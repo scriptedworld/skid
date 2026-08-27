@@ -114,24 +114,49 @@ the number that failed; seven of the nine report `success: true` in their own
 it collects no tests, and there are none. Docstring coverage is measured over a
 package holding one empty file.
 
-**Seven green tasks over one empty file is a vacuous pass, not coverage.** ruff,
+**Green tasks over one empty file are a vacuous pass, not coverage.** ruff,
 mypy, pylint, bandit, vulture and complexipy read `src/skid/__init__.py` and
-found nothing wrong with it because there is nothing in it. The gate becomes
-meaningful with the first code, not before.
+find nothing wrong with it because there is nothing in it. The language gate
+becomes meaningful with the first code, not before.
+
+`traceability` is the exception and the reason the common jig is worth having
+early: it reads the 45 requirement rows whether or not any code exists, so it
+fails honestly today rather than passing over nothing.
 
 The jigs were unrunnable earlier the same day, refused by wrench's schema for
 naming a task `id`, and toolbox's port landed between that measurement and this
 one.
 
-**The common jig is not adopted**, and that is what is left. Its `traceability`
-task runs `test-traceability.py --requirements REQUIREMENTS.md`, and skid holds
-requirements as a directory, which the checker cannot read.
+**Both jigs are adopted.** The common one needs three things the jig does not
+say, all of them recorded in
+`clank/tasks/skid/gate/20-adopt-the-common-jig.complete`:
 
-    clank/inbox/toolbox/traceability-must-read-a-directory
-    clank/tasks/skid/gate/20-adopt-the-common-jig.blocked
+    bolt --definitions skid common-quality .
 
-So skid has the nine language checks and none of the three common ones:
-traceability, the suppression register and cyclomatic complexity.
+- **The flag goes before the positionals**, or bolt drops it silently and the
+  run reports a plausible wrong verdict rather than an error.
+- **`bolt.skid.definitions.yaml`** points `requirements` at `docs/REQUIREMENTS`,
+  because the jig still defaults to the retired single file.
+- **`bin/` holds two links into toolbox**, because the jig resolves its checkers
+  against `{config_dir}`, which is this directory.
+
+**The traceability checker reads a directory.** It finds all 45 rows. The
+standing story that it could not was a flag being dropped, not a checker
+limitation.
+
+**Adopting cost one exclusion.** The linked checkers are Python, so `mypy` and
+`pylint` read them as skid's source and failed the gate entirely on toolbox's
+code. `pyproject.toml` scopes those tools away from `bin/`, which holds nothing
+skid wrote, and says so beside the exclusions. Filed as
+`clank/inbox/toolbox/an-adopter-is-graded-on-the-checkers-it-adopts`.
+
+    python-std-quality   8 of 9 pass; tests exits 5 with no tests collected
+    common-quality       2 of 3 pass; traceability reports 0 of 45 covered
+
+**Both remaining failures are the same fact**, and stage 4 clears both.
+Traceability is the one worth watching: it read 45 real rows, so it is a
+measurement rather than a vacuous pass, and it is the check that will hold every
+test to a requirement once tests exist.
 
 ## Where the work is
 
