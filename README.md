@@ -30,7 +30,10 @@ speaking over each other is worse than either waiting.
 
 ## State
 
-Nothing is built. `REQUIREMENTS.md` carries what must be true, stated first-hand
-on 2026-08-27, with nine open questions recorded rather than guessed.
+Nothing is built. `docs/REQUIREMENTS/` carries what must be true, one file per
+requirement, stated first-hand on 2026-08-27, with nine open questions recorded
+rather than guessed.
 
 First pass is Linux only, Python, and a standard uv project.
+
+`docs/PROJECT.md` is what to read before changing anything here.
