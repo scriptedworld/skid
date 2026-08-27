@@ -51,6 +51,7 @@ for other reasons.
     tests/              empty, and stage 4 of how a change gets made is where
                         it stops being empty
     docs/PROJECT.md     this file
+    docs/SPEC.md        how skid is arranged, so that the requirements hold
     docs/REQUIREMENTS/  one file per requirement, under a category directory
     docs/DECISIONS/     one file per decision
     pyproject.toml      uv project, hatchling, Python >= 3.12
@@ -182,23 +183,26 @@ all nine closed on 2026-08-27. Each closed at the id it already carried, so
 nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
 rather than kept empty.
 
-35 requirements, none marked `[?]`. Nothing about the specification blocks
-writing a spec.
+39 requirements, none marked `[?]`.
 
-What is not decided is smaller and belongs to design rather than to intent:
+**`docs/SPEC.md` answered the design questions this section used to list**: where
+the config lives and in what format, what the MCP tool surface is, and how the
+backend is started and reached. Read it there rather than here.
 
-- **Where the config file lives**, and what format it is in. FR-7.1 and FR-7.8
-  make it the record without saying where it sits.
-- **What the MCP tool surface is**, beyond FR-6.1's voice and FR-8.1's
-  substitutions.
-- **Whether the greeting window is settable through a tool as well as the
-  file** (FR-3.4). If it is, FR-7.1 already says which one wins.
-- **How the backend is started and reached** (FR-5.1). Wanted rather than
-  required, and it is also the criterion by which skid has its own tree, so it
-  is not the piece to drop for expedience.
+Writing it also raised four properties nothing had stated, which are now
+requirements rather than spec prose: FR-4.4 that submissions do not interleave,
+FR-4.5 that submitting returns when queued, FR-4.6 that one failure does not
+cancel an array, and FR-6.4 that a missing config is not an error. Each names
+the spec as what raised it.
 
-None of those is a question for anyone else to answer. They are what a spec is
-for, and `silo/docs/PATTERNS/how-a-change-gets-made.md` starts there.
+**The coverage check runs both ways and is clean.** Every requirement is cited
+by the spec, and the spec cites nothing that is not a requirement:
+
+    diff <(grep -ho 'FR-[0-9]\+\.[0-9]\+' docs/SPEC.md | sort -uV) \
+         <(grep -ho '^| FR-[0-9.]*' docs/REQUIREMENTS/*/*.md | sed 's/| //' | sort -V)
+
+What the spec still leaves open is listed in the spec itself, and none of it is
+a question for anyone else to answer.
 
 ## What is not built
 
@@ -223,8 +227,11 @@ knows skid exists. `repos.*.toml` is dotfiles', so it is filed as
 `clank/inbox/dotfiles/skid-is-in-no-manifest/` with the entry to paste.
 
 Read `silo/docs/PATTERNS/how-a-change-gets-made.md` before writing any of it.
-Stage 1 is a spec, which does not exist and is now the next thing: every
-requirement it would derive from is settled.
+Stages 1 and 2 are done: the spec exists and the coverage check between it and
+the requirements is clean both ways. **Stage 3, the test plan, is next.**
+
+Neither has been reviewed. Every review in that pattern is a separate cold-read
+agent or a person, and an agent reviewing its own work is not a review.
 
 Stage 4 is tests written to fail, and the gate runs against them before there is
 an implementation. That is the point at which the seven currently vacuous checks
