@@ -7,4 +7,5 @@
 The window is per name, so one agent talking continuously does not suppress
 another agent's announcement.
 
-`x` is FR-3.4 and its value is FR-7.4.
+`x` is FR-3.4, and FR-7.4 sets it to 30 seconds from the end of the last clip
+spoken for that name.

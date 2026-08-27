@@ -9,5 +9,5 @@ against threads in one process, a lock file against every process that agrees to
 take it. Which is needed follows from FR-5.1's backend and from whether anything
 outside it ever plays a clip.
 
-What the lock covers is a separate question from what holds it, and it is the
-sharper one. FR-7.3.
+What the lock covers is a separate question from what holds it, and FR-7.3
+settles it: playback alone.
