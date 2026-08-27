@@ -81,32 +81,40 @@ holds.
 
 ## The gate
 
-**Nothing gates skid, and nothing can today.** Measured 2026-08-27: every jig in
-toolbox is refused by the bolt on PATH before a single task runs.
+`bolt.python-std-quality.yaml` is linked to toolbox's and adopted. The link is
+gitignored: a committed copy would be a second statement of one file.
 
     bolt python-std-quality .
-    bolt: wrench: validating bolt.python-std-quality.yaml: jsonschema validation
-    failed with 'https://scriptedworld.github.io/wrench/jig.schema.json#'
-    - at '/tasks/0': missing property 'name'
 
-`~/bin/bolt` resolves to `~/.projects/bolt/bin/bolt` and runs, which is the new
-bolt built from `bolt.go`: it names tasks `name`, composes by nested jig tasks,
-and takes one jig per run as `bolt <jig> <directory>`. The toolbox jigs are
-written for the bolt before it, using `id`, `{configdir}` and `-c` overlays. All
-four of them fail the same way, so this is not skid's adoption being wrong.
+**Read `result.yaml` in the run directory, never the runner's summary line.**
+Measured 2026-08-27, the first run here: `success: false`, with two reasons,
+`docstrings exited 1` and `tests exited 5`. The summary printed
+`failed: 9 execution(s)`, which is the number of executions in the run and not
+the number that failed; seven of the nine report `success: true` in their own
+`output.yaml`.
 
-Already tracked as `clank/tasks/toolbox/port-the-jigs/10-port-to-the-new-jig-format.planning`,
-and skid's own adoption waits on it at
-`clank/tasks/skid/gate/10-adopt-the-python-jig.blocked`.
+**Both failures are true and neither is the gate's fault.** pytest exits 5 when
+it collects no tests, and there are none. Docstring coverage is measured over a
+package holding one empty file.
 
-**No jig is linked here in the meantime.** A link to a jig the runner refuses is
-a gate that reports an error on every run, which reads as a broken project
-rather than an unported jig.
+**Seven green tasks over one empty file is a vacuous pass, not coverage.** ruff,
+mypy, pylint, bandit, vulture and complexipy read `src/skid/__init__.py` and
+found nothing wrong with it because there is nothing in it. The gate becomes
+meaningful with the first code, not before.
 
-When the port lands, the second half is `traceability`: the checker takes
-`--requirements REQUIREMENTS.md` and cannot read a directory, which is the whole
-of `clank/inbox/toolbox/traceability-must-read-a-directory`. So the language jig
-is adoptable before the common one.
+The jigs were unrunnable earlier the same day, refused by wrench's schema for
+naming a task `id`, and toolbox's port landed between that measurement and this
+one.
+
+**The common jig is not adopted**, and that is what is left. Its `traceability`
+task runs `test-traceability.py --requirements REQUIREMENTS.md`, and skid holds
+requirements as a directory, which the checker cannot read.
+
+    clank/inbox/toolbox/traceability-must-read-a-directory
+    clank/tasks/skid/gate/20-adopt-the-common-jig.blocked
+
+So skid has the nine language checks and none of the three common ones:
+traceability, the suppression register and cyclomatic complexity.
 
 ## Where the work is
 
@@ -139,35 +147,58 @@ works on PulseAudio and PipeWire machines alike.
 that name (FR-7.4). Short by choice: a name that pauses re-announces rather than
 being assumed to still hold the floor.
 
-**Python, and the MCP SDK for Python.** Measured 2026-08-27: `mcp` 2.0.0 is
-installed, under Python 3.14.7. Whether kokoro forces the language is FR-7.6 and
-open, and the first pass is Python either way.
+**The config file is the record** for the voice and for the pronunciation
+substitutions alike (FR-7.1, FR-7.8). A setting made through an MCP tool is
+written through and survives a restart. The obligation that comes with it is
+writing into a file a person owns, so comments and ordering in it are to be
+preserved rather than normalised away.
+
+**Substitutions are global, and an entry declares its own kind**, literal or
+regular expression (FR-7.9, FR-7.7). The two rules that admitting regular
+expressions forces are settled with them: the set is a file and file order is
+the order, so reordering is editing the file (FR-8.4), and substitution is one
+left-to-right pass whose output no later entry examines (FR-8.5).
+
+**Python, because kokoro is a Python project** (FR-7.6). Measured 2026-08-27
+from PyPI: kokoro 0.9.4 depends on torch, transformers, huggingface-hub, numpy,
+misaki and loguru, so the package is the implementation rather than a binding
+over one. Staying in one language was the stated preference, and FR-5.2's MCP
+SDK for Python is a second reason that does not rest on the same measurement.
+
+**Python 3.12, exactly** (FR-1.7). kokoro declares `requires_python
+<3.13,>=3.10`, so `pyproject.toml` pins `>=3.12,<3.13` rather than leaving a
+floor that resolves to an interpreter kokoro refuses. This machine's default is
+3.14.7, which is not it.
+
+That dates the other measurement: `mcp` 2.0.0 was found installed under 3.14.7,
+which says the SDK exists rather than that it is present for this project.
 
 **Linux only, first pass.**
 
 ## What is open
 
-**Five, in `docs/REQUIREMENTS/open/`.** Nine were recorded at commissioning and
-FR-7.2 to FR-7.5 closed on 2026-08-27. Each is a requirement with an id rather
-than a line of prose, so closing one is a decision against a row that exists,
-and the file then moves out of `open/` into the category its answer belongs to.
+**No requirement is open.** All nine of FR-7 were recorded at commissioning and
+all nine closed on 2026-08-27. Each closed at the id it already carried, so
+nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
+rather than kept empty.
 
-Each open one is queued in `clank/tasks/skid/` as `.questions`, which is the
-queue they get answered from.
+35 requirements, none marked `[?]`. Nothing about the specification blocks
+writing a spec.
 
-    FR-7.1  does a tool-set voice persist to the config
-    FR-7.6  is Python forced by kokoro, or chosen
-    FR-7.7  are substitutions literal or regular expressions
-    FR-7.8  do substitutions live in the config as well as the tool
-    FR-7.9  are substitutions global or per name
+What is not decided is smaller and belongs to design rather than to intent:
 
-FR-7.1 and FR-7.8 are one question asked twice, so they are queued as one task:
-when a setting is reachable by an MCP tool and by editing the config, which one
-is the record.
+- **Where the config file lives**, and what format it is in. FR-7.1 and FR-7.8
+  make it the record without saying where it sits.
+- **What the MCP tool surface is**, beyond FR-6.1's voice and FR-8.1's
+  substitutions.
+- **Whether the greeting window is settable through a tool as well as the
+  file** (FR-3.4). If it is, FR-7.1 already says which one wins.
+- **How the backend is started and reached** (FR-5.1). Wanted rather than
+  required, and it is also the criterion by which skid has its own tree, so it
+  is not the piece to drop for expedience.
 
-**None of the five blocks a spec for the core path**, which is what FR-7.2 to
-FR-7.5 were holding. FR-7.7 and FR-7.9 block the pronunciation tool, and FR-7.1
-with FR-7.8 blocks anything that persists a setting.
+None of those is a question for anyone else to answer. They are what a spec is
+for, and `silo/docs/PATTERNS/how-a-change-gets-made.md` starts there.
 
 ## What is not built
 
@@ -177,6 +208,9 @@ Measured 2026-08-27: kokoro is not installed here, so nothing in FR-1 or FR-5
 has been run against the real engine.
 
     python3 -c "import kokoro"    ModuleNotFoundError: No module named 'kokoro'
+
+It cannot be installed against this machine's default interpreter either, which
+is 3.14.7. FR-1.7 is the constraint and `pyproject.toml` carries it.
 
 Players, measured the same day with `command -v`: `paplay` (which is `pacat`),
 `aplay` and `pw-play` (which is `pw-cat`) are present; `ffplay`, `mpv` and
@@ -189,5 +223,9 @@ knows skid exists. `repos.*.toml` is dotfiles', so it is filed as
 `clank/inbox/dotfiles/skid-is-in-no-manifest/` with the entry to paste.
 
 Read `silo/docs/PATTERNS/how-a-change-gets-made.md` before writing any of it.
-Stage 1 is a spec, which does not exist, and several of the open questions have
-to close before one can be written.
+Stage 1 is a spec, which does not exist and is now the next thing: every
+requirement it would derive from is settled.
+
+Stage 4 is tests written to fail, and the gate runs against them before there is
+an implementation. That is the point at which the seven currently vacuous checks
+start reading something.

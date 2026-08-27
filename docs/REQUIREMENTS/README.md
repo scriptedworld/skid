@@ -24,19 +24,21 @@ omission: only `[?]` is exempt from needing a test that cites it.
 
 ## The categories
 
-    what-it-speaks-with   FR-1   kokoro, a file, a player, the default device
-    one-at-a-time         FR-2   no overlap, the mechanism, the lock, the queue
-    who-is-speaking       FR-3   the name, and announcing it once
-    submission-shape      FR-4   an array, prepared ahead, spoken in order
-    warm                  FR-5   the backend, and the MCP server
-    voice-selection       FR-6   two routes to one setting
-    saying-it-right       FR-8   pronunciation substitutions
-    open                  FR-7   what is still unanswered, each queued as a task
+    what-it-speaks-with   kokoro, a file, a player, the default device, the
+                          interpreter kokoro will run under
+    one-at-a-time         no overlap, the mechanism, the lock, the queue
+    who-is-speaking       the name, and announcing it once
+    submission-shape      an array, prepared ahead, spoken in order
+    warm                  the backend, and the MCP server
+    voice-selection       two routes to one setting, and which is the record
+    saying-it-right       pronunciation substitutions
 
-**`FR-7` is the open set rather than a seventh subject.** A question closes at
-the id it already carried, because closing one is a decision against a row that
-exists, and its file moves out of `open/` into the category its answer belongs
-to. So `one-at-a-time` holds FR-2.1, FR-2.2, FR-7.2 and FR-7.3, and a category
-is not a number range.
+**A category is a subject, not a number range.** `FR-7` was the open set rather
+than a seventh subject, and a question closes at the id it already carried,
+because closing one is a decision against a row that exists. Its file then moves
+into the category its answer belongs to. So `one-at-a-time` holds FR-2.1,
+FR-2.2, FR-7.2 and FR-7.3.
 
-Settled so far: FR-7.2, FR-7.3, FR-7.4 and FR-7.5, on 2026-08-27. Five remain.
+**Nothing is open.** All nine of FR-7 closed on 2026-08-27, and the `open/`
+category is gone rather than kept empty. An empty directory at a standard path
+reads as a lost file.
