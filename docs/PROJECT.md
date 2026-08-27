@@ -26,12 +26,24 @@ waiting.
 
 ## Why it is its own repository
 
-CLAIM. It serves every agent and belongs to none of them, so it sits beside them
-rather than inside one. It is also a program with its own requirements, its own
-tests and its own gate, which is the same argument that took infobot out of
-silo.
+Stated 2026-08-27, heard by the silo session and relayed here rather than to me
+directly:
 
-Nobody has stated this in so many words. Ask before treating it as settled.
+> Because it's an MCP with a supporting background process ... and I believe
+> that deserves it's own tree.
+
+**That is a criterion rather than an observation about skid.** An MCP with a
+supporting background process gets its own tree, and what makes skid one is the
+warm backend of FR-5.1.
+
+So the requirement and the repository boundary are one decision seen twice, and
+**dropping the backend would weaken the case for the tree.** FR-5.1 is wanted
+rather than required, which is exactly the kind of thing that gets dropped for
+being optional, and this is what it would cost.
+
+It turns on shape, not on audience. Serving every agent and belonging to none
+would put wrench and toolbox here on the same reasoning, and they are separate
+for other reasons.
 
 ## Layout
 
@@ -54,7 +66,7 @@ it could do because nothing gates it.
 **skid is the first repository on the layout**, so what goes inside a file was
 decided here: `docs/DECISIONS/what-a-requirement-file-carries.md`. The row is
 kept verbatim, so concatenating the tree reproduces the document the checker
-parses today. FACT 2026-08-27: the 32 rows are byte-identical to the retired
+parses today. Measured 2026-08-27, the 32 rows are byte-identical to the retired
 `REQUIREMENTS.md` at `aafb459`.
 
     diff <(git show aafb459:REQUIREMENTS.md | grep '^| FR-' | sort -V) \
@@ -65,7 +77,7 @@ holds.
 
 ## The gate
 
-**Nothing gates skid, and nothing can today.** FACT 2026-08-27: every jig in
+**Nothing gates skid, and nothing can today.** Measured 2026-08-27: every jig in
 toolbox is refused by the bolt on PATH before a single task runs.
 
     bolt python-std-quality .
@@ -106,7 +118,7 @@ subprocess, default device, no direct access. Every requirement in
 
 **One clip at a time**, with the mechanism deliberately left open.
 
-**Python, and the MCP SDK for Python.** FACT 2026-08-27: `mcp` 2.0.0 is
+**Python, and the MCP SDK for Python.** Measured 2026-08-27: `mcp` 2.0.0 is
 installed, under Python 3.14.7. Whether kokoro forces the language is FR-7.6 and
 open, and the first pass is Python either way.
 
@@ -132,8 +144,8 @@ is the record.
 
 Everything. `src/skid/__init__.py` is empty and `tests/` holds a `.gitkeep`.
 
-FACT 2026-08-27: kokoro is not installed here, so nothing in FR-1 or FR-5 has
-been measured against the real engine.
+Measured 2026-08-27: kokoro is not installed here, so nothing in FR-1 or FR-5
+has been run against the real engine.
 
     python3 -c "import kokoro"    ModuleNotFoundError: No module named 'kokoro'
 
@@ -142,7 +154,7 @@ Players, measured the same day with `command -v`: `paplay` (which is `pacat`),
 `espeak-ng` are not. The server is PulseAudio 15.0.0 on PipeWire 1.4.2 and the
 default sink is `alsa_output.pci-0000_00_1f.3.analog-stereo`.
 
-**skid is in no manifest.** FACT 2026-08-27: `grep -rn skid
+**skid is in no manifest.** Measured 2026-08-27: `grep -rn skid
 ~/.projects/dotfiles/repos.*.toml` returns nothing, so nothing on this machine
 knows skid exists. `repos.*.toml` is dotfiles', so it is filed as
 `clank/inbox/dotfiles/skid-is-in-no-manifest/` with the entry to paste.

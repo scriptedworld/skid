@@ -7,6 +7,11 @@
 Wanted rather than required, stated that way first-hand. A first pass that loads
 the model per submission satisfies everything else here and is slower.
 
+**Dropping it costs more than the start-up time.** An MCP with a supporting
+background process is the criterion by which skid gets its own tree, so this
+requirement and the repository boundary are one decision seen twice.
+`../../PROJECT.md` carries it.
+
 The cost it avoids is unmeasured, because kokoro is not installed
 (FR-1.1). Measuring cold start against warm is what would turn this into a
 number worth defending.
