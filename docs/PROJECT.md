@@ -63,11 +63,15 @@ for other reasons.
 commissioning rather than carrying a `REQUIREMENTS.md` to migrate later, which
 it could do because nothing gates it.
 
-**skid is the first repository on the layout**, so what goes inside a file was
-decided here: `docs/DECISIONS/what-a-requirement-file-carries.md`. The row is
-kept verbatim, so concatenating the tree reproduces the document the checker
-parses today. Measured 2026-08-27, the 32 rows are byte-identical to the retired
-`REQUIREMENTS.md` at `aafb459`.
+**skid was the first repository on the layout**, so what goes inside a file was
+decided here and then promoted to bind every repository:
+`silo/docs/DECISIONS/what-a-requirement-file-carries.md`, silo `92e93df`.
+`docs/DECISIONS/what-a-requirement-file-carries.md` is a pointer to it and holds
+only what is skid's own.
+
+The row is kept verbatim, so concatenating the tree reproduces the document the
+checker parses today. Measured 2026-08-27, the 32 rows are byte-identical to the
+retired `REQUIREMENTS.md` at `aafb459`.
 
     diff <(git show aafb459:REQUIREMENTS.md | grep '^| FR-' | sort -V) \
          <(grep -h '^| FR-' docs/REQUIREMENTS/*/*.md | sort -V)
