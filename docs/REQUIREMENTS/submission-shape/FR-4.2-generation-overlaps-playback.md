@@ -4,6 +4,7 @@
 |---|---|---|
 | FR-4.2 | While one message is being spoken, **the rest are being prepared**. Generation and playback overlap. | [A] |
 
-This and FR-2.1 together are what FR-7.3 is about: one lock cannot cover
+This and FR-2.1 together are what FR-7.3 answers: one lock cannot cover
 generation and playback both without serialising the thing this requirement
-exists to make parallel.
+exists to make parallel, so the lock covers playback alone and generation runs
+ahead unbounded.

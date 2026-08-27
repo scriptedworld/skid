@@ -122,6 +122,23 @@ subprocess, default device, no direct access. Every requirement in
 
 **One clip at a time**, with the mechanism deliberately left open.
 
+**The concurrency shape**, settled 2026-08-27. The lock covers playback alone,
+so generation runs ahead of the speaker, and it runs ahead unbounded (FR-7.3).
+A submission arriving while another plays queues, also unbounded (FR-7.2).
+
+Nothing is dropped and nothing is capped, which is the trade that was chosen
+with its cost stated: a long array holds every clip it has generated before the
+second one is heard, and a caller behind one waits as long as it takes with no
+way to know how long that is.
+
+**`paplay` as the player**, with a user-defined one declared as a command line
+(FR-7.5). It follows the default output device, which FR-1.4 requires, and it
+works on PulseAudio and PipeWire machines alike.
+
+**A 30 second quiet window**, measured from the end of the last clip spoken for
+that name (FR-7.4). Short by choice: a name that pauses re-announces rather than
+being assumed to still hold the floor.
+
 **Python, and the MCP SDK for Python.** Measured 2026-08-27: `mcp` 2.0.0 is
 installed, under Python 3.14.7. Whether kokoro forces the language is FR-7.6 and
 open, and the first pass is Python either way.
@@ -130,19 +147,27 @@ open, and the first pass is Python either way.
 
 ## What is open
 
-Nine questions, `FR-7.1` to `FR-7.9`, in `docs/REQUIREMENTS/open/`. Each is a
-requirement with an id rather than a line of prose, so closing one is a decision
-against a row that exists. Each is queued in `clank/tasks/skid/` as `.questions`,
-which is the queue they get answered from.
+**Five, in `docs/REQUIREMENTS/open/`.** Nine were recorded at commissioning and
+FR-7.2 to FR-7.5 closed on 2026-08-27. Each is a requirement with an id rather
+than a line of prose, so closing one is a decision against a row that exists,
+and the file then moves out of `open/` into the category its answer belongs to.
 
-**The sharpest is FR-7.3, what the lock covers.** FR-2.1 forbids overlap and
-FR-4.2 wants the rest of an array prepared while one clip speaks, so one lock
-around generation and playback both satisfies the first and silently destroys
-the second. Nothing about the audible output would say which was built.
+Each open one is queued in `clank/tasks/skid/` as `.questions`, which is the
+queue they get answered from.
+
+    FR-7.1  does a tool-set voice persist to the config
+    FR-7.6  is Python forced by kokoro, or chosen
+    FR-7.7  are substitutions literal or regular expressions
+    FR-7.8  do substitutions live in the config as well as the tool
+    FR-7.9  are substitutions global or per name
 
 FR-7.1 and FR-7.8 are one question asked twice, so they are queued as one task:
 when a setting is reachable by an MCP tool and by editing the config, which one
 is the record.
+
+**None of the five blocks a spec for the core path**, which is what FR-7.2 to
+FR-7.5 were holding. FR-7.7 and FR-7.9 block the pronunciation tool, and FR-7.1
+with FR-7.8 blocks anything that persists a setting.
 
 ## What is not built
 

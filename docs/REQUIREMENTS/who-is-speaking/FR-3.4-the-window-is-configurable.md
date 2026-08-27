@@ -2,10 +2,11 @@
 
 | ID | Requirement | |
 |---|---|---|
-| FR-3.4 | `x` is configurable. Its default is unset. | [?] |
+| FR-3.4 | `x` is configurable. Its default is 30 seconds. | [A] |
 
-Open, and carrying no test until it closes. FR-7.4 is the value.
+The default is FR-7.4, settled 2026-08-27, which also fixes what the window is
+measured from.
 
-Configurable by which route is not stated either. FR-6.1 and FR-6.2 give the
-voice both an MCP tool and the config file; nothing says the window gets the
-same pair, and FR-7.1 is the record question that would follow if it did.
+Configurable by which route is not stated. FR-6.1 and FR-6.2 give the voice both
+an MCP tool and the config file; nothing says the window gets the same pair, and
+FR-7.1 is the record question that would follow if it did.
