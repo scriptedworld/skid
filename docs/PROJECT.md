@@ -133,16 +133,17 @@ say, all of them recorded in
 
     bolt --definitions skid common-quality .
 
-- **The flag goes before the positionals**, or bolt drops it silently and the
-  run reports a plausible wrong verdict rather than an error.
+- **The flag goes before the positionals.** Written after them it becomes a
+  positional, and bolt refuses with usage and exit 1, writing no run directory
+  at all.
 - **`bolt.skid.definitions.yaml`** points `requirements` at `docs/REQUIREMENTS`,
   because the jig still defaults to the retired single file.
 - **`bin/` holds two links into toolbox**, because the jig resolves its checkers
   against `{config_dir}`, which is this directory.
 
-**The traceability checker reads a directory.** It finds all 45 rows. The
-standing story that it could not was a flag being dropped, not a checker
-limitation.
+**The traceability checker reads a directory.** It finds all 45 rows, and the
+silo session confirmed the same checker against a single-file repository, so the
+standing story that it could not is spent.
 
 **Adopting cost one exclusion.** The linked checkers are Python, so `mypy` and
 `pylint` read them as skid's source and failed the gate entirely on toolbox's
