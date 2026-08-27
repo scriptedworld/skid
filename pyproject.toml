@@ -2,7 +2,10 @@
 name = "skid"
 version = "0.1.0"
 description = "Voice output for the agents. Text in, one clip at a time out."
-requires-python = ">=3.12"
+# 3.12 alone, and not a floor. kokoro declares requires_python <3.13,>=3.10, so
+# a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
+# measurement and says to retire the row rather than edit this in place.
+requires-python = ">=3.12,<3.13"
 dependencies = []
 
 [build-system]

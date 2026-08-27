@@ -8,5 +8,5 @@ FACT 2026-08-27: kokoro is not installed here.
 
     python3 -c "import kokoro"    ModuleNotFoundError: No module named 'kokoro'
 
-FR-7.6 asks whether kokoro forces Python. The model is named here; the language
-is not.
+The model is named here and the language is not. FR-7.6 settles that separately,
+and FR-1.7 carries the Python versions kokoro will run under.

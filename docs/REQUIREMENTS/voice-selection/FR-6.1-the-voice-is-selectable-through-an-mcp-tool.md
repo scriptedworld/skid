@@ -7,4 +7,4 @@
 A caller changes the voice without a file being edited or a process being
 restarted.
 
-Whether that change outlives the process is FR-7.1.
+The change outlives the process: FR-7.1 writes it through to the config file.
