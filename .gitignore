@@ -13,6 +13,11 @@ __pycache__/
 *.egg-info/
 
 # What a gate run leaves behind. bolt writes .bolt-<iso8601> at the run base by
-# default, and the python jig declares coverage.xml as a task output.
+# default, and the python jig declares coverage.xml as evidence.
 .bolt-*/
 coverage.xml
+.coverage
+
+# The adopted jig, linked into toolbox. A committed copy would be a second
+# statement of one thing, free to drift from the file it was copied from.
+bolt.*.yaml
