@@ -33,3 +33,26 @@ exclude_also = ["if __name__ == .__main__.:"]
 [tool.mypy]
 strict = true
 warn_unreachable = true
+exclude = ['^bin/']
+
+# WHY bin/ IS EXCLUDED EVERYWHERE BELOW, and why it is scoping rather than
+# silencing. bin/ holds nothing skid wrote. It is two symlinks into
+# toolbox/bin/, adopted because the common jig resolves its checkers against
+# {config_dir}, which is this directory. Measured 2026-08-27: with them linked
+# and no exclusion, `mypy .` and `pylint --recursive=y .` fail skid's gate on
+# toolbox's source, every finding in test-traceability.py or
+# suppression-register.py.
+#
+# A gate that fails a project for the code it adopted to run the gate is
+# reporting on the wrong repository. Excluding a path holding none of this
+# project's code says so; it hides no finding about skid and adds no pragma.
+# Filed for toolbox as clank/inbox/toolbox/an-adopter-is-graded-on-the-checkers-it-adopts.
+
+[tool.ruff]
+extend-exclude = ["bin"]
+
+[tool.pylint.MASTER]
+ignore-paths = ['^bin/.*']
+
+[tool.bandit]
+exclude_dirs = ["bin", ".ephemera"]
