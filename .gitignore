@@ -9,4 +9,10 @@ __pycache__/
 .venv/
 .ruff_cache/
 .mypy_cache/
+.pytest_cache/
 *.egg-info/
+
+# What a gate run leaves behind. bolt writes .bolt-<iso8601> at the run base by
+# default, and the python jig declares coverage.xml as a task output.
+.bolt-*/
+coverage.xml
