@@ -18,6 +18,13 @@ __pycache__/
 coverage.xml
 .coverage
 
-# The adopted jig, linked into toolbox. A committed copy would be a second
-# statement of one thing, free to drift from the file it was copied from.
-bolt.*.yaml
+# The adopted jigs and the checkers they name, linked into toolbox. A committed
+# copy would be a second statement of one thing, free to drift from the file it
+# was copied from.
+#
+# bolt.skid.definitions.yaml is NOT one of these and is tracked: it is skid's
+# own, not toolbox's, and it is what points the common jig at a requirements
+# directory instead of the retired single file.
+bolt.*-quality.yaml
+bin/*.py
+adapters/
