@@ -113,9 +113,9 @@ part of stale-state handling the earlier draft claimed to have avoided.
 **A pathname socket is chosen over an abstract one, and the trade is access
 control against staleness.** A Linux abstract socket, whose name begins with a
 NUL, is not a filesystem entry and has no staleness at all. Measured
-2026-08-27 by `.ephemera/abstract-socket-probe.py`: exclusive while held, a
-second bind gets `EADDRINUSE`, and after `SIGKILL` a fresh bind to the same name
-succeeds, leaving nothing behind to unlink.
+2026-08-27: bind to `"\0skid"` in one process, and while it is held a second
+bind gets `EADDRINUSE`; `SIGKILL` that process and a fresh bind to the same name
+succeeds, with nothing left behind to unlink and no path on disk to find.
 
 It also has no path, and therefore no file permissions. Access would be scoped
 to the network namespace, which on an ordinary machine means any local user can
