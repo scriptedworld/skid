@@ -16,10 +16,16 @@ without every line introducing itself.
 
 **The output path is the whole design.** Generate a file, run a player. skid
 never opens an audio device, selects one, mixes or sets a volume, because the
-operating system already does all four and does them better. What that buys is
-a failure surface of two items: a player that is not there, and a file that is
-bad. `docs/REQUIREMENTS/what-it-speaks-with/FR-1.5-skid-never-talks-to-an-audio-device.md`
+operating system already does all four and does them better. What **the output
+path** buys is a failure surface of two items: a player that is not there, and a
+file that is bad. `docs/REQUIREMENTS/what-it-speaks-with/FR-1.5-skid-never-talks-to-an-audio-device.md`
 is the property stated on its own so it can be tested as one.
+
+**That is the output path's surface, not the whole design's.** The queue, the
+lookahead and the configurable player each add failures of their own, and
+`docs/SPEC.md` names them under Failure. An earlier draft of both documents
+generalised the two to the whole system, which is the kind of sentence that stops
+anyone looking for a third case.
 
 **No overlap, ever.** Two agents speaking over each other is worse than either
 waiting.
@@ -44,6 +50,12 @@ being optional, and this is what it would cost.
 It turns on shape, not on audience. Serving every agent and belonging to none
 would put wrench and toolbox here on the same reasoning, and they are separate
 for other reasons.
+
+**The reasoning runs one way only, and `docs/SPEC.md` used to run it back.** The
+criterion was stated first-hand, so the boundary rests on it and not on anything
+skid decided. The spec then cited the boundary as a second reason for the
+backend, which is one decision counted twice, and that appeal is withdrawn.
+Both cold reviews of `fd42bdf` caught it independently.
 
 ## Layout
 
@@ -71,11 +83,15 @@ decided here and then promoted to bind every repository:
 only what is skid's own.
 
 The row is kept verbatim, so concatenating the tree reproduces the document the
-checker parses today. Measured 2026-08-27, the 32 rows are byte-identical to the
-retired `REQUIREMENTS.md` at `aafb459`.
+checker parses today. **The migration moved all 32 rows byte-identically**,
+which is a claim about the migration commit rather than about the tree now:
 
-    diff <(git show aafb459:REQUIREMENTS.md | grep '^| FR-' | sort -V) \
-         <(grep -h '^| FR-' docs/REQUIREMENTS/*/*.md | sort -V)
+    diff <(git show aafb459:REQUIREMENTS.md   | grep '^| FR-' | sort -V) \
+         <(git grep -h '^| FR-' f8c5660 -- docs/REQUIREMENTS | sort -V)
+
+The tree has moved since and the current rows are not that set. Ten of the 32
+were `[?]` and were rewritten as settled statements at the same ids as they
+closed, and thirteen rows have been added, so 45 rows now stand where 32 did.
 
 `docs/REQUIREMENTS/README.md` carries the status markers and what each category
 holds.
@@ -183,17 +199,27 @@ all nine closed on 2026-08-27. Each closed at the id it already carried, so
 nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
 rather than kept empty.
 
-39 requirements, none marked `[?]`.
+45 requirements, none marked `[?]`.
 
 **`docs/SPEC.md` answered the design questions this section used to list**: where
 the config lives and in what format, what the MCP tool surface is, and how the
 backend is started and reached. Read it there rather than here.
 
-Writing it also raised four properties nothing had stated, which are now
-requirements rather than spec prose: FR-4.4 that submissions do not interleave,
-FR-4.5 that submitting returns when queued, FR-4.6 that one failure does not
-cancel an array, and FR-6.4 that a missing config is not an error. Each names
-the spec as what raised it.
+Writing it raised four properties nothing had stated, which are now requirements
+rather than spec prose: FR-4.4 that submissions do not interleave, FR-4.5 that
+submitting returns when queued, FR-4.6 that one failure does not cancel an
+array, and FR-6.4 that a missing config is not an error.
+
+**Reviewing it raised six more**, which is the same mechanism working again on a
+document that had already been through it: FR-1.8 that a player must not return
+before its clip is inaudible, FR-1.9 that one which never returns is killed,
+FR-3.5 that the greeting is decided at playback, FR-3.6 that the quiet table is
+not persisted, FR-4.7 that a failure has somewhere to be seen, and FR-6.5 that a
+setting which would silence skid is refused.
+
+Each of the ten names what raised it. FR-8.5 was corrected rather than added: it
+had asserted entry priority while the spec asserted positional priority, and the
+two disagree on ordinary input.
 
 **The coverage check runs both ways and is clean.** Every requirement is cited
 by the spec, and the spec cites nothing that is not a requirement:
@@ -227,11 +253,17 @@ knows skid exists. `repos.*.toml` is dotfiles', so it is filed as
 `clank/inbox/dotfiles/skid-is-in-no-manifest/` with the entry to paste.
 
 Read `silo/docs/PATTERNS/how-a-change-gets-made.md` before writing any of it.
-Stages 1 and 2 are done: the spec exists and the coverage check between it and
-the requirements is clean both ways. **Stage 3, the test plan, is next.**
+Stages 1 and 2 are done and **stage 1 has been reviewed twice**, by the wrench
+session and by a cold subagent, independently and without contact. Both read
+`fd42bdf`. The spec was revised against the union of their findings and the
+revision has not itself been reviewed.
 
-Neither has been reviewed. Every review in that pattern is a separate cold-read
-agent or a person, and an agent reviewing its own work is not a review.
+**Stage 3, the test plan, is next.** It derives from the requirements rather
+than from the spec, so it is not waiting on a second review pass.
+
+The two reviews converged on four findings and each found what the other missed,
+which is the argument for two rather than one. Where they agreed, the confidence
+is real: neither could have primed the other.
 
 Stage 4 is tests written to fail, and the gate runs against them before there is
 an implementation. That is the point at which the seven currently vacuous checks
