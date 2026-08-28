@@ -5,7 +5,7 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-Four ready tasks in `clank/tasks/skid/`, all fully specified.
+Three ready tasks in `clank/tasks/skid/`, all fully specified.
 
 **The MCP server moves into the stdio script.**
 `resilience/40-the-mcp-server-moves-into-the-stdio-script.ready`. Designed with
@@ -37,14 +37,8 @@ today, so a wedged service is undetected, and the start limit is systemd's
 default, so five failures in ten seconds leaves it dead until somebody runs
 `reset-failed`. Neither value was chosen.
 
-**Test the eight uncovered rows.**
-`traceability/10-test-the-eight-testable-rows.ready`. A proposed test for each:
-three read a declaration file, four are behavioural and two of those share a
-blocking-player seam, and FR-7.6 is tested by asserting the measurement it rests
-on still holds.
-
-Traceability reads 40 of 48. It reaches 48 of 48 when that task lands, with
-nothing permanently red and no marker needed in toolbox's checker.
+Traceability reads 48 of 48, with nothing permanently red and no marker needed
+in toolbox's checker.
 
 ## Not settled by use
 
@@ -58,6 +52,19 @@ mispronunciation somebody reaches for the config to fix is worth more than any
 of the reasoning behind them.
 
 ## Landed since this file was last rewritten
+
+**Traceability closed at 48 of 48.** Nine tests over the last eight rows, and
+`pyproject.toml` gained the Linux classifier FR-1.6 needed so the row had a
+declaration to read. Four rows read a declaration, four are behavioural, and
+FR-8.3 took two because its row names two surfaces.
+
+The behavioural ones were checked by breaking the code rather than by watching
+them pass. FR-7.3 was run against a clip queue capped at one and reported three
+clips where five were due. FR-4.2's first version was run against generation
+made to take the playback lock and **passed**, which is the failure the task
+warned about: presence of a later clip is not overlap, because a service that
+generates the whole array before playing satisfies it. Rewritten to assert
+arrival against a snapshot, it fails that mutation.
 
 **The durable queue**, FR-4.8 and FR-4.9. The queue is a directory now:
 `$XDG_RUNTIME_DIR/skid/spool`, one entry per submission, written before `submit`
@@ -96,6 +103,26 @@ making the machine speak and rewriting its config. FR-5.4.
 kokoro and test against the real engine. The seams made it a non-question in the
 end, because the queue and the player are units that never touch audio.
 
+## Open, and needing a decision
+
+**Whether to widen the interpreter pin past 3.12.** Told first-hand 2026-08-28:
+kokoro runs on 3.13 and 3.14 and has simply not had a release since, so its
+declared `<3.13` is stale metadata rather than a real ceiling.
+
+That does not make the pin wrong. A resolver enforces what is declared, so
+installing skid on 3.13 means overriding another project's stated range, and
+FR-1.7 as written requires skid to sit inside what kokoro declares rather than
+inside what it is known to tolerate. Widening is therefore a decision with two
+halves: whether to carry a resolver override, and whether FR-1.7 should be
+reworded to speak about support rather than declaration.
+
+Nothing is blocked on it. `test_skid_runs_only_where_kokoro_does` asserts the
+containment that holds today and fails on the day kokoro re-declares, which is
+the day this gets easy.
+
+Several documents say kokoro "refuses" 3.13. That is true of the metadata and
+not of the software, and `docs/PROJECT.md` now says so.
+
 ## Open, and small
 
 **Whether the greeting window is settable through a tool** as well as the config
@@ -122,9 +149,10 @@ are zero `noqa` and zero `type: ignore` in `src/` and `tests/`.
 fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
 
-**`docstrings` passes now**, at 98.9% measured 2026-08-28 over skid's own code.
-It read 0.0% the day before, over an empty package. **`traceability` reports 40
-of 48**, which is a real number and the gap listed above.
+**`docstrings` passes now**, at 99.3% measured 2026-08-28 over skid's own code.
+It read 0.0% the day before, over an empty package. **`traceability` reports 48
+of 48**, and every mark cites a row `REQUIREMENTS.md` defines: checked in both
+directions, so no test cites a row that does not exist or one that is retired.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a

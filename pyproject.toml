@@ -2,6 +2,16 @@
 name = "skid"
 version = "0.1.0"
 description = "Voice output for the agents. Text in, one clip at a time out."
+# FR-1.6 is scope rather than a permanent boundary, and until this line it was a
+# sentence in a document with nothing a test could read. Declared so the scope
+# is checkable: `tests/test_declarations.py` asserts this exact string.
+#
+# What makes another platform cheap later is FR-1.3 through FR-1.5, so widening
+# this is a matter of naming a player and its command line rather than of
+# reworking the output path.
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+]
 # 3.12 alone, and not a floor. kokoro declares requires_python <3.13,>=3.10, so
 # a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
 # measurement and says to retire the row rather than edit this in place.

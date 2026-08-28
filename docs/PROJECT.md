@@ -42,10 +42,15 @@ waiting.
 `silo/docs/DECISIONS/requirements-are-a-directory.md`. Each row is kept
 verbatim, so concatenating the tree reproduces the document the checker parses.
 
-**48 rows, none open, 40 with a test citing them.** The eight without are
-FR-1.5, FR-1.6, FR-1.7, FR-4.2, FR-6.3, FR-7.3, FR-7.6 and FR-8.3, each with a
-proposed test at
-`clank/tasks/skid/traceability/10-test-the-eight-testable-rows.ready`.
+**48 rows, none open, 48 with a test citing them.** Traceability is closed, with
+nothing permanently red and no marker needed in toolbox's checker.
+
+Four of the last eight are discharged by reading a declaration rather than by
+calling anything, which for those rows is the right shape: an import set, a
+target platform and an interpreter range have no behaviour to exercise.
+`tests/test_declarations.py` holds them. Two of the four are tripwires on
+kokoro's own metadata, so they fail when the premise underneath FR-1.7 or FR-7.6
+moves.
 
 An id is never reused. `docs/REQUIREMENTS/README.md` lists the retired ones.
 
@@ -178,13 +183,21 @@ machine speak and rewriting its config.
 **No mocks.** kokoro is installed and tested against.
 
 **Python 3.12 exactly**, because kokoro declares `<3.13,>=3.10` and this
-machine's default is 3.14.7. **Linux only, first pass.**
+machine's default is 3.14.7. **Linux only, first pass**, declared as a
+classifier in `pyproject.toml` so FR-1.6 has something a test can read.
+
+**kokoro's `<3.13` is a declaration, not a ceiling.** Told first-hand
+2026-08-28: it runs on 3.13 and 3.14 and has simply not had a release since. A
+resolver still enforces what is declared, so the 3.12 pin stands and skid still
+installs only where kokoro says it fits, but the wording elsewhere that kokoro
+*refuses* 3.13 is about the metadata rather than the software. Widening the pin
+is open and would mean overriding another project's declared range.
 
 ## What is not built
 
-Nothing a requirement names. Four tasks are open and all four ready: the MCP
-server moving into the stdio script, the config becoming YAML, the systemd
-watchdog and start limit, and the eight uncovered rows.
+Nothing a requirement names. Three tasks are open and all three ready: the MCP
+server moving into the stdio script, the config becoming YAML, and the systemd
+watchdog and start limit.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 under Python 3.12.14.
 `paplay`, `aplay` and `pw-play` are present; `ffplay`, `mpv` and `espeak-ng` are
