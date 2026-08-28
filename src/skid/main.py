@@ -5,7 +5,10 @@ first connection, and restarts it if it dies, so there is no start protocol
 here: no lock file, no stale-path handling, no readiness race between clients.
 
 Run without systemd it binds a socket itself, which is for trying it by hand
-rather than the way it is meant to run.
+rather than the way it is meant to run. **It refuses if something is already
+listening there**, because the by-hand path used to unlink whatever it found and
+bind over it, which silently takes the socket away from systemd and leaves two
+resident models with only one of them reachable.
 
 **The two paths differ in how FR-5.4 is met, and the difference is worth
 knowing.** Under systemd the unit sets `SocketMode=0600` on the socket itself.
@@ -81,6 +84,32 @@ def notify_ready() -> None:
         sock.sendall(b"READY=1")
 
 
+def someone_is_listening(path: Path) -> bool:
+    """Whether a live server already holds this socket, as opposed to a stale file.
+
+    Run by hand, skid used to unlink whatever was at the path and bind its own.
+    Under socket activation that **takes the path away from systemd**, which goes
+    on believing it owns a socket nobody can reach, and the by-hand process
+    becomes the service without anything saying so.
+
+    Measured 2026-08-28: a by-hand instance started at 00:54 was still resident
+    at 03:18, holding 1.73 GB and listening on an inode the path no longer
+    resolved to. Nothing could reach it and nothing reported it.
+
+    Connecting is the only honest test. A socket file that refuses a connection
+    is stale and safe to replace; one that accepts is somebody's.
+    """
+    if not path.exists():
+        return False
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
+        probe.settimeout(1.0)
+        try:
+            probe.connect(str(path))
+        except (ConnectionRefusedError, FileNotFoundError, OSError):
+            return False
+    return True
+
+
 def build() -> tuple[Service, Starlette]:
     """Build the service and the ASGI app, with the model already warm."""
     ensure_runtime_dir()
@@ -116,6 +145,14 @@ def main() -> int:
         uvicorn.run(app, fd=LISTEN_FD, log_level="warning")
     else:
         path = ensure_runtime_dir() / "skid.sock"
+        if someone_is_listening(path):
+            print(
+                f"skid is already serving on {path}. Refusing to take it over."
+                "\nStop it first with: systemctl --user stop skid.socket skid.service",
+                file=sys.stderr,
+            )
+            service.stop()
+            return 1
         path.unlink(missing_ok=True)
         print(f"no systemd; serving on {path}", file=sys.stderr)
         uvicorn.run(app, uds=str(path), log_level="warning")

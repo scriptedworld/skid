@@ -8,8 +8,10 @@ the tests assert what the shim sends and what it writes back.
 memory. A restart forgets it, the service answers every later request with 404
 and `"id": null`, and the shim forwarded that verbatim. A JSON-RPC client cannot
 match a response whose id is null to the request it is waiting on, so it waits
-forever. Measured 2026-08-28: a call outstanding for five minutes, and three
-retries in the journal.
+until something outside gives up. Measured 2026-08-28: three retries in the
+journal, and the one call left to run its course was aborted by the MCP client's
+own backstop after 1800 seconds carrying no diagnosis, which is the failure
+being survived by a third party rather than reported.
 """
 
 from __future__ import annotations
@@ -133,7 +135,7 @@ def test_the_session_id_is_carried_on_later_requests() -> None:
 
 # COVERS: FR-5.3 | regression
 def test_a_forgotten_session_is_rebuilt_and_the_request_retried() -> None:
-    """A restart must cost a reconnection, not a client that waits forever.
+    """A restart must cost a reconnection, not a call nobody can diagnose.
 
     The service answers the handshake, then forgets. The shim has to notice the
     404, replay the handshake it cached, and send the original request again, so

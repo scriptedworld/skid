@@ -40,6 +40,28 @@ sessions hung, one for five minutes, with no error for anyone to read.
 **A reply that matches no pending request is worse than no reply**, because the
 client's bookkeeping is correct and the conclusion it draws from it is wrong.
 
+**It does not literally wait forever, and the true figure is worse for this
+row rather than better.** Measured 2026-08-28 by the agent-support session, whose
+call ended after the full half hour:
+
+    MCP server "skid" tool "status" sent no response or progress for 1800s;
+    aborting.
+
+So a third party's backstop bounds the call. **That does not satisfy this
+requirement, and the difference is the whole point of stating it as a property.**
+An abort at 1800 seconds carrying no diagnosis is the failure being survived by
+somebody else, not a call that failed as an error naming the backend. The
+harness timeout fires identically whether the service is wedged, slow or absent,
+because it has nothing to distinguish them with. The shim does.
+
+**And half an hour is indistinguishable from slow work.** `TIMEOUT = 300.0` in
+`client.py` is long precisely because a cold start loads a model, so a caller
+cannot tell a wedged session from kokoro warming up. The window in which anyone
+would investigate sits entirely inside the window in which the symptom looks
+normal. A bound alone therefore buys nothing; **the property is a bounded time
+that produces a diagnosis**, and 1800 seconds with none is the ceiling any
+answer has to beat to be worth anything.
+
 Restarting is the documented way to deploy an edit under an editable install, so
 this fired on an ordinary action rather than a rare fault, and the service came
 back healthy every time.
