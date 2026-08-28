@@ -60,7 +60,8 @@ Both cold reviews of `fd42bdf` caught it independently.
 ## Layout
 
     src/skid/           the package: config, generation, greeting, player,
-                        queue, substitution, then server, service and client
+                        queue, substitution, then server, service and client,
+                        with install.py standing apart, stdlib only
     tests/              one file per module, external test package
     share/systemd/user/ skid.socket and skid.service, the real units
     bin/                two links into toolbox, which the common jig resolves
@@ -158,9 +159,9 @@ skid wrote, and says so beside the exclusions. Filed as
 
     2026-08-27, an empty package    2026-08-28, the code and the tests
 
-    docstrings   0.0%, failing      docstrings   98.7%, passing
-    tests        exits 5, no tests  tests        60 pass
-    traceability 0 of 45 covered    traceability 36 of 47 covered
+    docstrings   0.0%, failing      docstrings   98.9%, passing
+    tests        exits 5, no tests  tests        72 pass
+    traceability 0 of 45 covered    traceability 38 of 47 covered
 
 The left column was measured against bolt
 `v0.0.0-20260827201109-7604557974a5`, reading `result.yaml` from a named
@@ -187,11 +188,17 @@ A green task that was measuring somebody else's repository is exactly what the
 vacuous-pass warning is about, and it took another project fixing its jig to
 surface it here.
 
-**Eleven requirements have no test citing them**, which is the gap traceability
-exists to report: FR-1.5, FR-1.6, FR-1.7, FR-2.2, FR-4.2, FR-5.3, FR-5.4,
-FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Several are properties of the machine or the
-units rather than of a function, so closing them is a question of what a test
-for each would read, not of writing eleven more assertions.
+**Nine requirements have no test citing them**, which is the gap traceability
+exists to report: FR-1.5, FR-1.6, FR-1.7, FR-2.2, FR-4.2, FR-6.3, FR-7.3,
+FR-7.6 and FR-8.3. Several are properties of the machine rather than of a
+function, so closing them is a question of what a test for each would read, not
+of writing nine more assertions.
+
+FR-5.3 and FR-5.4 left that list when the installer arrived, and how is the
+useful part: both are properties of the systemd units, so the tests read the
+unit files and assert `SocketMode=0600` and `Type=notify`. A requirement whose
+subject is a config file is tested by reading the config file. Several of the
+nine are the same shape.
 
 ## Where the work is
 
@@ -327,22 +334,38 @@ It has an unfortunate shape worth naming: the sessions with most worth saying
 are the long-running ones, and those are exactly the ones that cannot say it
 until they restart.
 
-### The installer does not exist, and that is the gap that matters
+### The installer, which is how another machine gets one
 
-The units at `share/systemd/user/` are the real ones, and they were installed by
-hand. **So skid works here and is reproducible nowhere**, and the difference
-between those two states lived only in a session until this paragraph.
+    python3 src/skid/install.py          from a fresh checkout
+    skid-install                         afterwards, by name
 
-What an installer owes, in order:
+`src/skid/install.py` is both, and it imports nothing but the standard library
+and nothing from its own package, because the first step is what puts `skid` on
+PATH. An installer that needed skid installed could not perform it.
 
-    uv tool install --editable <checkout>
-    cp share/systemd/user/skid.{socket,service} ~/.config/systemd/user/
-    systemctl --user daemon-reload
-    systemctl --user enable --now skid.socket
-    claude mcp add --scope user skid -- skid-mcp
+**The steps are data rather than a script.** `install_plan`, `uninstall_plan`
+and `verify_plan` each return a list of commands, which is what lets
+`--dry-run` print exactly what would run and lets the tests assert the sequence
+without writing to `~/.config/systemd/user`. A test suite that can break the
+machine it runs on is worse than one that checks less.
 
-Queued as `clank/tasks/skid/`. Nothing else stands between skid and another
-machine.
+**It enables the socket and does not start the service.** Socket activation
+means the first connection starts it, so starting it here would load a model to
+prove that two files were copied. Verification asks `systemctl is-enabled` and
+`is-active`, neither of which connects.
+
+**`claude mcp add` exits 1 on a name already registered**, measured 2026-08-28
+against an isolated `HOME`, so the installer reads the message rather than the
+status. Without that, running it twice would report a failure. It does not
+update an entry that already exists either, so a registration pointing at the
+wrong command is reported rather than silently replaced: removing an entry from
+a file a person owns is their call.
+
+**It writes only inside `$HOME`** and names all four places when it finishes:
+the units, the two executables, the uv tool environment and `~/.claude.json`.
+
+Verified 2026-08-28 by running it against this machine, twice, exit 0 both
+times, with the second run taking the already-registered path.
 
 ## What deploying it taught, which the tests could not
 
@@ -368,7 +391,8 @@ directory carries the property instead.
 
 ## What is not built
 
-The installer, above. Everything else in the requirements has code and tests.
+Nothing that a requirement names. Everything in `docs/REQUIREMENTS/` has code,
+and 38 of the 47 rows have a test citing them.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 are installed under Python
 3.12.14, and the whole path has been run end to end and heard: an MCP client

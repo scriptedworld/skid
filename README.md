@@ -28,12 +28,31 @@ and a bad file rather than an audio stack.
 **No overlap.** One clip is audible at a time, held by a lock. Two agents
 speaking over each other is worse than either waiting.
 
+## Installing
+
+One command, from a checkout, on a Linux machine with `uv`, `systemctl` and
+`claude` on PATH:
+
+    python3 src/skid/install.py
+
+It installs skid as a uv tool, puts the two systemd user units in place, enables
+the socket, and registers skid with the MCP client. Everything it writes is
+inside your home and it names each file when it finishes. `--dry-run` prints the
+commands without running any of them, and `--uninstall` reverses all of it.
+
+It enables the socket but does not start the service, because socket activation
+means the first connection does that, and starting it early loads a model to
+prove that two files were copied.
+
+**A session already running cannot call skid.** A Claude Code client picks an
+MCP server up when it starts, so `speak` appears in sessions started after the
+install. That is the session's age rather than anything wrong with the service.
+
 ## State
 
-Nothing is built. `docs/REQUIREMENTS/` carries what must be true, one file per
-requirement, stated first-hand on 2026-08-27, with nine open questions recorded
-rather than guessed.
+It works and it runs as a service. `docs/REQUIREMENTS/` carries what must be
+true, one file per requirement, 47 of them with none left open.
 
-First pass is Linux only, Python, and a standard uv project.
+First pass is Linux only, Python 3.12 exactly, and a standard uv project.
 
 `docs/PROJECT.md` is what to read before changing anything here.

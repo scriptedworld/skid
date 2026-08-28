@@ -5,11 +5,8 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**The installer.** `clank/tasks/skid/install/10-write-the-installer.ready`.
-skid runs here and nowhere else, because everything was installed by hand on
-2026-08-28. `docs/PROJECT.md` lists the five commands it owes.
-
-Everything else in `docs/REQUIREMENTS/` has code and tests.
+**Nothing.** The installer landed on 2026-08-28 and the task tree for skid is
+empty of anything `.ready`, `.blocked` or `.questions`.
 
 ## Owed, and not yet a task
 
@@ -19,11 +16,14 @@ one of its own reviewers checking their findings had landed. They said so
 themselves and asked for a reader with no stake in them. That pass still found a
 regression, FR-5.3, which is the argument for the one that is missing.
 
-**Eleven requirements have no test citing them**: FR-1.5, FR-1.6, FR-1.7,
-FR-2.2, FR-4.2, FR-5.3, FR-5.4, FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Measured
-2026-08-28, 36 of 47 covered. Some are properties of the machine or of the
-systemd units rather than of a function, so the work is deciding what a test for
-each would read before writing any.
+**Nine requirements have no test citing them**: FR-1.5, FR-1.6, FR-1.7, FR-2.2,
+FR-4.2, FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Measured 2026-08-28, 38 of 47
+covered. Some are properties of the machine rather than of a function, so the
+work is deciding what a test for each would read before writing any.
+
+FR-5.3 and FR-5.4 came off that list with the installer, by testing the systemd
+units as the data they are. That is the shape to try on the rest before
+concluding a requirement is untestable.
 
 ## Decided recently enough to restate
 
@@ -60,6 +60,12 @@ exists, correctly: nothing is mocked and nothing is silenced. There are zero
 fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
 
-**`docstrings` passes now**, at 98.7% measured 2026-08-28 over skid's own code.
-It read 0.0% the day before, over an empty package. **`traceability` reports 36
+**`docstrings` passes now**, at 98.9% measured 2026-08-28 over skid's own code.
+It read 0.0% the day before, over an empty package. **`traceability` reports 38
 of 47**, which is a real number and the gap listed above.
+
+**bandit reports five Low issues and zero High**, all of them `B404` and `B603`
+in the installer, which are what running commands looks like to a scanner.
+Reading the tail of its output invites the opposite conclusion: the summary
+prints severity and then confidence, so `High: 5` is the confidence line. There
+are zero `#nosec` in the tree.
