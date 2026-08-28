@@ -37,8 +37,42 @@ omission: only `[?]` is exempt from needing a test that cites it.
 than a seventh subject, and a question closes at the id it already carried,
 because closing one is a decision against a row that exists. Its file then moves
 into the category its answer belongs to. So `one-at-a-time` holds FR-2.1,
-FR-2.2, FR-7.2 and FR-7.3.
+FR-7.2 and FR-7.3.
 
 **Nothing is open.** All nine of FR-7 closed on 2026-08-27, and the `open/`
 category is gone rather than kept empty. An empty directory at a standard path
 reads as a lost file.
+
+## Retired
+
+**An id is never reused.** A reader meeting one in an old commit, a note or
+another project's document finds where it went rather than finding it attached
+to something unrelated.
+
+    FR-2.2   the mechanism is unconstrained
+             retired 2026-08-28, absorbed into FR-2.1
+             46 rows stand where 47 did
+
+**Why it went.** It read: *Exclusion is held by a mutex, a lock file, or an
+equivalent. The mechanism is unconstrained; the property is not.* That is a
+licence rather than an obligation. There is no implementation that satisfies
+FR-2.1 and violates it, and "or an equivalent" closes off the attempt by
+construction, so no change to the software could ever fail it.
+
+It was written at commissioning, when it was still open whether skid would be
+one process or several, to stop FR-2.1 being read as mandating a mechanism. That
+question is settled: one service, and a `threading.Lock` in `player.py`.
+
+**Retired under the rule that a decision is a requirement until it isn't**, and
+this one turns out never to have been constraining rather than to have expired.
+The distinction is worth keeping: FR-7.6 records a decision that DOES constrain,
+rests on a measurement about kokoro, and is tested by asserting that premise
+still holds. FR-2.2 rests on no measurement, so nothing external could ever
+retire it and nothing internal could ever violate it.
+
+**Its guidance survives**, as prose in FR-2.1 where it always belonged: what
+holds the lock is a separate question from what the lock covers.
+
+`docs/TEST_PLAN.md` reached the same conclusion independently when it was
+written, recording FR-2.2 as "constrains nothing and is discharged by FR-2.1
+passing with whatever". That row had been sitting there saying so.

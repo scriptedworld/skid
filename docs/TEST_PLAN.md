@@ -74,16 +74,17 @@ asserting something skid does not provide.
 | Requirement | Test | Kind |
 |---|---|---|
 | FR-2.1 | `test_two_submissions_never_overlap` | property |
-| FR-2.2 | covered by FR-2.1 | |
 
 **FR-2.1 is about simultaneity, which no suite can hear.** The player script
 appends a start and an end timestamp to a file. The test submits from two
 callers at once and asserts no interval overlaps another. That is the observable
 form of the requirement.
 
-FR-2.2 constrains nothing and is discharged by FR-2.1 passing with whatever
-mechanism exists. It gets no test of its own and says so here, because a row
-with no test needs a reason rather than a gap.
+FR-2.2 stood beside it saying the mechanism was unconstrained, and this plan
+recorded it as "constrains nothing and is discharged by FR-2.1 passing with
+whatever mechanism exists". That was the right reading and it was written here
+before anybody acted on it: the row was retired on 2026-08-28 for exactly that
+reason. Its guidance is prose in FR-2.1 now.
 
 ### Who is speaking
 
