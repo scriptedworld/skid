@@ -16,7 +16,6 @@ satisfied by a design that decides the prefix at queue time, and the audible
 behaviour is still wrong.
 """
 
-import asyncio
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -29,9 +28,10 @@ pytest.importorskip(
 
 from skid.config import Config, load_config
 from skid.generation import Generator
-from skid.server import build_server
+from skid.routes import build_app
 from skid.service import Service
 from skid.substitution import Substitution, apply_substitutions
+from skid.tools import ROUTES
 
 
 @pytest.fixture(scope="module")
@@ -453,8 +453,8 @@ def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> No
     )
     service.start()
     try:
-        server = build_server(service, config_path)
-        asyncio.run(server.call_tool("set_voice", {"voice": "af_bella"}))
+        tools = build_app(service, config_path).test_client()
+        tools.post(ROUTES["set_voice"][1], json={"voice": "af_bella"})
         service.submit("silo", ["through the tool"])
         service.wait_idle(timeout=300)
         after_tool = (service.status()["voice"], generator.voice)

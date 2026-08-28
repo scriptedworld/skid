@@ -72,6 +72,10 @@ dev = [
     "bandit",
     "coverage",
     "pytest>=8.0",
+    # waitress ships no py.typed marker, so mypy cannot see through the import
+    # in main.py without these. A stub package rather than an ignore comment:
+    # the checker gets the types instead of being told not to look.
+    "types-waitress",
 ]
 
 [project.scripts]

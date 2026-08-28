@@ -1,320 +1,203 @@
-"""The stdio shim: forwarding, and surviving a service that forgot the session.
+"""skid-mcp, the MCP server, against the real service over a real request.
 
-Written before the fix and expected to fail. No service is involved: the shim
-talks over an `httpx` transport, so a `MockTransport` scripts the responses and
-the tests assert what the shim sends and what it writes back.
+**Nothing here is scripted or stood in for.** The tools are the ones a client
+calls, the backend is `httpx` over a WSGI transport, and behind it is the actual
+Flask app over an actual `Service`. Flask being WSGI is what makes that possible
+without a socket: the request goes through the same code a socket would reach.
 
-**The bug these are written against.** The MCP session lives in the service's
-memory. A restart forgets it, the service answers every later request with 404
-and `"id": null`, and the shim forwarded that verbatim. A JSON-RPC client cannot
-match a response whose id is null to the request it is waiting on, so it waits
-until something outside gives up. Measured 2026-08-28: three retries in the
-journal, and the one call left to run its course was aborted by the MCP client's
-own backstop after 1800 seconds carrying no diagnosis, which is the failure
-being survived by a third party rather than reported.
+The previous version of this file could not do that. It tested a byte-forwarder
+against a hand-written service that scripted 404s, because the thing under test
+was session recovery and a session is a thing you have to break on purpose. There
+is no session now, so there is nothing to script.
+
+**What is gone, and deliberately.** Nine tests covered `Session._id`,
+`_handshake`, `_lost` and `_reinitialize`: replaying a handshake, retrying once,
+carrying the new session and not the dead one, and refusing to replay for
+anything but a 404. All of it was recovery from a session the service forgot,
+and no session exists on either side now. Their requirement, FR-5.3, is covered
+here by the case that actually remains: a service that cannot be reached fails
+the call instead of hanging it.
 """
 
 from __future__ import annotations
 
-import io
-import json
+import asyncio
+from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
 
-from skid.client import SESSION_HEADER, pump
+from skid.client import Backend, Unreachable, build_server
+from skid.config import Config, load_config
+from skid.routes import build_app
+from skid.service import Service
+from skid.tools import ROUTES
 
-INITIALIZE = {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {"protocolVersion": "2024-11-05", "capabilities": {}},
-}
-INITIALIZED = {"jsonrpc": "2.0", "method": "notifications/initialized"}
-SPEAK = {
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/call",
-    "params": {"name": "speak", "arguments": {"name": "silo", "messages": ["hi"]}},
-}
-
-DEAD_SESSION = {
-    "jsonrpc": "2.0",
-    "id": None,
-    "error": {"code": -32600, "message": "Session not found"},
-}
-"""What the service really returns for a session it has never heard of.
-
-Measured 2026-08-28 against the live socket, HTTP 404. The null id is the whole
-defect: it is not a response to anything the client asked.
-"""
+NOWHERE = Path("/nowhere/skid.sock")
+"""A socket path nothing is listening on, which is what an absent service is."""
 
 
-def _lines(*messages: dict[str, Any]) -> io.StringIO:
-    """Requests as the MCP client would write them, one JSON object per line."""
-    return io.StringIO("".join(json.dumps(message) + "\n" for message in messages))
+@pytest.fixture
+def config_path(tmp_path: Path) -> Path:
+    """A config file path in a directory the test owns."""
+    return tmp_path / "config.toml"
 
 
-def _replies(out: io.StringIO) -> list[dict[str, Any]]:
-    """What the shim wrote back, parsed."""
-    return [json.loads(line) for line in out.getvalue().splitlines() if line.strip()]
+@pytest.fixture
+def service(tmp_path: Path, config_path: Path) -> Iterator[Service]:
+    """A real service with a player that says nothing and exits zero."""
+    script = tmp_path / "player.sh"
+    script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")
+    script.chmod(0o755)
+
+    built = Service(
+        config=Config(player=f"{script} {{file}}"),
+        work_dir=tmp_path / "work",
+        log_path=tmp_path / "log",
+        config_path=config_path,
+    )
+    yield built
+    built.stop()
 
 
-class Service:
-    """A scripted service that can be told to forget its session once."""
-
-    def __init__(self, *, forget_after: int | None = None) -> None:
-        """`forget_after` is how many requests to answer before going amnesiac."""
-        self.seen: list[tuple[str | None, dict[str, Any]]] = []
-        self.executed: list[str] = []
-        self.sessions = 0
-        self._forget_after = forget_after
-
-    def last_session(self) -> str | None:
-        """The session id the most recent request arrived with."""
-        return self.seen[-1][0] if self.seen else None
-
-    def handler(self, request: httpx.Request) -> httpx.Response:
-        """Answer one request, recording the session id it arrived with."""
-        body = json.loads(request.content)
-        session = request.headers.get(SESSION_HEADER)
-        self.seen.append((session, body))
-
-        if body.get("method") == "initialize":
-            self.sessions += 1
-            return httpx.Response(
-                200,
-                json={"jsonrpc": "2.0", "id": body["id"], "result": {"serverInfo": {}}},
-                headers={SESSION_HEADER: f"session-{self.sessions}"},
-            )
-        if body.get("id") is None:
-            return httpx.Response(202, content=b"")
-
-        if self._forget_after is not None and len(self.seen) > self._forget_after:
-            self._forget_after = None
-            return httpx.Response(404, json=DEAD_SESSION)
-
-        if body.get("method") == "tools/call":
-            self.executed.append(body["params"]["name"])
-        return httpx.Response(
-            200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"ok": True}}
-        )
+@pytest.fixture
+def backend(service: Service, config_path: Path) -> Iterator[Backend]:
+    """A backend over the real app, reached through a real WSGI request."""
+    app = build_app(service, config_path)
+    transport = httpx.WSGITransport(app=app)
+    with httpx.Client(transport=transport, base_url="http://localhost") as http:
+        yield Backend(http, "/wsgi/skid.sock")
 
 
-def _run(service: Service, *messages: dict[str, Any]) -> tuple[int, io.StringIO]:
-    """Pump the messages through a shim wired to the scripted service."""
-    out = io.StringIO()
-    with httpx.Client(
-        transport=httpx.MockTransport(service.handler), base_url="http://localhost"
-    ) as http:
-        code = pump(http, _lines(*messages), out, path="/nowhere/skid.sock")
-    return code, out
+@pytest.fixture
+def server(backend: Backend) -> Any:
+    """The MCP server over that backend, as a client meets it."""
+    return build_server(backend)
+
+
+def _call(server: Any, tool: str, **arguments: Any) -> Any:
+    """Call a tool the way a client does, from a synchronous test."""
+    return asyncio.run(server.call_tool(tool, arguments))
 
 
 # COVERS: FR-5.2 | positive
-def test_a_request_is_forwarded_and_its_answer_returned() -> None:
-    """The ordinary path, which nothing covered before this file existed."""
-    service = Service()
+def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None:
+    """The protocol stops here now, so this is where the tool surface lives.
 
-    code, out = _run(service, INITIALIZE, INITIALIZED, SPEAK)
-
-    assert code == 0
-    assert [reply["id"] for reply in _replies(out)] == [1, 2]
-
-
-# COVERS: FR-5.2 | positive
-def test_the_session_id_is_carried_on_later_requests() -> None:
-    """The service hands one back at initialize and expects it thereafter."""
-    service = Service()
-
-    _run(service, INITIALIZE, INITIALIZED, SPEAK)
-
-    assert [session for session, _ in service.seen] == [None, "session-1", "session-1"]
-
-
-# COVERS: FR-5.3 | regression
-def test_a_forgotten_session_is_rebuilt_and_the_request_retried() -> None:
-    """A restart must cost a reconnection, not a call nobody can diagnose.
-
-    The service answers the handshake, then forgets. The shim has to notice the
-    404, replay the handshake it cached, and send the original request again, so
-    that the client gets the answer it was waiting for and never learns a
-    restart happened.
+    Asserted as the whole set against `skid.tools`, so a tool added to the
+    routes and not to this process is caught, and so is the reverse. That pair
+    is the failure mode the split introduced.
     """
-    service = Service(forget_after=2)
+    names = {tool.name for tool in asyncio.run(server.list_tools())}
 
-    code, out = _run(service, INITIALIZE, INITIALIZED, SPEAK)
-
-    assert code == 0
-    assert _replies(out)[-1] == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
-    assert service.sessions == 2
+    assert names == set(ROUTES)
 
 
-# COVERS: FR-5.3 | regression
-def test_the_retry_carries_the_new_session_and_not_the_dead_one() -> None:
-    """Retrying with the id the service just rejected is a loop, not a recovery."""
-    service = Service(forget_after=2)
+# COVERS: FR-5.2 | positive
+def test_a_tool_call_reaches_the_service_and_returns_its_answer(
+    server: Any, service: Service
+) -> None:
+    """One call, one request, one answer, with no handshake in front of it."""
+    _call(server, "speak", name="silo", messages=["one", "two"])
 
-    _run(service, INITIALIZE, INITIALIZED, SPEAK)
-
-    assert service.last_session() == "session-2"
+    assert service.status()["pending"] == 1
 
 
 # COVERS: FR-4.4 | property
-def test_a_recovered_request_is_executed_once_and_not_twice() -> None:
-    """The retry must never make the machine say the same thing twice.
+def test_a_call_is_executed_once(server: Any, service: Service) -> None:
+    """Nothing is ever replayed, because there is no session to lose.
 
-    `speak` is not idempotent, and this is the property the whole retry rests
-    on: recovery fires only for statuses the service emits *before* dispatching,
-    so the request being replayed provably did not run. A future `_lost` that
-    admitted a 503 or a connection reset would break this silently, and the
-    resulting duplicate speech would not look like a shim bug to anybody.
-
-    Asserting the reply arrived is not enough, which is why this exists
-    separately: the service running `speak` twice and answering once passes that
-    check and fails this one.
+    The old shim retried a request when the service said the session was gone,
+    which was safe only because a 404 arrived before dispatch. That invariant
+    was guarded by a docstring, and a later `_lost` admitting a 503 would have
+    made the machine say the same thing twice. Removing the session removes the
+    invariant, and this asserts the property it was protecting.
     """
-    service = Service(forget_after=2)
+    _call(server, "speak", name="silo", messages=["once"])
 
-    _run(service, INITIALIZE, INITIALIZED, SPEAK)
-
-    assert service.executed == ["speak"]
+    assert service.status()["pending"] == 1
 
 
 # COVERS: FR-5.3 | negative
-def test_a_reconnection_refused_at_the_protocol_layer_reports_what_it_said() -> None:
-    """A 200 carrying an error is not a rebuilt session, and its message is the good one.
+def test_an_unreachable_service_fails_the_call_rather_than_hanging() -> None:
+    """The failure FR-5.3 names, against a socket nothing is listening on.
 
-    The service explains itself in the `initialize` response: a protocol version
-    it will not accept, say. Reading only the status would call that success,
-    retry into a session that never existed, and hand the client a vague
-    complaint about the status of the retry instead of the service's own
-    account. That is this module's founding mistake pointed at its own recovery
-    path.
+    A real transport over a real absent path, so what is exercised is what a
+    client meets when the service is down: an error, promptly, naming where it
+    looked. The case this replaces waited 1800 seconds and said nothing.
     """
+    transport = httpx.HTTPTransport(uds=str(NOWHERE))
+    with httpx.Client(transport=transport, base_url="http://localhost") as http:
+        backend = Backend(http, NOWHERE)
 
-    handshakes: list[int] = []
-
-    def refuse_handshake(request: httpx.Request) -> httpx.Response:
-        """Answer the first handshake, then refuse to rebuild at the JSON-RPC layer."""
-        body = json.loads(request.content)
-        if body.get("method") == "initialize":
-            handshakes.append(1)
-            if len(handshakes) > 1:
-                return httpx.Response(
-                    200,
-                    json={
-                        "jsonrpc": "2.0",
-                        "id": body["id"],
-                        "error": {"code": -32602, "message": "unsupported protocol"},
-                    },
-                )
-            return httpx.Response(
-                200,
-                json={"jsonrpc": "2.0", "id": body["id"], "result": {}},
-                headers={SESSION_HEADER: "session-1"},
-            )
-        if body.get("id") is None:
-            return httpx.Response(202, content=b"")
-        return httpx.Response(404, json=DEAD_SESSION)
-
-    out = io.StringIO()
-    with httpx.Client(
-        transport=httpx.MockTransport(refuse_handshake), base_url="http://localhost"
-    ) as http:
-        pump(
-            http, _lines(INITIALIZE, INITIALIZED, SPEAK), out, path="/nowhere/skid.sock"
-        )
-
-    (failure,) = [reply for reply in _replies(out) if "error" in reply]
-    assert failure["id"] == 2
-    assert "unsupported protocol" in failure["error"]["message"]
-
-
-def test_initializing_twice_replays_the_current_handshake_not_both() -> None:
-    """A cached handshake that accumulates would rebuild a session already left behind.
-
-    Keyed by method rather than appended, so a client that re-initializes
-    replaces what is replayed. Appending would send the stale `initialize`
-    first and the session would be rebuilt from the wrong one.
-    """
-    service = Service(forget_after=4)
-    second = {**INITIALIZE, "id": 9, "params": {"protocolVersion": "later"}}
-
-    _run(service, INITIALIZE, INITIALIZED, second, SPEAK)
-
-    replayed = [body for _, body in service.seen if body.get("method") == "initialize"]
-    assert [body["params"].get("protocolVersion") for body in replayed[-1:]] == [
-        "later"
-    ]
-
-
-# COVERS: FR-5.3 | property
-def test_the_handshake_is_replayed_only_when_the_session_is_lost() -> None:
-    """Re-initializing on every request would make each call cost two round trips."""
-    service = Service(forget_after=2)
-
-    _run(service, INITIALIZE, INITIALIZED, SPEAK, SPEAK, SPEAK)
-
-    assert service.sessions == 2
+        with pytest.raises(Unreachable, match=str(NOWHERE)):
+            backend.call("status")
 
 
 # COVERS: FR-5.3 | negative
-def test_an_error_the_shim_cannot_recover_carries_the_requests_own_id() -> None:
-    """A client can report an error. It cannot report silence.
+def test_a_refusal_carries_the_services_own_reason(backend: Backend) -> None:
+    """A value the service will not store fails the call and says why.
 
-    This is the property FR-5.3 is really asking for, and the reason the row's
-    two named cases were not enough: the backend answered promptly here, with
-    something that was not an answer to the question asked.
+    Asserted at the backend rather than through `call_tool`, because the SDK
+    wraps a tool's exception as "Error executing tool set_voice" and matching on
+    the reason there would be testing the wrapper. What skid is responsible for
+    is that the reason exists, crosses the socket intact, and names the value
+    that was refused.
     """
-
-    def refuse(_request: httpx.Request) -> httpx.Response:
-        """Fail every request in a way no reconnection would fix."""
-        return httpx.Response(500, json={"jsonrpc": "2.0", "id": None, "error": {}})
-
-    out = io.StringIO()
-    with httpx.Client(
-        transport=httpx.MockTransport(refuse), base_url="http://localhost"
-    ) as http:
-        pump(http, _lines(SPEAK), out, path="/nowhere/skid.sock")
-
-    (reply,) = _replies(out)
-    assert reply["id"] == 2
-    assert "skid" in reply["error"]["message"]
+    with pytest.raises(Unreachable, match="af-typo"):
+        backend.call("set_voice", voice="af-typo")
 
 
-# COVERS: FR-5.3 | edge
-def test_a_notification_that_fails_gets_no_reply() -> None:
-    """JSON-RPC forbids answering a message that carried no id."""
+# COVERS: FR-6.5 | negative
+def test_an_unknown_voice_fails_the_call(server: Any, config_path: Path) -> None:
+    """The tool call is the last moment the caller is present to be told."""
+    with pytest.raises(Exception, match="set_voice"):
+        _call(server, "set_voice", voice="af-typo")
 
-    def refuse(_request: httpx.Request) -> httpx.Response:
-        """Fail the notification."""
-        return httpx.Response(500, json={"error": {}})
-
-    out = io.StringIO()
-    with httpx.Client(
-        transport=httpx.MockTransport(refuse), base_url="http://localhost"
-    ) as http:
-        pump(http, _lines(INITIALIZED), out, path="/nowhere/skid.sock")
-
-    assert _replies(out) == []
+    assert not config_path.exists()
 
 
-# COVERS: FR-5.3 | negative
-def test_an_unreachable_socket_exits_naming_the_path(
-    capsys: pytest.CaptureFixture[str],
+# COVERS: FR-6.1 | positive
+def test_setting_the_voice_through_the_tool_reaches_the_config(
+    server: Any, config_path: Path
 ) -> None:
-    """Today's behaviour, kept under test while everything around it changes."""
+    """The tool route ends at the file, with plain HTTP in the middle."""
+    _call(server, "set_voice", voice="af_bella")
 
-    def unreachable(_request: httpx.Request) -> httpx.Response:
-        """There is no service at the other end."""
-        raise httpx.ConnectError("no such file")
+    assert load_config(config_path).voice == "af_bella"
 
-    with httpx.Client(
-        transport=httpx.MockTransport(unreachable), base_url="http://localhost"
-    ) as http:
-        code = pump(http, _lines(SPEAK), io.StringIO(), path="/nowhere/skid.sock")
 
-    assert code == 1
-    assert "/nowhere/skid.sock" in capsys.readouterr().err
+# COVERS: FR-7.9 | property
+def test_the_substitution_set_is_global(server: Any) -> None:
+    """No name scopes the set: a correction any caller makes helps every caller."""
+    tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
+    schema = tools["add_substitution"].input_schema
+
+    assert "name" not in schema.get("properties", {})
+
+
+# COVERS: FR-8.1 | positive
+def test_a_substitution_is_declared_through_the_tool(
+    server: Any, config_path: Path
+) -> None:
+    """Patterns and their replacements arrive over MCP and land in the file."""
+    _call(
+        server,
+        "add_substitution",
+        pattern="kokoro",
+        replacement="koh koh roh",
+        kind="literal",
+    )
+
+    entries = load_config(config_path).substitutions
+    assert [(e.pattern, e.replacement) for e in entries] == [("kokoro", "koh koh roh")]
+
+
+# COVERS: FR-4.7 | positive
+def test_status_reports_what_a_caller_cannot_log(server: Any) -> None:
+    """speak returned at queue time, so status is how a caller learns anything."""
+    reported = _call(server, "status")
+
+    assert reported is not None

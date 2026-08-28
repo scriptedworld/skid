@@ -10,11 +10,17 @@ listening there**, because the by-hand path used to unlink whatever it found and
 bind over it, which silently takes the socket away from systemd and leaves two
 resident models with only one of them reachable.
 
-**The two paths differ in how FR-5.4 is met, and the difference is worth
-knowing.** Under systemd the unit sets `SocketMode=0600` on the socket itself.
-Run by hand, uvicorn chmods the socket to 0666 after binding it, whatever umask
-it was created under, so owner-only access rests entirely on the 0700 directory
-holding it. Both are private; only one says so on the socket.
+**Both paths now say 0600 on the socket itself.** Under systemd the unit sets
+`SocketMode=0600`. Run by hand, skid binds the socket and chmods it, which it
+can do because it owns the bind: waitress is handed an already-listening socket
+rather than a path. The previous arrangement let uvicorn create the socket and
+chmod it to 0666, so owner-only access rested entirely on the 0700 directory
+above it (FR-5.4).
+
+**What crosses this socket is plain HTTP, not MCP.** The protocol lives in
+`skid-mcp`, so nothing here holds a session and a restart invalidates nothing.
+Two SDK imports left with it, one of them present only because the MCP SDK
+answers 421 to an unknown Host header over a socket no browser can reach.
 """
 
 from __future__ import annotations
@@ -25,13 +31,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-import uvicorn
-from mcp.server.transport_security import TransportSecuritySettings
-from starlette.applications import Starlette
+import waitress
+from flask import Flask
 
 from skid.config import default_config_path, load_config
 from skid.generation import Generator
-from skid.server import build_server
+from skid.routes import build_app
 from skid.service import Service
 
 LISTEN_FD = 3
@@ -110,8 +115,8 @@ def someone_is_listening(path: Path) -> bool:
     return True
 
 
-def build() -> tuple[Service, Starlette]:
-    """Build the service and the ASGI app, with the model already warm."""
+def build() -> tuple[Service, Flask]:
+    """Build the service and the HTTP app, with the model already warm."""
     ensure_runtime_dir()
     config_path = default_config_path()
     config = load_config(config_path)
@@ -127,22 +132,40 @@ def build() -> tuple[Service, Starlette]:
         config_path=config_path,
     )
     service.start()
-    app = build_server(service, config_path).streamable_http_app(
-        transport_security=TransportSecuritySettings(
-            enable_dns_rebinding_protection=True,
-            allowed_hosts=["localhost", "localhost:*", "skid"],
-        )
-    )
-    return service, app
+    return service, build_app(service, config_path)
+
+
+def inherited_socket() -> socket.socket:
+    """The listening socket systemd created and passed as fd 3.
+
+    Taken as an object rather than a number because waitress serves sockets that
+    are already bound and listening, which is exactly what socket activation
+    hands over. Nothing here binds, and nothing unlinks a path systemd owns.
+    """
+    return socket.socket(fileno=LISTEN_FD)
+
+
+def bound_socket(path: Path) -> socket.socket:
+    """Bind and listen on `path` ourselves, owner-only, for the by-hand path.
+
+    The mode is set here because skid owns the bind. Letting the server create
+    the socket from a path is what produced an 0666 socket whose privacy came
+    entirely from the directory above it.
+    """
+    path.unlink(missing_ok=True)
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.bind(str(path))
+    path.chmod(0o600)
+    sock.listen()
+    return sock
 
 
 def main() -> int:
     """Serve until stopped."""
     service, app = build()
-    notify_ready()
 
     if os.environ.get("LISTEN_FDS"):
-        uvicorn.run(app, fd=LISTEN_FD, log_level="warning")
+        sock = inherited_socket()
     else:
         path = ensure_runtime_dir() / "skid.sock"
         if someone_is_listening(path):
@@ -153,9 +176,11 @@ def main() -> int:
             )
             service.stop()
             return 1
-        path.unlink(missing_ok=True)
         print(f"no systemd; serving on {path}", file=sys.stderr)
-        uvicorn.run(app, uds=str(path), log_level="warning")
+        sock = bound_socket(path)
+
+    notify_ready()
+    waitress.serve(app, sockets=[sock], clear_untrusted_proxy_headers=True)
 
     service.stop()
     return 0
