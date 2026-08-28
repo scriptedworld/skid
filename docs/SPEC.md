@@ -10,52 +10,54 @@ wins and this is the defect.
 Revised 2026-08-27 after two independent cold reviews of `fd42bdf`. What changed
 is recorded in `clank/tasks/skid/first-build/`.
 
-## The shape: many clients, one backend
+## The shape: one service
 
-**Two kinds of process.**
+**One long-lived process**, `skid`, reached over HTTP by every agent.
 
-    skid-mcp     an MCP server over stdio. One per agent that connects.
-    skid-backend one process for the machine. Holds the model, owns playback.
+    transport   MCP over HTTP, on a unix socket at
+                $XDG_RUNTIME_DIR/skid/skid.sock, mode 0600
+    lifetime    systemd socket activation: started on first connection,
+                restarted if it dies
 
-`skid-mcp` holds no model, opens no audio, and makes no decision about order. It
-validates a call, forwards it over a socket, and returns what came back.
+It is the MCP server, it holds the model, it owns playback, and it is the only
+writer of the config. There is no second process and no protocol between
+processes.
 
 *Discharges FR-5.2, FR-5.1.*
 
-### Why one backend, which is a choice and not a necessity
+### Why one process, which is a choice and not a necessity
 
-An MCP server over stdio is started by each client that connects, so several
-agents mean several `skid-mcp` processes, and exclusion has to reach across
-them.
+**An HTTP transport is what makes one process possible.** An MCP server over
+stdio is started per client, so several agents would mean several servers, and
+exclusion would have to reach across them. Over HTTP the agents are clients of
+one server, and the question does not arise.
 
-**The requirements do not compel a backend.** FR-2.2 permits a lock file
-explicitly, "against every process that agrees to take it", and a design with no
-backend at all satisfies every settled row: each `skid-mcp` loads kokoro itself
-and holds a lock file around playback. It meets FR-2.1, FR-4.4, FR-7.2, FR-7.3
-and FR-4.2. It is slower and it is not forbidden.
+**The requirements do not compel this.** FR-2.2 permits a lock file explicitly,
+"against every process that agrees to take it", and a design of N stdio servers
+each loading kokoro and taking a lock file around playback satisfies FR-2.1,
+FR-4.4, FR-7.2, FR-7.3 and FR-4.2. It is slower and it is not forbidden. The one
+row it fails is FR-5.1, which says of itself that it is "wanted rather than
+required", so an argument that this design is forced would rest on a want.
 
-**The one row it fails is FR-5.1, which says of itself that it is "wanted rather
-than required".** So a backend is what FR-5.1 asks for, and FR-5.1 is a want. An
-argument that the design is forced would have to rest on that want, and it
-cannot.
+What one process is chosen for:
 
-What the backend is chosen for, beyond the warm model:
-
-- **One writer for the config**, which is what makes FR-7.1 and FR-7.8's
-  write-through safe without a second locking scheme.
-- **One place FR-4.4 is true**, rather than a cross-process protocol about whose
-  submission is next.
+- **The warm model**, FR-5.1, held by the only process there is.
+- **One writer for the config**, which makes FR-7.1 and FR-7.8's write-through
+  safe without a second locking scheme.
+- **One place FR-4.4 is true**, rather than a protocol about whose submission is
+  next.
 - **One place a failure is visible**, which FR-4.7 requires.
+- **No start protocol at all**, because systemd owns the socket and the
+  lifetime. An earlier draft carried a lock file, a stale-socket unlink and a
+  bind-then-rename to make the path mean ready. All of it is gone, and it was
+  the part of this document nobody had run.
 
-Those are good reasons. They are not necessity, and the earlier draft of this
-section claimed necessity, which is a claim that stops anyone reconsidering the
-design later.
-
-**The appeal to the repository boundary is withdrawn as an argument.**
-`docs/PROJECT.md` records that skid has its own tree because it is an MCP with a
-supporting background process, and FR-5.1 records that the requirement and the
-boundary are one decision seen twice. Citing the boundary as a second reason
-counts one decision twice.
+**The appeal to the repository boundary is not an argument.** `docs/PROJECT.md`
+records that skid has its own tree because it is an MCP with a supporting
+background process, and FR-5.1 records that the requirement and the boundary are
+one decision seen twice. Citing the boundary as a second reason counts one
+decision twice. The criterion still holds under this shape, and more plainly: a
+persistent service is the background process.
 
 *Discharges FR-2.1, FR-2.2, FR-5.1.*
 
@@ -64,89 +66,72 @@ counts one decision twice.
 **Because all playback happens in one process, the exclusion of FR-2.1 is an
 in-process mutex.** No cross-process protocol about who is speaking.
 
-That much follows. **What does not follow is freedom from stale state**, which
-an earlier draft claimed. See the start protocol below: the socket path is
-filesystem state that outlives the process holding it, so skid has stale-state
-handling to do, and the honest claim is that the exclusion of playback is free
-rather than that staleness is gone.
+**Stale state is systemd's problem now, not skid's.** An earlier draft claimed
+freedom from it and had to be corrected, because a socket path outlives the
+process that bound it: measured 2026-08-27, after `SIGKILL` the path remains, a
+fresh bind gets `EADDRINUSE` and a client gets `ECONNREFUSED`. Under socket
+activation the init system owns the socket's existence, so skid neither creates
+nor cleans it.
 
-The mutex is sufficient only while every clip is played by the one backend.
+The mutex is sufficient only while every clip is played by this process.
 
 *Discharges FR-2.1, FR-2.2, FR-7.3.*
 
-## Starting the backend, and the socket
+## The socket, and who owns it
 
-    $XDG_RUNTIME_DIR/skid/          directory, mode 0700, ownership checked
-        backend.sock                the socket
-        backend.lock                held only during start
+    ~/.config/systemd/user/skid.socket     ListenStream, SocketMode=0600
+    ~/.config/systemd/user/skid.service    Type=notify, Restart=on-failure
 
-Falling back to `/tmp/skid-$UID/` when `XDG_RUNTIME_DIR` is unset. **The
-directory is created 0700 and its ownership is verified before use**, because
-`/tmp` is world-writable and a path another user pre-created would otherwise be
-trusted.
+    $XDG_RUNTIME_DIR/skid/skid.sock        the socket systemd creates
 
-**A socket file outlives the process that bound it.** Measured 2026-08-27:
-after `SIGKILL` the path remains, a fresh bind gets `EADDRINUSE`, and a client
-gets `ECONNREFUSED`. So presence of the path is not evidence of a live backend,
-and "start it if the socket is absent" would leave skid permanently silent after
-any crash.
+**skid does not create, bind or clean up the socket.** systemd creates it,
+passes the listening file descriptor in on `$LISTEN_FDS`, starts skid on the
+first connection, and restarts it if it dies. A client's first call after a
+crash waits for the restart rather than meeting a dead path.
 
-**The start protocol.**
+That deletes the whole start protocol an earlier draft carried: no lock file, no
+stale-socket unlink, no bind-then-rename, no readiness race. **It was the part of
+this document nobody had run**, and it is gone rather than tested.
 
-    1. connect to backend.sock. On success, done.
-    2. On ENOENT or ECONNREFUSED, take an exclusive flock on backend.lock.
-    3. Holding the lock, connect once more. Another client may have won while
-       this one waited; if it answers, done.
-    4. Still nothing: unlink any stale backend.sock, spawn the backend, and
-       wait for the path to appear, with a timeout.
-    5. Release the lock.
+### Why a unix socket rather than a TCP port
 
-**The backend binds to a temporary name, loads the model, and only then renames
-the socket into place.** The rename is atomic, so the path appearing means the
-backend is ready, and a client never connects to a socket whose process is still
-loading torch and possibly downloading weights. The wait in step 4 is bounded and
-generous for that reason.
+HTTP would ordinarily mean `127.0.0.1:<port>`, and every MCP client understands
+that. **A localhost port is reachable by every process on the machine**, so any
+local user could make the speakers talk, read the substitution set, and rewrite
+the voice through the tools.
 
-Yes, this is a lock file. It serialises start-up, not playback, and it is the
-part of stale-state handling the earlier draft claimed to have avoided.
+A unix socket has a path, and therefore has an owner and a mode. `SocketMode=0600`
+in the unit file is the whole of the access control, and systemd applies it
+before skid exists.
 
-**A pathname socket is chosen over an abstract one, and the trade is access
-control against staleness.** A Linux abstract socket, whose name begins with a
-NUL, is not a filesystem entry and has no staleness at all. Measured
-2026-08-27: bind to `"\0skid"` in one process, and while it is held a second
-bind gets `EADDRINUSE`; `SIGKILL` that process and a fresh bind to the same name
-succeeds, with nothing left behind to unlink and no path on disk to find.
+**A Linux abstract socket was considered and rejected on the same axis.**
+Measured 2026-08-27: bind to `"\0skid"`, a second bind gets `EADDRINUSE` while
+it is held, and after `SIGKILL` a fresh bind to the same name succeeds with
+nothing left on disk. No staleness at all, and no path, so no permissions
+either. Access would be scoped to the network namespace, which is the exposure
+a TCP port has.
 
-It also has no path, and therefore no file permissions. Access would be scoped
-to the network namespace, which on an ordinary machine means any local user can
-connect and make the speakers talk, and can write entries into the config
-through the tools.
+Socket activation gets the lifetime benefit that made the abstract socket
+attractive, without giving up the mode bit.
 
-**Owner-only access is worth more here than avoiding a start protocol**, so the
-socket keeps its path under a 0700 directory and the start protocol above
-handles the staleness that comes with it. Socket activation, letting the init
-system own the name and the lifetime, is the third option and is more machinery
-than skid needs while it is one user's tool on one machine.
+*Discharges FR-5.1, FR-2.1, FR-5.4.*
 
-**How the backend is spawned matters, because `skid-mcp` speaks JSON-RPC on its
-stdout.** The child is detached into its own session, its stdin is `/dev/null`,
-and its stdout and stderr go to the log named under Failure. It never inherits
-`skid-mcp`'s streams: one torch warning or one progress bar written into that
-pipe corrupts the client's protocol. Detaching is also what stops the shared
-backend dying with whichever agent happened to start it.
+### Not started by a client
 
-Requests are newline-delimited JSON, one request, one response. Each carries a
-protocol version, because a backend that never exits will meet an upgraded
-`skid-mcp`.
+Nothing about skid is spawned by an agent, so none of the stdio hazards of an
+earlier draft apply: no inherited JSON-RPC stream to corrupt with a torch
+warning, no detaching, no `/dev/null` for stdin. skid's stdout and stderr are
+the service's, and journald takes them.
 
-*Discharges FR-5.1, FR-2.1.*
+`Type=notify` means skid tells systemd when the model is loaded, so "the service
+is active" and "skid can answer" are the same statement.
 
 ## What a submission is
 
     {"name": "silo", "messages": ["first", "second"]}
 
 `name` identifies the submitting engine. `messages` is an array, always, and an
-array of one is how a single message is sent. `skid-mcp` rejects an absent name,
+array of one is how a single message is sent. The tool rejects an absent name,
 an empty array and a non-string message before anything is queued.
 
 *Discharges FR-3.1, FR-4.1.*
@@ -361,11 +346,11 @@ adds:
 - **the backend absent or wedged**, which every caller meets for the whole
   window between a crash and the next start
 
-**Every request to the backend has a bounded wait**, and exceeding it is a tool
-error naming the backend rather than the call (FR-5.3). One rule covers both an
-absent backend and one that is connected and not answering. The second matters
-more since the start protocol made path presence mean ready: the stronger that
-assumption, the more a wedged backend costs.
+**Every call has a bounded wait**, and exceeding it is a tool error naming the
+service rather than the call (FR-5.3). Socket activation removes the absent
+case, since a connection starts the service, but it does not remove the wedged
+one: a process that is running and not answering still leaves a client waiting,
+and `Type=notify` makes that less likely rather than impossible.
 
 That sentence existed at `fd42bdf`, was lost when this section was rewritten,
 and nothing noticed because no requirement held it. FR-5.3 is now the row that
@@ -395,8 +380,8 @@ kokoro is torch and generation blocks. Under asyncio without an executor it
 would stall the event loop, which would stall accepts, which would break
 FR-4.5's promise that submitting returns immediately.
 
-`skid-mcp` is whatever the MCP SDK requires, and holds no state worth
-synchronising.
+The HTTP surface is whatever the MCP SDK's server requires, served on the
+socket systemd hands over.
 
 *Discharges FR-4.5, FR-4.2.*
 
@@ -406,14 +391,32 @@ Python 3.12 exactly, and a uv project. kokoro refuses 3.13 and later, and this
 machine's default interpreter is 3.14.7, so the pin is load-bearing rather than
 conventional.
 
-Dependencies: `kokoro`, the Anthropic MCP SDK for Python, a style-preserving
-TOML library, and numpy, which arrives with kokoro. **Whether the MCP SDK
-supports 3.12 is the open risk in the pin**: it was measured present under
-3.14.7, which says it exists rather than that it installs here. Confirm it before
-anything else is built, because FR-1.7 and FR-5.2 disagree if it does not.
+Dependencies: `kokoro`, the Anthropic MCP SDK for Python, `tomlkit` for the
+style-preserving round trip FR-7.1 and FR-7.8 need, and numpy, which arrives
+with kokoro. Measured 2026-08-27: kokoro 0.9.4 and its torch stack install and
+run under 3.12.14, and the WAV writer is the stdlib's.
 
-Linux only in the first pass. The platform-specific surface is one line of
-config: the player command.
+**Whether the MCP SDK supports 3.12 is still the open risk in the pin.** It was
+measured present under 3.14.7, which says the SDK exists rather than that it
+installs here, and it is not yet a dependency of this project. Confirm it before
+the server is written, because FR-1.7 and FR-5.2 disagree if it does not.
+
+### Installed as a uv tool
+
+skid is installed with `uv tool install`, so it gets its own environment and its
+own pinned interpreter rather than depending on whatever `python3` means on the
+machine. That is what makes FR-1.7's pin hold in practice rather than only in
+`pyproject.toml`.
+
+The installer also writes the two systemd user units and reloads the daemon.
+Those units are what own the socket and the lifetime, so an install that skipped
+them would leave a service nothing starts.
+
+Nothing about this is built yet.
+
+Linux only in the first pass, and the systemd dependence makes that sharper than
+it was: the platform-specific surface is now the player command **and** the
+service manager.
 
 *Discharges FR-1.6, FR-1.7, FR-7.6, FR-5.2.*
 

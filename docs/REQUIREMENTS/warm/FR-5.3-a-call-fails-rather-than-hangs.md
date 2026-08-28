@@ -10,15 +10,17 @@ to be told, and told quickly, because the agent is waiting on the call.
 
 **One rule covers two cases**, and only the first was ever written down:
 
-- **Absent.** No backend, or one that died. Every caller meets this for the
-  whole window between a crash and the next start.
-- **Wedged.** Connected and not answering. `docs/SPEC.md` makes the socket path
-  appear only once the model has loaded, so path presence means ready, and the
-  stronger that assumption is the more a wedged backend costs when it happens.
+- **Absent.** Largely answered by socket activation: a connection starts the
+  service and systemd restarts it if it dies, so a crash costs a wait rather
+  than a refusal. The bound still matters, because starting includes loading a
+  model.
+- **Wedged.** Running and not answering, which nothing removes. `Type=notify`
+  separates "started" from "ready" and makes it less likely; a process can still
+  stop answering after both.
 
-A timeout naming the backend distinguishes both from a call that failed on its
-own merits, which matters because FR-4.7's log lives in the backend and is
-exactly what a caller cannot reach when this fires.
+A timeout naming the service distinguishes both from a call that failed on its
+own merits, which matters because FR-4.7's log lives inside skid and is exactly
+what a caller cannot reach when this fires.
 
 ## Why it is a row rather than a line of spec
 
