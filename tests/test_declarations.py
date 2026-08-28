@@ -127,6 +127,27 @@ def test_skid_imports_no_audio_library() -> None:
 
 
 # COVERS: FR-1.6 | property
+def test_the_licence_is_declared_and_matches_the_file_beside_it() -> None:
+    """A licence has two halves and only one of them was here.
+
+    `LICENSE` is the written half and was correct. `pyproject.toml` is the
+    machine-readable half, which is what a package index reads, and it declared
+    nothing at all: a published wheel would have said its terms were unknown
+    while the repository beside it carried Apache 2.0.
+
+    Asserted together rather than separately, because the failure worth catching
+    is not either being absent. It is the two disagreeing, which is the state
+    that looks fine from whichever one you happen to read.
+    """
+    declared = _pyproject()["project"]["license"]
+    written = (CHECKOUT / "LICENSE").read_text(encoding="utf-8")
+
+    assert declared == "Apache-2.0"
+    assert "Apache License" in written
+    assert "Version 2.0" in written
+
+
+# COVERS: FR-1.6 | property
 def test_linux_is_declared_rather_than_intended() -> None:
     """Scope that only a document states is scope nothing can check.
 
