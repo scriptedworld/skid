@@ -34,6 +34,15 @@ It carries nothing. The spool is the queue, and this only says to go and look,
 so one wakeup can cover several entries and a restart needs none at all.
 """
 
+PROGRESS_GRACE = 60.0
+"""How long the serve loop may go without a step before it is called stuck.
+
+Twice the generation time of the longest clip the player would accept. Measured
+2026-08-28: 6.4 characters per second of audio, so the 300 second playback
+ceiling in `player.py` is about 1950 characters, which generates in roughly 30
+seconds. `.ephemera/measure-clip-length.py` regenerates the figures.
+"""
+
 STOP = None
 """What is put on a queue to say there is nothing more coming.
 
@@ -80,6 +89,7 @@ class Service:
         self._idle = threading.Event()
         self._idle.set()
         self._thread: threading.Thread | None = None
+        self._progressed = time.monotonic()
 
         self.greeted: list[str] = []
         self.spoken: list[tuple[str, str]] = []
@@ -153,6 +163,36 @@ class Service:
         """Block until nothing is waiting or being spoken."""
         return self._idle.wait(timeout=timeout)
 
+    def _progress(self) -> None:
+        """Note that the serve loop got somewhere. Called at each step it takes."""
+        self._progressed = time.monotonic()
+
+    def is_progressing(self, now: float, grace: float = PROGRESS_GRACE) -> bool:
+        """Whether the serve loop is working or waiting, rather than stuck.
+
+        **Progress, not liveness.** A timer on a thread that is always alive
+        proves the timer runs. What the watchdog needs to know is that the loop
+        in `_serve` is not wedged, and there are three ways for it to be fine:
+
+            idle        nothing queued, so the loop is parked on `_incoming`
+            playing     a clip is on the speaker, bounded by FR-1.9's timeout
+            recent      it stepped within `grace`
+
+        Generation is the only step that takes real time without touching any of
+        the first two, which is what `grace` covers. Measured 2026-08-28: 1196
+        characters generated in 10.9 seconds, and a clip long enough to reach
+        the player's own 300s ceiling is about 1950 characters and roughly 30
+        seconds of generation. The default is twice that.
+
+        Wrong in this direction is a watchdog that fires late. Wrong in the
+        other restarts a service that is speaking and cuts a clip mid-sentence.
+        """
+        if self._idle.is_set():
+            return True
+        if self._player.playing_since() is not None:
+            return True
+        return (now - self._progressed) < grace
+
     def status(self) -> dict[str, object]:
         """Health, queue depth and recent failures, for a caller that cannot log."""
         return {
@@ -209,6 +249,7 @@ class Service:
                 self._record_failure(f"generation failed for {raw!r}: {exc}")
                 continue
             clips.put(Clip(path=path, text=raw, is_greeting=is_greeting))
+            self._progress()
         clips.put(STOP)
 
     def _speak(self, submission: Submission, index_base: int) -> None:
@@ -250,6 +291,7 @@ class Service:
                     self.spoken.append((submission.name, clip.text))
             finally:
                 clip.path.unlink(missing_ok=True)
+                self._progress()
 
         worker.join(timeout=5)
         self._table.record_finished(submission.name, when=time.monotonic())
@@ -270,6 +312,7 @@ class Service:
         while True:
             if self._incoming.get() is None:
                 return
+            self._progress()
             self._refresh_config()
             for entry in self._expired_now():
                 self._record_failure(
@@ -285,6 +328,7 @@ class Service:
                     )
                 finally:
                     self._spool.done(taken)
+                    self._progress()
                 index += len(submission.messages) + 1
             self._idle.set()
 

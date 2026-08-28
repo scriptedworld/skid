@@ -29,7 +29,7 @@ pytest.importorskip(
 from skid.config import Config, load_config
 from skid.generation import Generator
 from skid.routes import build_app
-from skid.service import Service
+from skid.service import PROGRESS_GRACE, Service
 from skid.substitution import Substitution, apply_substitutions
 from skid.tools import ROUTES
 
@@ -543,3 +543,66 @@ def test_a_substitution_does_not_reach_the_log(
     assert apply_substitutions(entries, submitted) != submitted
     assert submitted in log
     assert "coke oh roh" not in log
+
+
+# COVERS: FR-5.3 | property
+def test_an_idle_service_is_progressing(service_for: Callable[..., Service]) -> None:
+    """Parked on an empty queue is health, and it is the state skid is usually in.
+
+    A watchdog that treated idle as a stall would restart a working service
+    every two minutes all day.
+    """
+    service = service_for()
+    service.wait_idle(timeout=300)
+
+    assert service.is_progressing(time.monotonic())
+
+
+# COVERS: FR-5.3 | property
+def test_a_long_clip_on_the_speaker_is_progressing_not_stuck(
+    service_for: Callable[..., Service], tmp_path: Path
+) -> None:
+    """Playback is health however long it lasts, so the grace does not bound it.
+
+    Measured 2026-08-28: 1196 characters is 76.9 seconds of audio, and nothing
+    caps a message's length. A watchdog tuned to clip length would either fire
+    mid-sentence or be set so high it never fires. Asserted with the player held
+    and the grace set to zero, which is the strongest form: no elapsed time
+    whatsoever can make a playing service look stuck.
+    """
+    service = service_for(_holds_at(1, tmp_path))
+
+    service.submit("silo", ["one"])
+    assert _wait_for(tmp_path / "holding"), "the player never started"
+    while_playing = service.is_progressing(time.monotonic(), grace=0.0)
+
+    (tmp_path / "release").touch()
+    service.wait_idle(timeout=300)
+
+    assert while_playing
+
+
+# COVERS: FR-5.3 | negative
+def test_a_stalled_loop_stops_looking_like_progress(
+    tmp_path: Path, generator: Generator
+) -> None:
+    """Withholding the ping is the mechanism, so this is the case that matters.
+
+    The shape of a wedged service: work accepted, nothing on the speaker, and no
+    step taken since. Arranged by submitting to a service that was never
+    started, so the serve loop genuinely never runs and nothing has to be broken
+    to hold it still.
+
+    Asked about a moment past the grace rather than waiting one out, so the test
+    costs nothing and `PROGRESS_GRACE` can change without it becoming slow.
+    """
+    service = Service(
+        config=Config(player=_player_that("true", tmp_path)),
+        work_dir=tmp_path / "work",
+        log_path=tmp_path / "log",
+        generator=generator,
+    )
+
+    service.submit("silo", ["never spoken"])
+
+    assert not service.is_progressing(time.monotonic() + PROGRESS_GRACE + 1)

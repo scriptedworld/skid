@@ -29,6 +29,8 @@ import os
 import socket
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 import waitress
@@ -72,8 +74,26 @@ def state_dir() -> Path:
     return root / "skid"
 
 
-def notify_ready() -> None:
-    """Tell systemd the model is loaded, so active and answerable are one thing.
+def watchdog_interval() -> float | None:
+    """How often to ping, from `WATCHDOG_USEC`, or None if systemd wants none.
+
+    Half of what the unit asked for, which is what systemd's own documentation
+    recommends, so the value lives in `skid.service` and is not restated here.
+    A unit with no `WatchdogSec` sets nothing and gets no pinging thread.
+
+    `WATCHDOG_PID` is checked because systemd sets these for the main process
+    and they are inherited by children; ignoring it would have a forked process
+    keeping the service alive on its parent's behalf.
+    """
+    raw = os.environ.get("WATCHDOG_USEC")
+    owner = os.environ.get("WATCHDOG_PID")
+    if not raw or (owner and int(owner) != os.getpid()):
+        return None
+    return int(raw) / 2_000_000
+
+
+def notify(message: bytes) -> None:
+    """Send one datagram to systemd, and say nothing when there is nobody there.
 
     Written by hand rather than taken as a dependency: it is one datagram, and
     skid is silent about it when there is no NOTIFY_SOCKET, which is the case
@@ -86,7 +106,26 @@ def notify_ready() -> None:
         address = "\0" + address[1:]
     with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as sock:
         sock.connect(address)
-        sock.sendall(b"READY=1")
+        sock.sendall(message)
+
+
+def keep_pinging(service: Service, interval: float) -> None:
+    """Ping while the service is getting somewhere, and stop when it is not.
+
+    **Not a timer.** Withholding the ping is the whole mechanism: a thread that
+    pings unconditionally proves only that the thread runs, which is the failure
+    this is supposed to detect. `Service.is_progressing` is what decides, and it
+    counts idle and playback as health.
+    """
+    while True:
+        time.sleep(interval)
+        if service.is_progressing(time.monotonic()):
+            notify(b"WATCHDOG=1")
+
+
+def notify_ready() -> None:
+    """Tell systemd the model is loaded, so active and answerable are one thing."""
+    notify(b"READY=1")
 
 
 def someone_is_listening(path: Path) -> bool:
@@ -180,6 +219,13 @@ def main() -> int:
         sock = bound_socket(path)
 
     notify_ready()
+
+    interval = watchdog_interval()
+    if interval is not None:
+        threading.Thread(
+            target=keep_pinging, args=(service, interval), daemon=True
+        ).start()
+
     waitress.serve(app, sockets=[sock], clear_untrusted_proxy_headers=True)
 
     service.stop()
