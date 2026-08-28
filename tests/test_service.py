@@ -34,8 +34,8 @@ from skid.substitution import Substitution, apply_substitutions
 from skid.tools import ROUTES
 
 
-@pytest.fixture(scope="module")
-def generator() -> Generator:
+@pytest.fixture(scope="module", name="generator")
+def generator_fixture() -> Generator:
     """One warm model for the whole module, as FR-5.1 intends."""
     return Generator()
 
@@ -117,8 +117,8 @@ def _clip_beyond(work: Path, already: set[str], timeout: float = 300.0) -> str |
     return None
 
 
-@pytest.fixture
-def restored_voice(generator: Generator) -> Iterator[None]:
+@pytest.fixture(name="restored_voice")
+def restored_voice_fixture(generator: Generator) -> Iterator[None]:
     """Put the shared generator's voice back after a test that changes it.
 
     The generator is module-scoped so the model stays warm, which means a test
@@ -130,8 +130,8 @@ def restored_voice(generator: Generator) -> Iterator[None]:
     generator.set_voice(original)
 
 
-@pytest.fixture
-def service_for(
+@pytest.fixture(name="service_for")
+def service_for_fixture(
     tmp_path: Path, generator: Generator
 ) -> Iterator[Callable[..., Service]]:
     """Build a started service with a given player, and stop it afterwards."""
