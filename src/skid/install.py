@@ -120,8 +120,21 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     pointing at the wrong command survives every re-run that only adds. Removing
     first is what makes the registration match the checkout being installed
     rather than whatever was installed first.
+
+    **The units are checked before anything is written**, because installing one
+    systemd will reject leaves a machine that looks installed and cannot start.
+    A unit file is data and a typo in it is not found until the day it is
+    loaded; `systemd-analyze verify` finds it now, and finds it on whichever
+    machine is being installed to rather than only on the one the tests ran on.
     """
     units = paths.checkout / "share" / "systemd" / "user"
+    verify_units = [
+        Step(
+            says=f"check systemd accepts {unit} before installing it",
+            argv=("systemd-analyze", "--user", "verify", str(units / unit)),
+        )
+        for unit in UNITS
+    ]
     copies = [
         Step(
             says=f"install {unit} into {paths.units}",
@@ -144,6 +157,7 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
         )
     ]
     return [
+        *verify_units,
         Step(
             says=f"install skid as a uv tool from {paths.checkout}",
             argv=("uv", "tool", "install", "--editable", str(paths.checkout)),
@@ -256,7 +270,13 @@ def confirmed(question: str, *, assume_yes: bool = False) -> bool:
 
 
 def missing_tools(
-    required: tuple[str, ...] = ("uv", "systemctl", "install", "claude"),
+    required: tuple[str, ...] = (
+        "uv",
+        "systemctl",
+        "systemd-analyze",
+        "install",
+        "claude",
+    ),
 ) -> list[str]:
     """Which of the commands the plan runs are not on PATH.
 

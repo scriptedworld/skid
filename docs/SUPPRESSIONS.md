@@ -11,22 +11,38 @@ nothing until there are several.
 
 ## S-1, bandit's subprocess findings
 
-**Seven marks covering eight findings, three rules, three files.** `B404` for
-importing `subprocess`, `B603` for calling it without `shell=True`, and `B607`
-for naming a program without an absolute path. The counts differ because the
-test's one call site trips two rules at once.
+**Five marks, two rules, two files, and no test carries one.** `B404` for
+importing `subprocess`, `B603` for calling it without `shell=True`.
 
-    src/skid/install.py     B404   import subprocess
-    src/skid/install.py     B603   the spaCy model check
-    src/skid/install.py     B603   running one step of the plan
-    src/skid/player.py      B404   import subprocess
-    src/skid/player.py      B603   playing a clip
-    tests/test_install.py   B404   import subprocess
-    tests/test_install.py   B603, B607   systemd-analyze verify
+    src/skid/install.py   B404   import subprocess
+    src/skid/install.py   B603   the spaCy model check
+    src/skid/install.py   B603   running one step of the plan
+    src/skid/player.py    B404   import subprocess
+    src/skid/player.py    B603   playing a clip
 
 Line numbers are deliberately not recorded. They go stale on the next edit and a
 stale line number is worse than none, because it sends a reader to the wrong
 call. `grep -rn nosec src/ tests/` is the current list and it is one command.
+
+**It was seven marks for about an hour, and the two that went are the useful
+part of this entry.** `tests/test_install.py` ran `systemd-analyze verify` on
+the unit files and carried `B404`, `B603` and `B607` for it. Asked why there
+were so many subprocess calls, the answer turned out to be that one of them was
+a test doing work the installer should have been doing.
+
+The check was right and its placement was wrong twice over: it only ever ran on
+the machine the suite ran on, and it made that file the only test module
+shelling out. It is a step at the head of the install plan now, so it runs on
+whichever machine is being installed to, catches a unit systemd would reject
+before anything is written, and the test asserts the command instead of running
+it.
+
+**No test in this repository imports `subprocess`.** That is the property to
+keep. `test_player.py` was already the model for it: FR-7.5 makes the player a
+command line, so the test writes a real script, configures it, and asserts what
+the script recorded. The production code runs it; the test never does.
+
+A test that needs to shell out is usually a seam that has not been found yet.
 
 ### The question put, 2026-08-28
 
@@ -58,13 +74,13 @@ being covered by the general argument.
 
 **Forced, because the work is running another program:**
 
-    player.py       plays a clip                FR-1.3, and the whole design
-    install.py      uv tool install             an external tool
-    install.py      systemctl --user ...        an external tool
-    install.py      claude mcp add / remove     an external tool
-    install.py      checks en_core_web_sm       a DIFFERENT interpreter, so an
-                                                in-process import cannot answer
-    test_install.py systemd-analyze verify      an external tool
+    player.py    plays a clip               FR-1.3, and the whole design
+    install.py   uv tool install            an external tool
+    install.py   systemctl --user ...       an external tool
+    install.py   systemd-analyze verify     an external tool
+    install.py   claude mcp add / remove    an external tool
+    install.py   checks en_core_web_sm      a DIFFERENT interpreter, so an
+                                            in-process import cannot answer
 
 **Chosen:** the unit files are copied with `install -D -m 0644` where
 `shutil.copy`, `mkdir` and `chmod` would do. It buys one thing, which is that
