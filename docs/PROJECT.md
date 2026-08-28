@@ -365,6 +365,20 @@ you actually depend on, and read what came back rather than that something came
 back. Synthesised by the agent-support session from four measurements, three of
 them skid's, at `agent-support 286547c`.
 
+**They are found by arithmetic that fails to close, not by suspicion.** The
+toolbox session's observation, and it is the half that tells you what to do
+rather than what to fear, because nothing about any of these looks wrong when
+read. Its own instance was not about a service at all: a handoff document said
+83 tests, two were added, and the measured total was not 85. The gap was found
+by the sum refusing to balance.
+
+Every one of these was caught the same way. `status` returns a queue depth and
+therefore cannot be slow, so a slow `status` is a contradiction rather than a
+delay. A probe reporting `pending: 0` while three callers wait is two numbers
+that cannot both describe one service. The way in is to find a quantity that has
+to agree with another and check that it does, rather than to read carefully and
+hope something looks off.
+
 `client.py` now caches the handshake, rebuilds the session when the service says
 it is gone, and retries once, so a restart costs a reconnection. What it cannot
 recover becomes a JSON-RPC error carrying the request's own id.
