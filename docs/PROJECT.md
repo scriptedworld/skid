@@ -396,11 +396,35 @@ independently.
 **`claude mcp list` does not answer this.** It says the server is up, not that
 the asking session can reach it. So the diagnosis for "skid is running and I
 cannot speak" is almost always the session's age rather than the service, and
-the fix is restarting the client rather than anything here.
+the fix is on the client's side rather than anything here.
+
+**A `/clear` is enough, and this document used to say restart.** Measured
+2026-08-28 by process parentage: `skid-mcp` is spawned per **clear**, not per
+client process. Five of the seven live clients were days older than their own
+shims, and the one session that reported clearing had a shim from two minutes
+before it.
+
+    my own client   PID 305096, started Aug 27 13:20, never restarted
+    the socket      created Aug 28 01:08
+    my shim         started Aug 28 01:41, at a clear
+    and it spoke    minutes later
+
+So a client three-quarters of a day older than the registration acquired the
+tools without restarting. That is worth having because restarting is expensive
+and clearing is what sessions do anyway.
+
+**One mechanism, three consequences, and only the first is worth memorising:**
+
+    the shim is a per-clear child, not a per-client one    <- the fact
+      a clear picks up a newly registered server
+      a clear replaces a shim holding a dead session id
+
+The other two are what people write down separately and are then surprised by
+the day the first changes.
 
 It has an unfortunate shape worth naming: the sessions with most worth saying
 are the long-running ones, and those are exactly the ones that cannot say it
-until they restart.
+until they clear.
 
 ### The installer, which is how another machine gets one
 
