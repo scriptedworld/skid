@@ -13,6 +13,7 @@ less.
 
 from __future__ import annotations
 
+import io
 import shutil
 import subprocess
 from pathlib import Path
@@ -21,9 +22,12 @@ import pytest
 
 from skid.install import (
     ALREADY_EXISTS,
+    NO_SUCH_SERVER,
     UNITS,
     Paths,
     Step,
+    already_installed,
+    confirmed,
     install_plan,
     missing_tools,
     uninstall_plan,
@@ -210,3 +214,74 @@ def test_a_machine_without_the_tools_is_told_before_anything_is_written() -> Non
     """A missing `uv` is found first, not halfway through with units copied."""
     assert missing_tools(("definitely-not-a-command",)) == ["definitely-not-a-command"]
     assert missing_tools(("sh",)) == []
+
+
+def test_a_reinstall_unregisters_before_it_registers(tmp_path: Path) -> None:
+    """`claude mcp add` will not replace an entry, so a reinstall removes first.
+
+    Measured 2026-08-28 in an isolated HOME: add against a taken name exits 1
+    and leaves the existing entry untouched, whatever command it points at. So
+    an installer that only ever adds cannot re-point a registration, and every
+    re-run against a moved checkout would leave the old one in place.
+    """
+    steps = install_plan(_paths(tmp_path), reinstall=True)
+    verbs = [step.argv[:3] for step in steps]
+
+    assert verbs.index(("claude", "mcp", "remove")) < verbs.index(
+        ("claude", "mcp", "add")
+    )
+
+
+def test_a_first_install_does_not_remove_a_registration_it_never_made(
+    tmp_path: Path,
+) -> None:
+    """Nothing is unregistered on a machine that has never had skid."""
+    verbs = [argv[:3] for argv in _argvs(install_plan(_paths(tmp_path)))]
+
+    assert ("claude", "mcp", "remove") not in verbs
+
+
+def test_both_registration_steps_tolerate_the_state_they_wanted(tmp_path: Path) -> None:
+    """Removing what is absent and adding what is present are both exit 1.
+
+    Each is the ordinary outcome of one of the two paths, so each carries the
+    message that means the world is already as the step wanted.
+    """
+    by_verb = {
+        step.argv[:3]: step for step in install_plan(_paths(tmp_path), reinstall=True)
+    }
+
+    assert by_verb[("claude", "mcp", "remove")].tolerate == NO_SUCH_SERVER
+    assert by_verb[("claude", "mcp", "add")].tolerate == ALREADY_EXISTS
+
+
+def test_an_existing_install_is_found_from_the_filesystem_alone(tmp_path: Path) -> None:
+    """What is already here is read off disk, never by asking the MCP client.
+
+    `claude mcp get` and `claude mcp list` health-check the server, which opens
+    the socket, which starts the service. An installer must not load a model to
+    find out whether it has run before.
+    """
+    paths = _paths(tmp_path)
+    assert already_installed(paths) == []
+
+    paths.units.mkdir(parents=True)
+    (paths.units / "skid.socket").write_text("[Socket]\n", encoding="utf-8")
+    paths.tool_dir.mkdir(parents=True)
+
+    assert already_installed(paths) == [
+        str(paths.units / "skid.socket"),
+        str(paths.tool_dir),
+    ]
+
+
+def test_no_terminal_to_ask_on_is_taken_as_no(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A script that did not say yes has not said yes.
+
+    Reinstalling replaces files the user owns and re-points their registration.
+    Guessing yes because there was nobody to ask is how that surprises somebody.
+    """
+    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+
+    assert confirmed("Reinstall?") is False
+    assert confirmed("Reinstall?", assume_yes=True) is True

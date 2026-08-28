@@ -354,18 +354,33 @@ means the first connection starts it, so starting it here would load a model to
 prove that two files were copied. Verification asks `systemctl is-enabled` and
 `is-active`, neither of which connects.
 
-**`claude mcp add` exits 1 on a name already registered**, measured 2026-08-28
-against an isolated `HOME`, so the installer reads the message rather than the
-status. Without that, running it twice would report a failure. It does not
-update an entry that already exists either, so a registration pointing at the
-wrong command is reported rather than silently replaced: removing an entry from
-a file a person owns is their call.
+**Run against a machine that already has skid, it says what is there and asks.**
+Answering yes reinstalls; `--yes` answers for a script, `--dry-run` asks nothing,
+and no terminal to ask on is taken as no rather than as yes. What is already
+present is read off the filesystem, never by asking the MCP client, because
+`claude mcp get` and `mcp list` both health-check the server and a health check
+opens the socket, which is what starts the service.
+
+**A reinstall unregisters before it registers, and it has to.** Measured
+2026-08-28 against an isolated `HOME`:
+
+    claude mcp add     name free        exit 0
+    claude mcp add     name taken       exit 1, and the entry is NOT updated
+    claude mcp remove  name absent      exit 1, "No MCP server named"
+
+So an installer that only ever adds cannot re-point a registration: an entry
+left by some other checkout survives every re-run. Removing first is what makes
+the registration match the checkout being installed. Both registration steps
+read the message rather than the exit status, because each of those exit-1 cases
+is the ordinary outcome of one of the two paths.
 
 **It writes only inside `$HOME`** and names all four places when it finishes:
 the units, the two executables, the uv tool environment and `~/.claude.json`.
 
-Verified 2026-08-28 by running it against this machine, twice, exit 0 both
-times, with the second run taking the already-registered path.
+Verified 2026-08-28 by running it against this machine: a fresh run, a run with
+no terminal that correctly changed nothing, and two `--yes` reinstalls that
+removed and re-added the registration. Exit 0 every time, and `speak` still
+answered afterwards.
 
 ## What deploying it taught, which the tests could not
 

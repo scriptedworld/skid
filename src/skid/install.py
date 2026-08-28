@@ -24,6 +24,13 @@ never seen skid.
 Nothing needs root and nothing is written outside `$HOME`, which is the property
 that makes an installer for this service an ordinary thing to run rather than
 something to read carefully first. Read it carefully anyway.
+
+**Run against a machine that already has skid, it says so and asks.** Answering
+yes reinstalls, which means the registration is removed and added rather than
+left alone: `claude mcp add` refuses a name that is taken and does not update
+it, so an entry pointing at some other checkout survives every re-run that only
+adds. `--yes` answers for a script, `--dry-run` asks nothing and changes nothing,
+and no terminal to ask on is taken as no.
 """
 
 from __future__ import annotations
@@ -47,6 +54,13 @@ ALREADY_EXISTS = "already exists"
 
 It exits 1 in that case, measured 2026-08-28, so the exit status alone cannot
 tell an installer re-run from a real failure and the message has to be read.
+"""
+
+NO_SUCH_SERVER = "No MCP server"
+"""What `claude mcp remove` says when there is nothing registered to remove.
+
+A first install and a reinstall run the same removal, and on a machine that has
+never seen skid there is nothing there. That is the wanted state, not a failure.
 """
 
 
@@ -93,13 +107,19 @@ class Paths:
         )
 
 
-def install_plan(paths: Paths) -> list[Step]:
+def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     """The commands that take a checkout to a running socket, in order.
 
     The socket is enabled and started; the service is not. Socket activation
     means the first connection starts it, and starting it here would load the
     model to prove an install worked, which is a minute of nothing for no
     reason. `verify_plan` checks the socket instead, which is the property.
+
+    **A reinstall unregisters before it registers.** `claude mcp add` refuses a
+    name that is taken and does not update it, measured 2026-08-28, so an entry
+    pointing at the wrong command survives every re-run that only adds. Removing
+    first is what makes the registration match the checkout being installed
+    rather than whatever was installed first.
     """
     units = paths.checkout / "share" / "systemd" / "user"
     copies = [
@@ -116,6 +136,13 @@ def install_plan(paths: Paths) -> list[Step]:
         )
         for unit in UNITS
     ]
+    unregister = [
+        Step(
+            says=f"unregister {SERVER_NAME} first, because add will not replace it",
+            argv=("claude", "mcp", "remove", SERVER_NAME, "--scope", "user"),
+            tolerate=NO_SUCH_SERVER,
+        )
+    ]
     return [
         Step(
             says=f"install skid as a uv tool from {paths.checkout}",
@@ -130,6 +157,7 @@ def install_plan(paths: Paths) -> list[Step]:
             says="enable and start the socket, which does not start the service",
             argv=("systemctl", "--user", "enable", "--now", "skid.socket"),
         ),
+        *(unregister if reinstall else []),
         Step(
             says=f"register {SERVER_NAME} with the MCP client, at user scope",
             argv=(
@@ -196,6 +224,37 @@ def verify_plan() -> list[Step]:
     ]
 
 
+def already_installed(paths: Paths) -> list[str]:
+    """What of skid is already on this machine, as the paths that hold it.
+
+    Asked of the filesystem alone. The MCP registration is not checked, because
+    `claude mcp get` and `claude mcp list` both health-check the server, and a
+    health check on skid opens the socket, and opening the socket is what starts
+    the service. An installer must not load a model to find out whether it has
+    run before.
+    """
+    found = [str(paths.units / unit) for unit in UNITS if (paths.units / unit).exists()]
+    if paths.tool_dir.exists():
+        found.append(str(paths.tool_dir))
+    return found
+
+
+def confirmed(question: str, *, assume_yes: bool = False) -> bool:
+    """Ask, and take silence for no.
+
+    A reinstall replaces files the user owns and re-points their MCP
+    registration, so it is asked for rather than assumed. With no terminal to
+    ask on there is no answer to read, and guessing yes on behalf of a script is
+    how an installer surprises somebody: `--yes` is how a script says yes.
+    """
+    if assume_yes:
+        return True
+    if not sys.stdin.isatty():
+        print("not a terminal, so nothing was changed. Pass --yes to reinstall.")
+        return False
+    return input(f"{question} [y/N] ").strip().lower() in {"y", "yes"}
+
+
 def missing_tools(
     required: tuple[str, ...] = ("uv", "systemctl", "install", "claude"),
 ) -> list[str]:
@@ -230,14 +289,11 @@ def spacy_model_present(paths: Paths) -> bool:
 def run(step: Step) -> bool:
     """Run one step, and say whether the world is now as the step wanted.
 
-    A tolerated message is success. `claude mcp add` exits 1 on a name that is
-    already registered, which is the ordinary outcome of running the installer
-    twice, so reading the status alone would report a re-run as a failure.
-
-    It does not update an entry that is already there, so a registration
-    pointing at the wrong command stays wrong and is reported rather than
-    silently replaced. Removing an entry from a file a person owns is their
-    call, and the message names the command that does it.
+    A tolerated message is success, and both tolerated messages are about
+    something already being in the state the step wanted. `claude mcp add` exits
+    1 on a name that is already registered and `claude mcp remove` exits
+    non-zero on a name that is not, so reading the status alone would call a
+    first install and a reinstall failures in turn.
     """
     finished = subprocess.run(step.argv, capture_output=True, text=True, check=False)
     output = finished.stdout + finished.stderr
@@ -276,24 +332,33 @@ def report_what_changed(paths: Paths) -> None:
         print(f"  {where:<{width}}  {what}")
 
 
-def install(paths: Paths, *, dry_run: bool) -> int:
-    """Install, verify, and say what a session has to do to see it."""
-    absent = missing_tools()
-    if absent:
-        print(f"not on PATH: {', '.join(absent)}", file=sys.stderr)
-        return 1
+def ask_about_reinstalling(present: list[str], *, assume_yes: bool) -> bool:
+    """Show what is already here and ask whether to replace it."""
+    print("skid is already installed. These are here now:\n")
+    for path in present:
+        print(f"  {path}")
+    print(
+        "\nReinstalling replaces the units, rebuilds the tool environment, and"
+        "\nre-points the MCP registration at this checkout. `claude mcp add` will"
+        "\nnot update an entry that exists, so the registration is removed and"
+        "\nadded rather than left as it is.\n"
+    )
+    return confirmed("Reinstall?", assume_yes=assume_yes)
 
-    print(f"Installing skid from {paths.checkout}\n")
-    if not perform(install_plan(paths), dry_run=dry_run):
-        return 1
 
-    if dry_run:
-        print("\nDry run: nothing was changed.")
-        return 0
+def verify_installed(paths: Paths) -> bool:
+    """Check the install took, without connecting to it.
 
+    Two questions, and the second is the one a passing socket does not answer:
+    kokoro downloads `en_core_web_sm` at start-up when it is absent, using pip
+    or uv, and under systemd neither is on PATH. That cost 76 failed starts
+    before the model was declared as a dependency. An install that leaves it
+    missing has produced a service that cannot start, and says so here rather
+    than at the first `speak`.
+    """
     print("\nChecking, without connecting, because connecting starts the service:")
     if not perform(verify_plan(), dry_run=False):
-        return 1
+        return False
 
     if not spacy_model_present(paths):
         print(
@@ -302,6 +367,36 @@ def install(paths: Paths, *, dry_run: bool) -> int:
             "\nunder systemd, so the service will fail to start. Reinstall the tool.",
             file=sys.stderr,
         )
+        return False
+    return True
+
+
+def install(paths: Paths, *, dry_run: bool, assume_yes: bool = False) -> int:
+    """Install, verify, and say what a session has to do to see it."""
+    absent = missing_tools()
+    if absent:
+        print(f"not on PATH: {', '.join(absent)}", file=sys.stderr)
+        return 1
+
+    present = already_installed(paths)
+    if (
+        present
+        and not dry_run
+        and not ask_about_reinstalling(present, assume_yes=assume_yes)
+    ):
+        print("Left alone. Nothing was changed.")
+        return 0
+
+    verb = "Reinstalling" if present else "Installing"
+    print(f"\n{verb} skid from {paths.checkout}\n")
+    if not perform(install_plan(paths, reinstall=bool(present)), dry_run=dry_run):
+        return 1
+
+    if dry_run:
+        print("\nDry run: nothing was changed.")
+        return 0
+
+    if not verify_installed(paths):
         return 1
 
     report_what_changed(paths)
@@ -341,6 +436,11 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="remove the units, the registration and the tool",
     )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="answer the reinstall question yes, for a script with no terminal",
+    )
     return parser.parse_args(argv)
 
 
@@ -361,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
     paths = Paths.from_environment(checkout_root())
     if options.uninstall:
         return uninstall(paths, dry_run=options.dry_run)
-    return install(paths, dry_run=options.dry_run)
+    return install(paths, dry_run=options.dry_run, assume_yes=options.yes)
 
 
 if __name__ == "__main__":
