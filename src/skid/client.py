@@ -14,9 +14,16 @@ about.
 **The session lives in the service's memory, so a restart forgets it.** The
 service then answers every later request `404 Session not found` with a null
 id, which is not a response to anything the client asked, so a client that was
-handed it would wait for its answer forever. Measured 2026-08-28: restarting the
-service left calls from three sessions outstanding, one of them for five
-minutes, with no error for anyone to read.
+handed it waits until something outside gives up. Measured 2026-08-28:
+restarting the service left calls from three sessions outstanding, and the one
+allowed to run its course was aborted by the MCP client's own backstop after
+**1800 seconds** with no diagnosis attached.
+
+**That bound is the wrong layer's and is worse than no bound would be.** Half an
+hour is indistinguishable from slow work, because `TIMEOUT` below is long on
+purpose to cover a cold start loading a model, so nothing before the abort reads
+as a fault to anybody watching. The harness cannot say which of wedged, slow or
+absent it saw. This file can, at the moment it happens.
 
 So the shim caches the handshake and replays it when the service says the
 session is gone, and a restart costs a reconnection instead. Restarting is the
