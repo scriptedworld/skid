@@ -23,6 +23,21 @@ session is gone, and a restart costs a reconnection instead. Restarting is the
 documented way to deploy an edit under an editable install, so this is an
 ordinary event rather than a rare one.
 
+**And that is exactly why the reconnection is quiet about a changed tool
+surface, which is the one thing to watch here.** The client never sees the
+second `initialize` result: the shim consumes it. So a new instance answering
+with different capabilities or a different tool list leaves the client believing
+what the old one said, and the shim cannot synthesise a
+`notifications/tools/list_changed` to correct it.
+
+That is safe today because the six tools are stable, which is a property of the
+tool set and not of this file. The restart being recovered from is a code
+deploy, so **the moment a reconnection is most likely to hide a changed surface
+is the moment the surface is most likely to have changed.** Renaming a tool and
+restarting would leave every reconnected client calling the old name until it
+restarts, invisibly rather than loudly. Anyone changing the tool surface should
+expect to restart the clients too.
+
 **Anything it cannot recover becomes a JSON-RPC error carrying the request's own
 id.** That is what FR-5.3 is really asking for. The row names an absent backend
 and a wedged one; the case that bit was a backend answering promptly with
@@ -57,12 +72,11 @@ Measured 2026-08-28 against the live socket. The body is
 client rather than failing it.
 """
 
-SESSION_MISSING = 400
-"""What the service answers when no session id is sent at all.
+HANDSHAKE = ("initialize", "notifications/initialized")
+"""The two messages that establish a session, in the order a client sends them.
 
-Measured 2026-08-28: `Bad Request: Missing session ID`. Recoverable only when
-the shim really had no id to send, because the same status covers an ordinary
-malformed request.
+Replaying these is what rebuilds a session the service has forgotten. Nothing
+else is ever replayed, because nothing else is safe to send twice.
 """
 
 INTERNAL_ERROR = -32603
@@ -102,6 +116,23 @@ def _request_id(request: str) -> Any:
         return None
 
 
+def _refusal(response: httpx.Response) -> str:
+    """The JSON-RPC error message in a 200, or empty if the answer was an answer.
+
+    A transport that succeeded says nothing about whether the protocol did. This
+    is the founding mistake of this module pointed at its own recovery path:
+    reading the status and not the body is what made a 404 look like a reply.
+    """
+    for payload in _payloads(response):
+        try:
+            error = json.loads(payload).get("error")
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        if error:
+            return str(error.get("message", error))
+    return ""
+
+
 def _error_for(request: str, detail: str) -> list[str]:
     """A JSON-RPC error the client can match to its own request, or nothing.
 
@@ -126,17 +157,20 @@ class Session:
         """Start with no session and no handshake to replay."""
         self._http = http
         self._id: str | None = None
-        self._handshake: list[str] = []
+        self._handshake: dict[str, str] = {}
 
-    def forget(self) -> None:
-        """Drop the session id, as the service does when it restarts.
+    def disown(self) -> None:
+        """Hold an id the service cannot know, which is what a restart leaves.
 
-        The next request then gets `404 Session not found` and the recovery in
-        `send` takes over, so this is how the failure is reproduced against a
-        real service without restarting it and wedging every other client whose
-        shim predates this file.
+        Not the same as having no id, and the difference is the whole point: a
+        restarted service answers `404 Session not found` to an id it does not
+        recognise, where it answers `400 Missing session ID` to no id at all.
+        Only the first is the failure this class exists for.
+
+        This is how the failure is reproduced against a real service without
+        restarting it and wedging every other client whose shim predates it.
         """
-        self._id = None
+        self._id = "disowned-" + "0" * 24
 
     def _post(self, request: str) -> httpx.Response:
         """Send one request, carrying the session id if there is one."""
@@ -155,49 +189,86 @@ class Session:
 
         `initialize` and the `notifications/initialized` that follows it are the
         only two a client sends before it can do anything, so caching those two
-        lines is enough to become a session again. Everything else is the
-        client's own traffic and is never replayed.
+        is enough to become a session again. Everything else is the client's own
+        traffic and is never replayed.
+
+        **Keyed by method, so a client that initializes twice replaces rather
+        than accumulates.** Appending to a list would replay a stale
+        `initialize` alongside the current one, in that order, and the session
+        rebuilt from it would be the one the client has already moved on from.
         """
         try:
             method = json.loads(request).get("method")
         except (json.JSONDecodeError, AttributeError):
             return
-        if method in ("initialize", "notifications/initialized"):
-            self._handshake.append(request)
+        if method in HANDSHAKE:
+            self._handshake[method] = request
 
-    def _reinitialize(self) -> bool:
-        """Become a new session by replaying the handshake. False if it fails."""
-        if not self._handshake:
-            return False
+    def _reinitialize(self) -> tuple[bool, str]:
+        """Become a new session by replaying the handshake, in the order sent.
+
+        **A 200 is not success, which is the same mistake one layer in.** An
+        `initialize` refused at the JSON-RPC layer, a protocol version the
+        service will not accept being the obvious case, comes back 200 carrying
+        an `error` member. Reading only the status would call that a rebuilt
+        session, retry into it, and hand the client `the service answered 404`
+        in place of the service's own account of what was wrong.
+
+        Returns whether the session is usable, and what to say if it is not.
+        """
+        replay = [
+            self._handshake[method] for method in HANDSHAKE if method in self._handshake
+        ]
+        if not replay:
+            return False, "no handshake to replay"
         self._id = None
-        for request in self._handshake:
-            if self._post(request).status_code >= 400:
-                return False
-        return True
+        for request in replay:
+            response = self._post(request)
+            if response.status_code >= 400:
+                return False, f"reconnecting failed with {response.status_code}"
+            refusal = _refusal(response)
+            if refusal:
+                return False, f"reconnecting was refused: {refusal}"
+        return True, ""
 
-    def _lost(self, response: httpx.Response, had_session: bool) -> bool:
+    def _lost(self, response: httpx.Response) -> bool:
         """Whether this answer means the session is gone rather than the request bad.
 
-        Two shapes, and the second is narrow on purpose. A restart leaves the
-        shim holding an id the service has never heard of, which is `404 Session
-        not found`. A shim holding no id at all is told `400 Bad Request:
-        Missing session ID`, and re-handshaking is the right answer to that too.
+        **A status belongs here only if the service is known to emit it before
+        dispatching the request**, because `send` replays the request on the
+        strength of it. `speak` is not idempotent: a retry that crossed a
+        dispatch boundary would make the machine say the same thing twice, and
+        nobody would suspect the shim.
 
-        The `had_session` guard is what keeps the 400 case from swallowing an
-        ordinary malformed request, which is the same status for a different
-        reason.
+        `404 Session not found` qualifies, and is checked in the session manager
+        before any tool is reached. A 503 or a connection reset does **not**
+        qualify, however much they look like the same kind of trouble, because
+        either can arrive after the work has been done.
+
+        `400 Missing session ID` was here and was removed. It is what the
+        service says to a shim holding no id at all, and tracing `_id` showed
+        that state cannot be reached after the first handshake: `_post` only
+        ever widens the id, and nothing clears it outside `_reinitialize`, which
+        re-posts immediately. So the branch could only fire before a session had
+        ever existed, where there is nothing lost to recover. It was a live test
+        over a dead path, which is a green light that means nothing.
         """
-        if response.status_code == SESSION_LOST:
-            return True
-        return response.status_code == SESSION_MISSING and not had_session
+        return response.status_code == SESSION_LOST
 
     def send(self, request: str) -> list[str]:
-        """Forward one request, rebuilding the session once if it has been lost."""
+        """Forward one request, rebuilding the session once if it has been lost.
+
+        The replay is safe because `_lost` admits only statuses the service
+        emits before dispatching, so the original request provably did not run.
+        Read `_lost` before adding one.
+        """
         self._remember(request)
-        had_session = self._id is not None
         response = self._post(request)
 
-        if self._lost(response, had_session) and self._reinitialize():
+        if self._lost(response):
+            rebuilt, why = self._reinitialize()
+            if not rebuilt:
+                return _error_for(request, why)
             response = self._post(request)
 
         if response.status_code >= 400:
