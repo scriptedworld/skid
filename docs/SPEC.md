@@ -229,6 +229,15 @@ array kokoro returns, so that FR-1.5's first test clause stays literally true:
 no audio library is imported. `soundfile` would fail that clause, being
 libsndfile.
 
+**Measured end to end on this machine, 2026-08-27, before any of skid existed.**
+`KPipeline(lang_code='a')` with `voice='af_heart'` on "Hi, silo here." returned
+42000 samples, 1.75 seconds, written by `wave` as **mono, 16-bit, 24000 Hz** and
+played by `paplay` on the default sink. So the output path of FR-1.1 through
+FR-1.5 is known to work as specified rather than assumed to.
+
+kokoro returns float samples; the writer scales to signed 16-bit little-endian.
+That conversion is the whole of what sits between the engine and the file.
+
 **Generation runs ahead of playback without bound in queue depth, and one
 message at a time.** One warm model is shared, nothing establishes that a kokoro
 pipeline is safe to call concurrently, and a single worker running ahead of the
@@ -410,8 +419,12 @@ config: the player command.
 
 ## What this deliberately leaves open
 
-- **Voice names.** `af_heart` is a placeholder. The set kokoro offers has not
-  been measured, because kokoro is not installed.
+- ~~**Voice names.**~~ **Settled by measurement 2026-08-27.** kokoro 0.9.4
+  offers 54 voices, listed by `hexgrad/Kokoro-82M` under `voices/`, named
+  `<lang><gender>_<name>`: `af_` and `am_` American, `bf_` and `bm_` British,
+  then `e`, `f`, `h`, `i`, `j`, `p` and `z` for the other languages. `af_heart`
+  turned out to be a real voice rather than the placeholder it was written as.
+  FR-6.5's validation checks against that set.
 - **Whether the greeting window is settable through a tool** as well as the
   file. FR-3.4 requires only that it is configurable, and FR-7.1 says which
   route would win.
