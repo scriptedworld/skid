@@ -75,9 +75,21 @@ class Service:
         self.spoken: list[tuple[str, str]] = []
 
     def start(self) -> None:
-        """Begin serving. Idempotent enough to call once."""
-        self._work.mkdir(parents=True, exist_ok=True)
-        self._log_path.parent.mkdir(parents=True, exist_ok=True)
+        """Begin serving. Idempotent enough to call once.
+
+        **Both directories are made owner-only, and the log's is the one that
+        needs it.** `mkdir(mode=...)` does nothing to a directory that already
+        exists, which is why the mode is set separately: measured 2026-08-28,
+        the live clips directory was 0775 and `~/.local/state/skid` was 0775.
+
+        The clips directory sits inside systemd's own 0700 runtime directory, so
+        FR-5.4 held there by accident. The log directory has no such parent, and
+        the log records the text a caller submitted whenever generation fails,
+        so it was readable by any local user.
+        """
+        for directory in (self._work, self._log_path.parent):
+            directory.mkdir(parents=True, exist_ok=True)
+            directory.chmod(0o700)
         self._thread = threading.Thread(target=self._serve, daemon=True)
         self._thread.start()
 
