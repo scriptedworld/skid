@@ -59,11 +59,15 @@ Both cold reviews of `fd42bdf` caught it independently.
 
 ## Layout
 
-    src/skid/           the package. Empty: nothing is built.
-    tests/              empty, and stage 4 of how a change gets made is where
-                        it stops being empty
+    src/skid/           the package: config, generation, greeting, player,
+                        queue, substitution, then server, service and client
+    tests/              one file per module, external test package
+    share/systemd/user/ skid.socket and skid.service, the real units
+    bin/                two links into toolbox, which the common jig resolves
+                        against this directory
     docs/PROJECT.md     this file
     docs/SPEC.md        how skid is arranged, so that the requirements hold
+    docs/TEST_PLAN.md   one test named per requirement
     docs/REQUIREMENTS/  one file per requirement, under a category directory
     docs/DECISIONS/     one file per decision
     pyproject.toml      uv project, hatchling, Python >= 3.12
@@ -91,7 +95,7 @@ which is a claim about the migration commit rather than about the tree now:
 
 The tree has moved since and the current rows are not that set. Ten of the 32
 were `[?]` and were rewritten as settled statements at the same ids as they
-closed, and thirteen rows have been added, so 45 rows now stand where 32 did.
+closed, and rows have been added since, so 47 rows now stand where 32 did.
 
 `docs/REQUIREMENTS/README.md` carries the status markers and what each category
 holds.
@@ -110,18 +114,19 @@ Measured 2026-08-27, the first run here: `success: false`, with two reasons,
 the number that failed; seven of the nine report `success: true` in their own
 `output.yaml`.
 
-**Both failures are true and neither is the gate's fault.** pytest exits 5 when
-it collects no tests, and there are none. Docstring coverage is measured over a
-package holding one empty file.
+**Both failures were true and neither was the gate's fault.** pytest exits 5
+when it collects no tests, and there were none. Docstring coverage was measured
+over a package holding one empty file.
 
 **Green tasks over one empty file are a vacuous pass, not coverage.** ruff,
 mypy, pylint, bandit, vulture and complexipy read `src/skid/__init__.py` and
-find nothing wrong with it because there is nothing in it. The language gate
-becomes meaningful with the first code, not before.
+found nothing wrong with it because there was nothing in it. The language gate
+became meaningful with the first code, not before, and the reason for keeping
+the sentence is that the same trap waits for the next package added here.
 
-`traceability` is the exception and the reason the common jig is worth having
-early: it reads the 45 requirement rows whether or not any code exists, so it
-fails honestly today rather than passing over nothing.
+`traceability` was the exception and the reason the common jig is worth having
+early: it reads the requirement rows whether or not any code exists, so it
+failed honestly rather than passing over nothing.
 
 The jigs were unrunnable earlier the same day, refused by wrench's schema for
 naming a task `id`, and toolbox's port landed between that measurement and this
@@ -141,7 +146,7 @@ say, all of them recorded in
 - **`bin/` holds two links into toolbox**, because the jig resolves its checkers
   against `{config_dir}`, which is this directory.
 
-**The traceability checker reads a directory.** It finds all 45 rows, and the
+**The traceability checker reads a directory.** It finds every row, and the
 silo session confirmed the same checker against a single-file repository, so the
 standing story that it could not is spent.
 
@@ -151,36 +156,42 @@ code. `pyproject.toml` scopes those tools away from `bin/`, which holds nothing
 skid wrote, and says so beside the exclusions. Filed as
 `clank/inbox/toolbox/an-adopter-is-graded-on-the-checkers-it-adopts`.
 
-    python-std-quality   7 of 9 pass; docstrings 0.0%, tests exits 5
-    common-quality       2 of 3 pass; traceability reports 0 of 45 covered
+    2026-08-27, an empty package    2026-08-28, the code and the tests
 
-Measured 2026-08-27 against bolt `v0.0.0-20260827201109-7604557974a5`, reading
-`result.yaml` from a named `--output-dir`.
+    docstrings   0.0%, failing      docstrings   98.7%, passing
+    tests        exits 5, no tests  tests        60 pass
+    traceability 0 of 45 covered    traceability 36 of 47 covered
 
-**All three failures are the same fact: there is no code yet.** Stage 4 clears
-them and none is worked around. In particular `docstrings` is left failing
-rather than answered with a module docstring written to move the number, which
-would be gaming a measurement rather than passing it.
-
-**`docstrings` is the worked example of a borrowed pass.** It reported 88.9% and
-passed until toolbox excluded the adopted paths. The 88.9% was toolbox's two
-checker scripts, reached through `bin/`. skid's own code scores 0.0%, and both
-numbers are one command apart:
-
-    interrogate --fail-under 80 -e .venv -e venv -e build -e dist .
-      -> PASSED, 88.9%          reading toolbox's checkers
+The left column was measured against bolt
+`v0.0.0-20260827201109-7604557974a5`, reading `result.yaml` from a named
+`--output-dir`. The right column is two commands, both of which write an
+artifact to read:
 
     interrogate --fail-under 80 -e .venv -e venv -e build -e dist \
                 -e .ephemera -e bin -e adapters .
-      -> FAILED, 0.0%           reading skid's
+    python -m pytest -o addopts= -q
+
+**`analyse` is the one task that cannot pass**, and not for anything in skid.
+`pylint --recursive=y .` walks `.venv` and does not return; skid's own code
+lints in two seconds. Filed with a repro at
+`clank/inbox/toolbox/pylint-walks-the-virtualenv`. Run the rest of the jig.
+
+**`docstrings` is the worked example of a borrowed pass**, and the reason the
+exclusions in `pyproject.toml` are there rather than being tidied away. It
+reported 88.9% over an empty package and passed, because the 88.9% was toolbox's
+two checker scripts reached through `bin/`. Excluding the adopted paths dropped
+it to 0.0%, which was skid's own code and the honest number. The 98.7% above is
+that same honest measurement now that there is something to measure.
 
 A green task that was measuring somebody else's repository is exactly what the
 vacuous-pass warning is about, and it took another project fixing its jig to
 surface it here.
 
-**Traceability is the one check that is not vacuous today.** It reads 45 real
-rows whether or not code exists, so its failure is a measurement, and it is what
-will hold every test to a requirement once tests exist.
+**Eleven requirements have no test citing them**, which is the gap traceability
+exists to report: FR-1.5, FR-1.6, FR-1.7, FR-2.2, FR-4.2, FR-5.3, FR-5.4,
+FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Several are properties of the machine or the
+units rather than of a function, so closing them is a question of what a test
+for each would read, not of writing eleven more assertions.
 
 ## Where the work is
 
@@ -248,7 +259,7 @@ all nine closed on 2026-08-27. Each closed at the id it already carried, so
 nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
 rather than kept empty.
 
-45 requirements, none marked `[?]`.
+47 requirements, none marked `[?]`.
 
 **`docs/SPEC.md` answered the design questions this section used to list**: where
 the config lives and in what format, what the MCP tool surface is, and how the
@@ -368,24 +379,34 @@ Players, measured the same day with `command -v`: `paplay` (which is `pacat`),
 `espeak-ng` are not. The server is PulseAudio 15.0.0 on PipeWire 1.4.2 and the
 default sink is `alsa_output.pci-0000_00_1f.3.analog-stereo`.
 
-**skid is in no manifest.** Measured 2026-08-27: `grep -rn skid
-~/.projects/dotfiles/repos.*.toml` returns nothing, so nothing on this machine
-knows skid exists. `repos.*.toml` is dotfiles', so it is filed as
-`clank/inbox/dotfiles/skid-is-in-no-manifest/` with the entry to paste.
+**skid is in `repos.live.toml`**, entry checked 2026-08-28, carrying the summary
+and `clone = false`. It was absent the day before, which is what
+`clank/inbox/dotfiles/skid-is-in-no-manifest/` was filed to fix, and the dotfiles
+session acted on it.
 
-Read `silo/docs/PATTERNS/how-a-change-gets-made.md` before writing any of it.
-Stages 1 and 2 are done and **stage 1 has been reviewed twice**, by the wrench
-session and by a cold subagent, independently and without contact. Both read
-`fd42bdf`. The spec was revised against the union of their findings and the
-revision has not itself been reviewed.
+## How the stages went, because the shape held
 
-**Stage 3, the test plan, is next.** It derives from the requirements rather
-than from the spec, so it is not waiting on a second review pass.
+`silo/docs/PATTERNS/how-a-change-gets-made.md` is the pattern, and skid ran all
+four stages of it.
 
-The two reviews converged on four findings and each found what the other missed,
-which is the argument for two rather than one. Where they agreed, the confidence
-is real: neither could have primed the other.
+**Stage 1, the spec, was reviewed twice**, by the wrench session and by a cold
+subagent, independently and without contact. Both read `fd42bdf`. They converged
+on four findings and each found what the other missed, which is the argument for
+two rather than one; where they agreed, neither could have primed the other.
 
-Stage 4 is tests written to fail, and the gate runs against them before there is
-an implementation. That is the point at which the seven currently vacuous checks
-start reading something.
+**The revision was then verified, and the verification earned its place.** The
+wrench session checked its own three findings had been answered, said plainly
+that this made it the wrong reader for whether the revision was good, and found
+a regression on the way: the rewrite had dropped `fd42bdf`'s rule that an
+unreachable backend returns a tool error rather than hanging. That is now FR-5.3,
+which covers the wedged case the original did not.
+
+**A cold read of the revised spec by someone with no stake in those findings is
+still owed.** It is the one review the document has not had, and the sequence
+above is why it is worth having: each pass so far found something the previous
+one could not.
+
+**Stage 3 was the test plan**, `docs/TEST_PLAN.md`, one test named per
+requirement and derived from the requirements rather than the spec. **Stage 4
+wrote the tests to fail** before there was an implementation, which is the point
+at which the vacuous checks started reading something.
