@@ -23,7 +23,9 @@ waiting.
 ## Layout
 
     src/skid/           config, generation, greeting, player, spool,
-                        substitution, then server, service and client.
+                        substitution, then service, routes and client.
+                        tools.py is the route declaration both processes
+                        derive from, and imports neither of them.
                         install.py stands apart: stdlib only, so it can run
                         before skid is installed
     tests/              one file per module, external test package
@@ -61,20 +63,30 @@ An id is never reused. `docs/REQUIREMENTS/README.md` lists the retired ones.
     tool      uv tool install --editable, giving skid, skid-mcp, skid-install
     client    claude mcp add --scope user skid -- skid-mcp
 
-`skid` is the service: one process, one warm model, MCP over HTTP on the socket
-systemd hands it. `skid-mcp` is a stdio shim holding no model, no queue and no
-config, bridging the two because MCP clients speak stdio and an http URL cannot
-name a unix socket. Without it every session would load kokoro for itself.
+`skid` is the service: one process, one warm model, six Flask routes served by
+waitress on the socket systemd hands it. `skid-mcp` is the MCP server: it holds
+the six tool schemas and the dispatch, and no model, no queue and no config.
+Without it every session would load kokoro for itself.
+
+    claude <-stdio-> skid-mcp <-plain HTTP-> skid
+
+**What crosses the socket is plain HTTP, and nothing is cached on either side.**
+`skid/tools.py` names the six routes, and both processes derive from it, so a
+tool cannot exist on one side only.
 
 **The installed tool is editable, so a code edit reaches the running service
 only after `systemctl --user restart skid.service`.**
 
-**Say you are deploying before you do that.** A restart wedges every client
-whose shim predates skid `de3abb5`: the shim holds an MCP session id the new
-process has never heard of, gets a 404 with a null id, and the caller waits
-until its harness gives up at 1800 seconds with no diagnosis. FR-5.3 has the
-detail. A shim spawned after `de3abb5` rebuilds its session and is unaffected,
-so this stops mattering once every session has been through one restart.
+**Say you are deploying before you do that.** It is now a courtesy rather than a
+rescue: a restart costs a connection refused for as long as the service takes to
+come back, and every client reconnects on its next call.
+
+**The wedge is gone rather than handled**, as of 2026-08-28. It existed because
+MCP over HTTP kept a session id in the service's memory: a restart forgot it,
+the service answered 404 with a null id, and a client that cannot match a null
+id to its request waited until its harness gave up at 1800 seconds with no
+diagnosis. No session id exists on either side now, so nothing can go stale.
+FR-5.3 and `clank/tasks/skid/resilience/40` carry the detail.
 
 ### Installing
 
