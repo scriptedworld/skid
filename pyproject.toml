@@ -77,6 +77,18 @@ exclude = ['^bin/']
 [tool.ruff]
 extend-exclude = ["bin"]
 
+[tool.ruff.lint.isort]
+# Stated rather than inferred, because the inference is not stable across
+# invocations. Measured 2026-08-28 with ruff 0.16.3: `ruff check .` treated
+# `skid` as third-party and passed, while the same command with any
+# `--extend-exclude` treated it as first-party and reported three I001s. The
+# flag's value did not matter; naming `bin`, which is what pyproject already
+# says, was enough to flip it.
+#
+# So the gate and a bare local run disagreed about the same tree, and the gate
+# was the one that was right. Declaring it makes the answer the same either way.
+known-first-party = ["skid"]
+
 [tool.pylint.MASTER]
 # .venv is here for a different reason from bin/. The jig runs
 # `pylint --recursive=y .`, which walks the virtualenv, and astroid recurses to

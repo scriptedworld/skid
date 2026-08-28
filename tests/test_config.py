@@ -10,6 +10,7 @@ owns and edits, so the comments and the ordering in it are not ours to discard.
 from pathlib import Path
 
 import pytest
+
 from skid.config import Config, load_config, save_config
 
 
