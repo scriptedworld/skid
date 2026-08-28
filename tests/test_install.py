@@ -56,6 +56,25 @@ def _argvs(steps: list[Step]) -> list[tuple[str, ...]]:
     return [step.argv for step in steps]
 
 
+def _section(unit: str, heading: str) -> str:
+    """The lines of one section of a unit file, without the ones around it.
+
+    Matched on a line that IS the heading rather than on the text appearing
+    anywhere, because these units explain themselves in comments and a comment
+    naming `[Service]` would otherwise end the `[Unit]` section early. That is
+    not hypothetical: it is how this helper came to exist.
+    """
+    text = (CHECKOUT / "share" / "systemd" / "user" / unit).read_text(encoding="utf-8")
+    lines = text.splitlines()
+    start = lines.index(heading) + 1
+    rest = [
+        index
+        for index, line in enumerate(lines[start:], start)
+        if line.startswith("[") and line.endswith("]")
+    ]
+    return "\n".join(lines[start : rest[0]] if rest else lines[start:])
+
+
 # COVERS: FR-5.4 | property
 @pytest.mark.parametrize("unit", UNITS)
 def test_the_installer_checks_each_unit_before_writing_it(
@@ -121,6 +140,37 @@ def test_the_service_is_notify_so_active_means_answerable() -> None:
     )
 
     assert "Type=notify" in service
+
+
+# COVERS: FR-5.3 | property
+def test_the_service_declares_a_watchdog() -> None:
+    """A process can be running and not answering, and this is what notices.
+
+    `Type=notify` makes "active" mean "answerable" at start-up only. Nothing
+    covered the process that stops answering later, which FR-5.3 names, and
+    `WatchdogUSec=0` was that sentence as a measurement.
+    """
+    service = (CHECKOUT / "share" / "systemd" / "user" / "skid.service").read_text(
+        encoding="utf-8"
+    )
+
+    assert "WatchdogSec=" in service
+
+
+# COVERS: FR-5.3 | property
+def test_the_start_limit_is_chosen_and_in_the_section_systemd_reads() -> None:
+    """Both halves matter, and the second is why this asserts a position.
+
+    systemd moved `StartLimitIntervalSec` to `[Unit]` in v229 and **ignores it
+    in `[Service]` with a warning while `systemd-analyze verify` still exits
+    0**. Measured 2026-08-28 by writing it in the wrong section: the exit status
+    said the unit was fine and the setting was being dropped. Asserting only
+    that the key appears somewhere would pass against exactly that mistake.
+    """
+    unit_section = _section("skid.service", "[Unit]")
+
+    assert "StartLimitIntervalSec=" in unit_section
+    assert "StartLimitBurst=" in unit_section
 
 
 def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
+from time import monotonic
 
 DEFAULT_TIMEOUT = 300.0
 """Longer than any clip skid produces: a stuck-process detector, not a policy."""
@@ -43,6 +44,18 @@ class Player:
         self._command = command
         self._timeout = timeout
         self._lock = Lock()
+        self._started: float | None = None
+
+    def playing_since(self) -> float | None:
+        """When the current clip started, by the monotonic clock, or None.
+
+        A clip legitimately takes tens of seconds: measured 2026-08-28, 1196
+        characters produced 76.9 seconds of audio. So playback in progress is
+        health rather than a stall, and the watchdog needs to be able to tell
+        the difference. `self._timeout` is what bounds it (FR-1.9), which is why
+        this can be trusted without a second bound over the top of it.
+        """
+        return self._started
 
     def _argv(self, clip: Path) -> list[str]:
         """Split the command and put the clip where the placeholder is.
@@ -62,6 +75,7 @@ class Player:
         silencing the machine for ever while the queue grows behind it.
         """
         with self._lock:
+            self._started = monotonic()
             try:
                 finished = subprocess.run(  # nosec B603 - docs/SUPPRESSIONS.md S-1
                     self._argv(clip),
@@ -75,6 +89,8 @@ class Player:
                 ) from exc
             except OSError as exc:
                 raise PlaybackFailed(f"player could not be run: {exc}") from exc
+            finally:
+                self._started = None
 
         if finished.returncode != 0:
             raise PlaybackFailed(f"player exited {finished.returncode}: {clip}")
