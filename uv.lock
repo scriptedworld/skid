@@ -1686,8 +1686,8 @@ dependencies = [
     { name = "httpx" },
     { name = "kokoro" },
     { name = "mcp" },
-    { name = "tomlkit" },
     { name = "waitress" },
+    { name = "wrench" },
 ]
 
 [package.dev-dependencies]
@@ -1711,8 +1711,8 @@ requires-dist = [
     { name = "httpx" },
     { name = "kokoro", specifier = ">=0.9.4" },
     { name = "mcp", specifier = ">=2.0" },
-    { name = "tomlkit", specifier = ">=0.13" },
     { name = "waitress", specifier = ">=3.0" },
+    { name = "wrench", editable = "../wrench/python" },
 ]
 
 [package.metadata.requires-dev]
@@ -2221,4 +2221,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/f9/4a6925a07951df56394f7e6ebe14f69f1c5ef9d87aa63e0839acf15aa63a/wrapt-2.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:cdc021cb0b62471d6aac7f2bd92f3b4658073775f9ee7fcd325c511129e7bcc8", size = 81180, upload-time = "2026-07-28T06:04:47.021Z" },
     { url = "https://files.pythonhosted.org/packages/a8/4f/8b5de0395b2a72216751d41c9861df6facaeb611b619d8810ed2b3b23eb2/wrapt-2.3.0-cp312-cp312-win_arm64.whl", hash = "sha256:67bfe2485f50368c3fcd2275fc1fd100e350d601e0058921a7c82678a465aeab", size = 80155, upload-time = "2026-07-28T06:04:48.373Z" },
     { url = "https://files.pythonhosted.org/packages/00/39/3daf9f47be208606586de4568ba6713db53ebc8fd7a575aea1fe57983b69/wrapt-2.3.0-py3-none-any.whl", hash = "sha256:d8c7ed08477429752b8c44991f40ad7838b18332a160698740a6bfbc10d998a2", size = 61866, upload-time = "2026-07-28T06:06:12.9Z" },
+]
+
+[[package]]
+name = "wrench"
+version = "0.1.0"
+source = { editable = "../wrench/python" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "pyyaml" },
+    { name = "referencing" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jsonschema" },
+    { name = "pyyaml" },
+    { name = "referencing" },
 ]

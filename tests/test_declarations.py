@@ -37,7 +37,7 @@ CHECKOUT = Path(__file__).resolve().parent.parent
 
 SOURCE = CHECKOUT / "src" / "skid"
 
-THIRD_PARTY = {"flask", "httpx", "kokoro", "mcp", "numpy", "tomlkit", "waitress"}
+THIRD_PARTY = {"flask", "httpx", "kokoro", "mcp", "numpy", "waitress", "wrench"}
 """Every non-stdlib package skid's own source imports. Measured 2026-08-28.
 
 Written out rather than counted, because which names are in it is the whole
@@ -47,7 +47,8 @@ the `subprocess` call in `player.py`.
 **`uvicorn` and `starlette` left when the MCP server moved into the stdio
 script**, and `flask` and `waitress` arrived in their place. This test is what
 noticed: the swap was made in `main.py` and the suite failed here, which is the
-row doing its job on a change nobody wrote it for.
+row doing its job on a change nobody wrote it for. It did the same again when
+`tomlkit` left and `wrench` arrived with the config becoming YAML.
 
 `mcp` is still here because `client.py` is the MCP server now. It is the
 script's dependency alone, and nothing the service imports reaches it.

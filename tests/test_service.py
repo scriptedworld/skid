@@ -440,10 +440,8 @@ def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> No
     speak during the suite.
     """
     player = _player_that("true", tmp_path)
-    config_path = tmp_path / "config.toml"
-    config_path.write_text(
-        f'voice = "af_heart"\nplayer = "{player}"\n', encoding="utf-8"
-    )
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(f'voice: af_heart\nplayer: "{player}"\n', encoding="utf-8")
     service = Service(
         config=load_config(config_path),
         work_dir=tmp_path / "work",
@@ -459,9 +457,7 @@ def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> No
         service.wait_idle(timeout=300)
         after_tool = (service.status()["voice"], generator.voice)
 
-        config_path.write_text(
-            f'voice = "af_sky"\nplayer = "{player}"\n', encoding="utf-8"
-        )
+        config_path.write_text(f'voice: af_sky\nplayer: "{player}"\n', encoding="utf-8")
         service.submit("silo", ["through the file"])
         service.wait_idle(timeout=300)
         after_file = (service.status()["voice"], generator.voice)
