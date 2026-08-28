@@ -21,7 +21,7 @@ from typing import Any
 import httpx
 import pytest
 
-from skid.client import SESSION_HEADER, Session, pump
+from skid.client import SESSION_HEADER, pump
 
 INITIALIZE = {
     "jsonrpc": "2.0",
@@ -65,6 +65,7 @@ class Service:
     def __init__(self, *, forget_after: int | None = None) -> None:
         """`forget_after` is how many requests to answer before going amnesiac."""
         self.seen: list[tuple[str | None, dict[str, Any]]] = []
+        self.executed: list[str] = []
         self.sessions = 0
         self._forget_after = forget_after
 
@@ -92,6 +93,8 @@ class Service:
             self._forget_after = None
             return httpx.Response(404, json=DEAD_SESSION)
 
+        if body.get("method") == "tools/call":
+            self.executed.append(body["params"]["name"])
         return httpx.Response(
             200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"ok": True}}
         )
@@ -156,47 +159,93 @@ def test_the_retry_carries_the_new_session_and_not_the_dead_one() -> None:
     assert service.last_session() == "session-2"
 
 
-# COVERS: FR-5.3 | edge
-def test_a_shim_holding_no_session_at_all_handshakes_rather_than_erroring() -> None:
-    """The service answers 400 for a missing id, which re-handshaking fixes.
+# COVERS: FR-4.4 | property
+def test_a_recovered_request_is_executed_once_and_not_twice() -> None:
+    """The retry must never make the machine say the same thing twice.
 
-    Narrower than the 404 path on purpose: 400 is also what an ordinary
-    malformed request gets, so this recovers only when the shim really had no id
-    to send. Measured 2026-08-28, the live service says
-    `Bad Request: Missing session ID`.
+    `speak` is not idempotent, and this is the property the whole retry rests
+    on: recovery fires only for statuses the service emits *before* dispatching,
+    so the request being replayed provably did not run. A future `_lost` that
+    admitted a 503 or a connection reset would break this silently, and the
+    resulting duplicate speech would not look like a shim bug to anybody.
+
+    Asserting the reply arrived is not enough, which is why this exists
+    separately: the service running `speak` twice and answering once passes that
+    check and fails this one.
     """
-    sent: list[str | None] = []
+    service = Service(forget_after=2)
 
-    def demand_session(request: httpx.Request) -> httpx.Response:
-        """Refuse anything without a session, and issue one at initialize."""
-        sent.append(request.headers.get(SESSION_HEADER))
+    _run(service, INITIALIZE, INITIALIZED, SPEAK)
+
+    assert service.executed == [SPEAK["params"]["name"]]
+
+
+# COVERS: FR-5.3 | negative
+def test_a_reconnection_refused_at_the_protocol_layer_reports_what_it_said() -> None:
+    """A 200 carrying an error is not a rebuilt session, and its message is the good one.
+
+    The service explains itself in the `initialize` response: a protocol version
+    it will not accept, say. Reading only the status would call that success,
+    retry into a session that never existed, and hand the client a vague
+    complaint about the status of the retry instead of the service's own
+    account. That is this module's founding mistake pointed at its own recovery
+    path.
+    """
+
+    handshakes: list[int] = []
+
+    def refuse_handshake(request: httpx.Request) -> httpx.Response:
+        """Answer the first handshake, then refuse to rebuild at the JSON-RPC layer."""
         body = json.loads(request.content)
         if body.get("method") == "initialize":
+            handshakes.append(1)
+            if len(handshakes) > 1:
+                return httpx.Response(
+                    200,
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": body["id"],
+                        "error": {"code": -32602, "message": "unsupported protocol"},
+                    },
+                )
             return httpx.Response(
                 200,
                 json={"jsonrpc": "2.0", "id": body["id"], "result": {}},
-                headers={SESSION_HEADER: "fresh"},
+                headers={SESSION_HEADER: "session-1"},
             )
-        if request.headers.get(SESSION_HEADER) is None:
-            return httpx.Response(
-                400, json={"jsonrpc": "2.0", "id": None, "error": {"code": -32600}}
-            )
-        return httpx.Response(
-            200, json={"jsonrpc": "2.0", "id": body["id"], "result": {}}
-        )
+        if body.get("id") is None:
+            return httpx.Response(202, content=b"")
+        return httpx.Response(404, json=DEAD_SESSION)
 
     out = io.StringIO()
     with httpx.Client(
-        transport=httpx.MockTransport(demand_session), base_url="http://localhost"
+        transport=httpx.MockTransport(refuse_handshake), base_url="http://localhost"
     ) as http:
-        session = Session(http)
-        session.send(json.dumps(INITIALIZE))
-        session.forget()
-        replies = session.send(json.dumps(SPEAK))
+        pump(
+            http, _lines(INITIALIZE, INITIALIZED, SPEAK), out, path="/nowhere/skid.sock"
+        )
 
-    assert [json.loads(reply)["id"] for reply in replies] == [2]
-    assert sent[-1] == "fresh"
-    assert out.getvalue() == ""
+    (failure,) = [reply for reply in _replies(out) if "error" in reply]
+    assert failure["id"] == 2
+    assert "unsupported protocol" in failure["error"]["message"]
+
+
+def test_initializing_twice_replays_the_current_handshake_not_both() -> None:
+    """A cached handshake that accumulates would rebuild a session already left behind.
+
+    Keyed by method rather than appended, so a client that re-initializes
+    replaces what is replayed. Appending would send the stale `initialize`
+    first and the session would be rebuilt from the wrong one.
+    """
+    service = Service(forget_after=4)
+    second = {**INITIALIZE, "id": 9, "params": {"protocolVersion": "later"}}
+
+    _run(service, INITIALIZE, INITIALIZED, second, SPEAK)
+
+    replayed = [body for _, body in service.seen if body.get("method") == "initialize"]
+    assert [body["params"].get("protocolVersion") for body in replayed[-1:]] == [
+        "later"
+    ]
 
 
 # COVERS: FR-5.3 | property
