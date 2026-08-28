@@ -10,18 +10,36 @@ wins and this is the defect.
 Revised 2026-08-27 after two independent cold reviews of `fd42bdf`. What changed
 is recorded in `clank/tasks/skid/first-build/`.
 
-## The shape: one service
+## The shape: one service, and a script that speaks the protocol
 
-**One long-lived process**, `skid`, reached over HTTP by every agent.
+**One long-lived process**, `skid`, reached over HTTP by every agent through a
+per-client stdio script, `skid-mcp`.
 
-    transport   MCP over HTTP, on a unix socket at
+    claude <-stdio-> skid-mcp <-plain HTTP-> skid
+
+    transport   plain HTTP, on a unix socket at
                 $XDG_RUNTIME_DIR/skid/skid.sock, mode 0600
     lifetime    systemd socket activation: started on first connection,
                 restarted if it dies
+    server      waitress, handed the socket systemd already bound
+    app         flask, six routes named in skid/tools.py
 
-It is the MCP server, it holds the model, it owns playback, and it is the only
-writer of the config. There is no second process and no protocol between
-processes.
+`skid` holds the model, owns playback, and is the only writer of the config.
+`skid-mcp` is the MCP server: it holds the six tool schemas and the dispatch,
+and it holds nothing that survives a call.
+
+**Nothing is cached on either side of the socket, which is the point.** MCP over
+HTTP puts a session id in the service's memory, and a restart forgot it: the
+service then answered every later request `404 Session not found` with a null
+id, which a JSON-RPC client cannot match to anything it asked, so it waited
+until something outside gave up. Measured 2026-08-28 at 1800 seconds. Removing
+the session removes the failure rather than recovering from it.
+
+**The cost is a new failure mode, and it is guarded.** With the schemas in one
+process and the implementations in another, a tool can exist on one side only.
+`skid/tools.py` is the single declaration both derive from, and
+`tests/test_routes.py` asserts the route set and the tool set are equal in both
+directions.
 
 *Discharges FR-5.2, FR-5.1.*
 
@@ -438,19 +456,31 @@ and depth is not.
 
 ## What runs it
 
-Python 3.12 exactly, and a uv project. kokoro refuses 3.13 and later, and this
-machine's default interpreter is 3.14.7, so the pin is load-bearing rather than
-conventional.
+Python 3.12 exactly, and a uv project. kokoro **declares** `<3.13,>=3.10`, and
+this machine's default interpreter is 3.14.7, so the pin is load-bearing rather
+than conventional.
 
-Dependencies: `kokoro`, the Anthropic MCP SDK for Python, `tomlkit` for the
+**The declaration is not a ceiling.** Told first-hand 2026-08-28: kokoro runs on
+3.13 and 3.14 and has simply not had a release since. A resolver still enforces
+what is declared, and nothing in skid needs a newer interpreter, so the pin
+costs nothing and stays.
+
+Dependencies: `kokoro`, `flask` and `waitress` for the service, the Anthropic
+MCP SDK for Python for the script alone, `httpx` between them, `tomlkit` for the
 style-preserving round trip FR-7.1 and FR-7.8 need, and numpy, which arrives
 with kokoro. Measured 2026-08-27: kokoro 0.9.4 and its torch stack install and
 run under 3.12.14, and the WAV writer is the stdlib's.
 
-**Whether the MCP SDK supports 3.12 is still the open risk in the pin.** It was
-measured present under 3.14.7, which says the SDK exists rather than that it
-installs here, and it is not yet a dependency of this project. Confirm it before
-the server is written, because FR-1.7 and FR-5.2 disagree if it does not.
+**The MCP SDK under 3.12 was the open risk in the pin and is now settled.**
+Measured 2026-08-28 on skid's own interpreter: `mcp` 2.1.1 under 3.12.14. The
+earlier reading of 2.0.0 under 3.14.7 was this machine's default rather than
+skid's, so it said the SDK exists rather than that it is present here.
+
+**waitress rather than gunicorn**, because it serves a socket that is already
+bound and listening, which is exactly what socket activation hands over.
+`waitress.serve(app, sockets=[sock])`, proved against a real unix socket rather
+than assumed; `waitress.serve(app, **kw)` hides the parameter from signature
+inspection and `Adjustments` is where it is visible.
 
 ### Installed as a uv tool
 
