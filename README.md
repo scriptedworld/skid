@@ -40,6 +40,12 @@ the socket, and registers skid with the MCP client. Everything it writes is
 inside your home and it names each file when it finishes. `--dry-run` prints the
 commands without running any of them, and `--uninstall` reverses all of it.
 
+**Run it where skid is already installed and it shows you what is there and
+asks.** Answering yes reinstalls, which re-points the MCP registration at this
+checkout: `claude mcp add` refuses a name that is taken and will not update it,
+so the registration is removed and added rather than left as it is. `--yes`
+answers for a script, and no terminal to ask on is taken as no.
+
 It enables the socket but does not start the service, because socket activation
 means the first connection does that, and starting it early loads a model to
 prove that two files were copied.
