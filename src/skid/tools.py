@@ -44,47 +44,66 @@ SCHEMAS: dict[str, dict[str, object]] = {
     "speak": {
         "type": "object",
         "properties": {
-            "name": {"type": "string"},
-            "messages": {"type": "array", "items": {"type": "string"}},
+            "name": {"type": "string", "minLength": 1},
+            "messages": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+            },
         },
         "required": ["name", "messages"],
     },
     "set_voice": {
         "type": "object",
-        "properties": {"voice": {"type": "string"}},
+        "properties": {"voice": {"type": "string", "minLength": 1}},
         "required": ["voice"],
     },
     "add_substitution": {
         "type": "object",
         "properties": {
-            "pattern": {"type": "string"},
+            "pattern": {"type": "string", "minLength": 1},
             "replacement": {"type": "string"},
-            "kind": {"type": "string", "default": "literal"},
+            "kind": {"enum": ["literal", "regex"], "default": "literal"},
         },
         "required": ["pattern", "replacement"],
     },
     "remove_substitution": {
         "type": "object",
         "properties": {
-            "pattern": {"type": "string"},
-            "kind": {"type": "string", "default": "literal"},
+            "pattern": {"type": "string", "minLength": 1},
+            "kind": {"enum": ["literal", "regex"], "default": "literal"},
         },
         "required": ["pattern"],
     },
     "list_substitutions": {"type": "object", "properties": {}},
     "status": {"type": "object", "properties": {}},
 }
-"""What each tool takes, for the compatibility endpoint's `tools/list`.
+"""What each tool takes. **Enforced, not merely advertised.**
 
-**These are not the schemas a current client sees.** `skid-mcp` derives those
-from its function signatures through the SDK, which is one declaration and the
-right one. These exist because the service has to answer an older shim that asks
-it directly, and it has no SDK to derive anything with.
+`routes.py` compiles these with wrench and validates every incoming call against
+them, so a request that does not match is refused with a message naming the
+field. The same documents are what `tools/list` publishes, which is what makes
+the advertisement honest: a client is told the contract that will actually be
+applied to it.
 
-Two statements of the same thing is the drift this module exists to prevent, so
-`tests/test_client.py` asserts they agree on names, required fields and property
-names. The SDK adds titles and a wrapper name that carry no meaning to a caller,
-and those are not compared.
+An earlier version of this only published them, and hand-written checks in the
+operations did the real work. That is two statements of one contract with
+nothing keeping them together, which is the drift this module exists to prevent.
+
+**`additionalProperties` is deliberately not set.** A key skid does not know is
+ignored here, where in the config file it is refused. The difference is who is
+harmed: an unknown config key is a typo that silently keeps a default and leaves
+a person staring at a file that appears to say otherwise, while an unknown
+argument is a client sending a field skid has no use for, and refusing it breaks
+a caller to no purpose. `test_the_substitution_set_is_global` depends on this,
+sending `name` to prove the set is not scoped by it.
+
+`skid-mcp` still derives its own schemas from function signatures through the
+SDK, so the surface is stated twice while that is true.
+`tests/test_client.py` asserts the two agree on names, required fields and
+property names; titles and the SDK's generated wrapper name mean nothing to a
+caller and are not compared. The duplication goes when the shim stops being an
+MCP server and becomes a forwarder.
 """
 
 RESULT = "result"

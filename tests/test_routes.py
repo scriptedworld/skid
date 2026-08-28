@@ -228,6 +228,55 @@ def test_status_reports_what_a_caller_cannot_log(client: FlaskClient) -> None:
     assert set(reported) >= {"pending", "recent_failures", "voice"}
 
 
+# COVERS: FR-5.2 | negative
+def test_a_call_that_does_not_match_its_schema_is_refused_by_field(
+    client: FlaskClient, service: Service
+) -> None:
+    """The published schema is the enforced one, checked by wrench.
+
+    An earlier version declared these only to show them in `tools/list`, with
+    hand-written checks doing the real work, which is one contract stated twice
+    and nothing holding the two together. wrench validates every call against
+    the same document a client is handed.
+
+    `messages: []` is the case worth naming: it used to reach `Submission` and
+    raise from a dataclass three frames down, and now it is refused at the edge
+    naming the field. Nothing is queued either way, which is what is asserted.
+    """
+    empty = client.post(ROUTES["speak"][1], json={"name": "silo", "messages": []})
+    wrong_type = client.post(ROUTES["speak"][1], json={"name": 7, "messages": ["a"]})
+    missing = client.post(ROUTES["speak"][1], json={"name": "silo"})
+
+    assert empty.status_code == 400
+    assert "messages" in empty.get_json()[ERROR]
+    assert wrong_type.status_code == 400
+    assert "name" in wrong_type.get_json()[ERROR]
+    assert missing.status_code == 400
+    assert service.status()["pending"] == 0
+
+
+# COVERS: FR-5.2 | property
+def test_the_published_schema_is_the_enforced_one(client: FlaskClient) -> None:
+    """What `tools/list` advertises is what a call is held to, not a copy of it.
+
+    Asserted by taking the schema the endpoint publishes and sending something
+    that violates it, so the two cannot drift apart without this failing.
+    """
+    published = {
+        tool["name"]: tool["inputSchema"]
+        for tool in client.post(
+            LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+        ).get_json()["result"]["tools"]
+    }
+
+    assert "voice" in published["set_voice"]["required"]
+
+    refused = client.post(ROUTES["set_voice"][1], json={})
+
+    assert refused.status_code == 400
+    assert "voice" in refused.get_json()[ERROR]
+
+
 # COVERS: FR-6.4 | edge
 def test_a_missing_config_is_not_an_error(client: FlaskClient) -> None:
     """Reading the set before anything has written one answers empty, not 500."""
