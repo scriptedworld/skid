@@ -151,13 +151,36 @@ code. `pyproject.toml` scopes those tools away from `bin/`, which holds nothing
 skid wrote, and says so beside the exclusions. Filed as
 `clank/inbox/toolbox/an-adopter-is-graded-on-the-checkers-it-adopts`.
 
-    python-std-quality   8 of 9 pass; tests exits 5 with no tests collected
+    python-std-quality   7 of 9 pass; docstrings 0.0%, tests exits 5
     common-quality       2 of 3 pass; traceability reports 0 of 45 covered
 
-**Both remaining failures are the same fact**, and stage 4 clears both.
-Traceability is the one worth watching: it read 45 real rows, so it is a
-measurement rather than a vacuous pass, and it is the check that will hold every
-test to a requirement once tests exist.
+Measured 2026-08-27 against bolt `v0.0.0-20260827201109-7604557974a5`, reading
+`result.yaml` from a named `--output-dir`.
+
+**All three failures are the same fact: there is no code yet.** Stage 4 clears
+them and none is worked around. In particular `docstrings` is left failing
+rather than answered with a module docstring written to move the number, which
+would be gaming a measurement rather than passing it.
+
+**`docstrings` is the worked example of a borrowed pass.** It reported 88.9% and
+passed until toolbox excluded the adopted paths. The 88.9% was toolbox's two
+checker scripts, reached through `bin/`. skid's own code scores 0.0%, and both
+numbers are one command apart:
+
+    interrogate --fail-under 80 -e .venv -e venv -e build -e dist .
+      -> PASSED, 88.9%          reading toolbox's checkers
+
+    interrogate --fail-under 80 -e .venv -e venv -e build -e dist \
+                -e .ephemera -e bin -e adapters .
+      -> FAILED, 0.0%           reading skid's
+
+A green task that was measuring somebody else's repository is exactly what the
+vacuous-pass warning is about, and it took another project fixing its jig to
+surface it here.
+
+**Traceability is the one check that is not vacuous today.** It reads 45 real
+rows whether or not code exists, so its failure is a measurement, and it is what
+will hold every test to a requirement once tests exist.
 
 ## Where the work is
 
