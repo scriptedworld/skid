@@ -25,6 +25,9 @@ dependencies = [
 [project.scripts]
 skid = "skid.main:main"
 skid-mcp = "skid.client:main"
+# Reachable by name only once the install it performs has happened, which is why
+# `python3 src/skid/install.py` is the documented first run. Both are this file.
+skid-install = "skid.install:main"
 
 [tool.hatch.metadata]
 # The spaCy model is a direct URL because it is not on PyPI. Declaring it is
