@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import io
 import shutil
-import subprocess
+import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
 from pathlib import Path
 
 import pytest
@@ -64,7 +64,7 @@ def test_the_units_in_the_checkout_parse(unit: str) -> None:
     if shutil.which("systemd-analyze") is None:
         pytest.skip("systemd-analyze is not on PATH")
 
-    finished = subprocess.run(
+    finished = subprocess.run(  # nosec B603 B607 - docs/SUPPRESSIONS.md S-1
         [
             "systemd-analyze",
             "--user",

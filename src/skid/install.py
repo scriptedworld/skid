@@ -38,7 +38,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -278,7 +278,7 @@ def spacy_model_present(paths: Paths) -> bool:
     python = paths.tool_dir / "bin" / "python"
     if not python.exists():
         return False
-    finished = subprocess.run(
+    finished = subprocess.run(  # nosec B603 - docs/SUPPRESSIONS.md S-1
         [str(python), "-c", "import en_core_web_sm"],
         capture_output=True,
         check=False,
@@ -295,7 +295,9 @@ def run(step: Step) -> bool:
     non-zero on a name that is not, so reading the status alone would call a
     first install and a reinstall failures in turn.
     """
-    finished = subprocess.run(step.argv, capture_output=True, text=True, check=False)
+    finished = subprocess.run(  # nosec B603 - docs/SUPPRESSIONS.md S-1
+        step.argv, capture_output=True, text=True, check=False
+    )
     output = finished.stdout + finished.stderr
     if finished.returncode == 0:
         return True
