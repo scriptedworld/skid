@@ -11,7 +11,7 @@ overlap. skid cannot detect that and does not pretend to.
 from __future__ import annotations
 
 import shlex
-import subprocess
+import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -63,7 +63,7 @@ class Player:
         """
         with self._lock:
             try:
-                finished = subprocess.run(
+                finished = subprocess.run(  # nosec B603 - docs/SUPPRESSIONS.md S-1
                     self._argv(clip),
                     timeout=self._timeout,
                     check=False,

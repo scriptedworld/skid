@@ -49,9 +49,14 @@ route would win. Nothing depends on it.
 to be longer than any clip skid produces, and no clip length has been measured
 beyond the 1.75 seconds of one short sentence.
 
-**Where `docs/MOCKS/` and `docs/SUPPRESSIONS/` would go if ever needed.** Neither
-exists, correctly: nothing is mocked and nothing is silenced. There are zero
-`noqa` and zero `type: ignore` in `src/` and `tests/` as of 2026-08-28.
+**`docs/SUPPRESSIONS.md` exists now**, carrying one entry: seven `#nosec` marks
+covering eight bandit findings about `subprocess`, with the question that was
+put and the answer that was given. A file rather than the `docs/SUPPRESSIONS/`
+directory this line used to anticipate, because one class of suppression is one
+entry.
+
+**Nothing is mocked**, and `docs/MOCKS/` still does not exist, correctly. There
+are zero `noqa` and zero `type: ignore` in `src/` and `tests/`.
 
 ## Known and not blocking
 
@@ -65,7 +70,12 @@ It read 0.0% the day before, over an empty package. **`traceability` reports 38
 of 46**, which is a real number and the gap listed above.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
-in the installer, which are what running commands looks like to a scanner.
-Reading the tail of its output invites the opposite conclusion: the summary
-prints severity and then confidence, so `High: 5` is the confidence line. There
-are zero `#nosec` in the tree.
+in the installer and the player, which are what running commands looks like to a
+scanner. Reading the tail of its output invites the opposite conclusion: the
+summary prints severity and then confidence, so `High: 5` is the confidence
+line.
+
+**Both bandit tasks pass now**, by seven `#nosec` marks registered in
+`docs/SUPPRESSIONS.md`. Per-line rather than a threshold change or a tree-wide
+skip, which was the user's choice and is the narrowest of the three: a new
+subprocess call still fails the gate until somebody looks at it.
