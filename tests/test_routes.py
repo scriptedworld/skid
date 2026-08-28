@@ -20,7 +20,7 @@ import pytest
 from flask.testing import FlaskClient
 
 from skid.config import Config, load_config
-from skid.routes import build_app
+from skid.routes import LEGACY_ENDPOINT, METHOD_NOT_FOUND, build_app
 from skid.service import Service
 from skid.tools import ERROR, RESULT, ROUTES
 
@@ -70,6 +70,11 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
 
     Asserted as equality in both directions, so an orphaned route is caught as
     well as an unreachable tool.
+
+    `LEGACY_ENDPOINT` is subtracted rather than added to `ROUTES`, because it is
+    not a tool and nothing should build a request from it. It is named here so
+    that removing it, which is expected once no old shim is running, makes this
+    test the thing that notices.
     """
     declared = {(method, path) for method, path in ROUTES.values()}
     served = {
@@ -79,7 +84,7 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
         if method in ("GET", "POST") and not str(rule).startswith("/static")
     }
 
-    assert served == declared
+    assert served - {("POST", LEGACY_ENDPOINT)} == declared
 
 
 # COVERS: FR-4.5 | positive
@@ -221,3 +226,40 @@ def test_status_reports_what_a_caller_cannot_log(client: FlaskClient) -> None:
 def test_a_missing_config_is_not_an_error(client: FlaskClient) -> None:
     """Reading the set before anything has written one answers empty, not 500."""
     assert _result(client.get(ROUTES["list_substitutions"][1])) == []
+
+
+# COVERS: FR-5.3 | regression
+def test_an_old_shim_is_told_the_protocol_moved_and_can_match_the_answer(
+    client: FlaskClient,
+) -> None:
+    """The deploy reintroduced the wedge, and this is what closed it again.
+
+    A `skid-mcp` from before the move posts MCP to `/mcp`. With no route there,
+    Flask answers 404 with an HTML page, which is not a JSON-RPC message, so the
+    client cannot match it to its request and waits. Measured on the live socket
+    right after the restart: a `status()` call was still outstanding at 120
+    seconds, which is the failure FR-5.3 exists to prevent, arriving by a new
+    road.
+
+    The id is what makes the answer usable, so the id is what is asserted. A 200
+    is deliberate: a shim that treats 404 as a lost session would otherwise try
+    to reconnect into the same wall.
+    """
+    answer = client.post(
+        LEGACY_ENDPOINT,
+        json={"jsonrpc": "2.0", "id": 7, "method": "tools/call"},
+    ).get_json()
+
+    assert answer["id"] == 7
+    assert answer["error"]["code"] == METHOD_NOT_FOUND
+    assert "skid-mcp" in answer["error"]["message"]
+
+
+# COVERS: FR-5.3 | edge
+def test_an_old_shims_notification_gets_no_reply(client: FlaskClient) -> None:
+    """Nothing is waiting on a notification, and JSON-RPC forbids answering one."""
+    response = client.post(
+        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "method": "notifications/initialized"}
+    )
+
+    assert response.status_code == 202
