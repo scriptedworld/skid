@@ -5,7 +5,7 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-Two ready tasks in `clank/tasks/skid/`, both fully specified.
+One ready task in `clank/tasks/skid/`, fully specified.
 
 **The config becomes YAML, and wrench validates it and the spool.**
 `data-files/10-validate-with-wrench-and-a-schema.ready`. Decided 2026-08-28 with
@@ -17,12 +17,6 @@ before that was recorded, so it predates it and is now the outlier.
 Nothing blocks it: **no config file exists on this machine**, so there is
 nothing to migrate. It drops `tomlkit` rather than adding a dependency, and
 retires FR-7.8's comment clause and `docs/SPEC.md:289` with it.
-
-**The systemd watchdog and the restart limit.**
-`resilience/20-the-watchdog-and-the-restart-limit.ready`. `WatchdogUSec=0`
-today, so a wedged service is undetected, and the start limit is systemd's
-default, so five failures in ten seconds leaves it dead until somebody runs
-`reset-failed`. Neither value was chosen.
 
 Traceability reads 48 of 48, with nothing permanently red and no marker needed
 in toolbox's checker.
@@ -39,6 +33,22 @@ mispronunciation somebody reaches for the config to fix is worth more than any
 of the reasoning behind them.
 
 ## Landed since this file was last rewritten
+
+**The watchdog and the start limit**, `6ca9a7a`, deployed and live:
+`WatchdogUSec=2min` where it was 0, and the start limit 10 over 120s where it
+was systemd's 5 over 10.
+
+The watchdog measures progress rather than liveness, and withholding the ping is
+the mechanism. Health is idle, a clip on the speaker, or a step within 60
+seconds. It is not keyed to clip length, because playback pings and a clip can
+legitimately run 77 seconds.
+
+Two things caught by writing them wrong first. `StartLimit*` moved to `[Unit]`
+in systemd v229 and is ignored in `[Service]` with a warning while
+`systemd-analyze verify` exits 0 either way, so the test asserts the section
+rather than the key. And that test failed on its own first draft, because a
+comment in the unit contains the literal `[Service]` and split the section
+early.
 
 **The MCP server moved into the stdio script**, `0eef559`, and is deployed and
 serving. `skid-mcp` holds the six schemas and the dispatch; the service is six
@@ -159,9 +169,20 @@ not of the software, and `docs/PROJECT.md` now says so.
 file. FR-3.4 requires only that it is configurable, and FR-7.1 already says which
 route would win. Nothing depends on it.
 
-**The bound in FR-1.9**, the time after which a stuck player is killed. It wants
-to be longer than any clip skid produces, and no clip length has been measured
-beyond the 1.75 seconds of one short sentence.
+**The bound in FR-1.9**, the time after which a stuck player is killed, is now
+measured against real clips rather than guessed. 6.4 characters per second of
+audio, 2026-08-28, so the 300 second default admits about 1950 characters and
+cuts off anything longer mid-sentence.
+
+Whether that is the right ceiling is the open half. Nothing caps a message's
+length at submission, so the choice is between raising the bound, capping the
+message, or accepting that an essay gets truncated. Nothing depends on it: the
+watchdog does not, because playback pings regardless of length.
+
+    chars  generate s  audio s        .ephemera/measure-clip-length.py
+        5        0.35     1.27
+      398        3.83    25.62
+     1196       10.85    76.88
 
 **`docs/SUPPRESSIONS.md` exists now**, carrying one entry: five `#nosec` marks
 covering eight bandit findings about `subprocess`, with the question that was

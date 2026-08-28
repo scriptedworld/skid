@@ -199,6 +199,28 @@ access. The part least worth reopening.
 ahead of the speaker, unbounded. A submission arriving while another plays
 queues.
 
+**The watchdog measures progress, not liveness**, `WatchdogSec=120`. skid pings
+only while the serve loop is getting somewhere, and withholding the ping is the
+mechanism: a timer on a thread that is always alive proves the timer runs, which
+is the failure being detected. Health is idle, or a clip on the speaker, or a
+step within `PROGRESS_GRACE`.
+
+It is not keyed to clip length. Measured 2026-08-28, 6.4 characters per second
+of audio, so 1196 characters plays for 77 seconds and nothing caps a message.
+Playback pings, so what the window must clear is one generation step instead:
+about 30 seconds for the longest clip the player's 300s ceiling admits.
+`.ephemera/measure-clip-length.py` regenerates the table.
+
+**The start limit is 10 attempts over 120 seconds**, where systemd's default was
+5 over 10. The default latches on fast failures and not slow ones: an import
+error stops in 7 seconds, while the spaCy episode restarted 76 times without
+tripping it because each attempt outlived the window. Latching is deliberate;
+`systemctl --user status skid.service` says failed and `reset-failed` clears it.
+
+**`StartLimit*` goes in `[Unit]`.** systemd moved it in v229, ignores it in
+`[Service]` with a warning, and `systemd-analyze verify` still exits 0 either
+way, so the exit status cannot tell you which you wrote.
+
 **`paplay` as the player**, with a user-defined one declared as a command line.
 It follows the default output device and works on PulseAudio and PipeWire alike.
 
@@ -241,9 +263,8 @@ the answer to the declaration, and it is already the arrangement.
 
 ## What is not built
 
-Nothing a requirement names. Three tasks are open and all three ready: the MCP
-server moving into the stdio script, the config becoming YAML, and the systemd
-watchdog and start limit.
+Nothing a requirement names. One task is open and ready: the config becoming
+YAML.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 under Python 3.12.14.
 `paplay`, `aplay` and `pw-play` are present; `ffplay`, `mpv` and `espeak-ng` are
