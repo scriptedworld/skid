@@ -39,11 +39,30 @@ dependencies = [
 # somebody installed it rather than because this file asked for it, so `uv sync`
 # removed it and a fresh clone could never have run the suite at all.
 #
-# The linters are not here on purpose: the gate runs ruff, mypy, pylint, bandit
-# and the rest as uv tools from PATH, so declaring them would be a second
-# statement of what toolbox's jig already pins.
+# THE WHOLE QUALITY TOOLCHAIN, not just pytest. The list is the `requires:`
+# block of `bolt.python-std-quality.yaml` verbatim, so the gate and a local run
+# reach for the same set.
+#
+# This is not a second statement of what toolbox pins. The jig pins what the
+# GATE runs; this declares what the PROJECT needs to check itself, and the
+# difference is load-bearing: the jig invokes these from PATH, where python is
+# 3.14.7 and cannot import skid's dependencies. Run from here they see the 3.12
+# interpreter the code actually uses. `types` reports 30 phantom errors from
+# PATH and one real one from the venv, which is the whole argument.
+#
+# Filed against the jig as clank/tasks/toolbox/jig-validation/30.
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "ruff",
+    "mypy",
+    "pylint",
+    "complexipy",
+    "vulture",
+    "interrogate",
+    "bandit",
+    "coverage",
+    "pytest>=8.0",
+]
 
 [project.scripts]
 skid = "skid.main:main"

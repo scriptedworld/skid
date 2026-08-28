@@ -179,7 +179,7 @@ def test_a_recovered_request_is_executed_once_and_not_twice() -> None:
 
     _run(service, INITIALIZE, INITIALIZED, SPEAK)
 
-    assert service.executed == [SPEAK["params"]["name"]]
+    assert service.executed == ["speak"]
 
 
 # COVERS: FR-5.3 | negative
