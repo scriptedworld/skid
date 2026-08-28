@@ -349,6 +349,18 @@ adds:
   FR-7.2 queues without bound behind it
 - a config file present but malformed
 - the model failing to load or download
+- **the backend absent or wedged**, which every caller meets for the whole
+  window between a crash and the next start
+
+**Every request to the backend has a bounded wait**, and exceeding it is a tool
+error naming the backend rather than the call (FR-5.3). One rule covers both an
+absent backend and one that is connected and not answering. The second matters
+more since the start protocol made path presence mean ready: the stronger that
+assumption, the more a wedged backend costs.
+
+That sentence existed at `fd42bdf`, was lost when this section was rewritten,
+and nothing noticed because no requirement held it. FR-5.3 is now the row that
+does.
 
 **Disk exhaustion is the one that degrades worst**, and it is named rather than
 designed away: FR-7.3's unboundedness was chosen with its cost stated. Every
