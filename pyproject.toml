@@ -97,6 +97,10 @@ dev = [
 [project.scripts]
 skid = "skid.main:main"
 skid-mcp = "skid.client:main"
+# The socket is the interface and MCP is one client of it. skid-say is another,
+# and it needs nothing a session spawned at start-up, which is what made the
+# machine silent for hours with a working service behind it.
+skid-say = "skid.say:main"
 # Reachable by name only once the install it performs has happened, which is why
 # `python3 src/skid/install.py` is the documented first run. Both are this file.
 skid-install = "skid.install:main"

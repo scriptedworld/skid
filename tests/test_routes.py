@@ -20,7 +20,7 @@ import pytest
 from flask.testing import FlaskClient
 
 from skid.config import Config, load_config
-from skid.routes import LEGACY_ENDPOINT, METHOD_NOT_FOUND, build_app
+from skid.routes import LEGACY_ENDPOINT, build_app
 from skid.service import Service
 from skid.tools import ERROR, RESULT, ROUTES
 
@@ -31,24 +31,30 @@ def config_path_fixture(tmp_path: Path) -> Path:
     return tmp_path / "config.yaml"
 
 
-@pytest.fixture(name="client")
-def client_fixture(tmp_path: Path, config_path: Path) -> Iterator[FlaskClient]:
-    """The real app over a real service, with a player that says nothing."""
+@pytest.fixture(name="service")
+def service_fixture(tmp_path: Path, config_path: Path) -> Iterator[Service]:
+    """A real service with a player that says nothing and exits zero."""
     script = tmp_path / "player.sh"
     script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")
     script.chmod(0o755)
 
-    service = Service(
+    built = Service(
         config=Config(player=f"{script} {{file}}"),
         work_dir=tmp_path / "work",
         log_path=tmp_path / "log",
         config_path=config_path,
     )
+    yield built
+    built.stop()
+
+
+@pytest.fixture(name="client")
+def client_fixture(service: Service, config_path: Path) -> Iterator[FlaskClient]:
+    """The real app over that service, called as a client calls it."""
     app = build_app(service, config_path)
     app.config["TESTING"] = True
     with app.test_client() as http:
         yield http
-    service.stop()
 
 
 def _result(response: Any) -> Any:
@@ -229,30 +235,97 @@ def test_a_missing_config_is_not_an_error(client: FlaskClient) -> None:
 
 
 # COVERS: FR-5.3 | regression
-def test_an_old_shim_is_told_the_protocol_moved_and_can_match_the_answer(
-    client: FlaskClient,
-) -> None:
-    """The deploy reintroduced the wedge, and this is what closed it again.
+def test_an_old_shim_can_still_speak(client: FlaskClient, service: Service) -> None:
+    """The case that took the machine silent for hours, closed properly.
 
-    A `skid-mcp` from before the move posts MCP to `/mcp`. With no route there,
-    Flask answers 404 with an HTML page, which is not a JSON-RPC message, so the
-    client cannot match it to its request and waits. Measured on the live socket
-    right after the restart: a `status()` call was still outstanding at 120
-    seconds, which is the failure FR-5.3 exists to prevent, arriving by a new
-    road.
+    A `skid-mcp` from before the move posts MCP to `/mcp`. Deleting the endpoint
+    left Flask answering 404 with an HTML page, which is not a JSON-RPC message,
+    so every client waited on a reply it could not match: measured on the live
+    socket, a call still outstanding at 120 seconds. Answering a JSON-RPC error
+    unblocked them and still left them mute, because only the person holding a
+    session can restart it to pick up a new shim.
 
-    The id is what makes the answer usable, so the id is what is asserted. A 200
-    is deliberate: a shim that treats 404 as a lost session would otherwise try
-    to reconnect into the same wall.
+    So the endpoint does the work. This asserts the whole path an old shim takes:
+    a `tools/call` reaching the service, running, and coming back in MCP's shape
+    with the caller's own id on it.
     """
     answer = client.post(
         LEGACY_ENDPOINT,
-        json={"jsonrpc": "2.0", "id": 7, "method": "tools/call"},
+        json={
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+                "name": "speak",
+                "arguments": {"name": "silo", "messages": ["heard again"]},
+            },
+        },
     ).get_json()
 
     assert answer["id"] == 7
-    assert answer["error"]["code"] == METHOD_NOT_FOUND
-    assert "skid-mcp" in answer["error"]["message"]
+    assert "queued 1 message(s) for silo" in answer["result"]["content"][0]["text"]
+    assert service.status()["pending"] == 1
+
+
+# COVERS: FR-5.3 | property
+def test_the_legacy_endpoint_holds_no_session(client: FlaskClient) -> None:
+    """Statelessness is what makes serving the old protocol safe to keep.
+
+    The wedge task 40 removed was a session id going stale in the service's
+    memory. Reinstating MCP here would reinstate that too if it issued one, so
+    it issues none and expects none: no `mcp-session-id` header out, and a call
+    carrying a stale one works anyway.
+    """
+    first = client.post(
+        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+    )
+    with_a_dead_session = client.post(
+        LEGACY_ENDPOINT,
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "status", "arguments": {}},
+        },
+        headers={"mcp-session-id": "disowned-000000000000000000000000"},
+    )
+
+    assert "mcp-session-id" not in {key.lower() for key, _ in first.headers}
+    assert with_a_dead_session.get_json()["id"] == 2
+    assert "error" not in with_a_dead_session.get_json()
+
+
+# COVERS: FR-5.2 | property
+def test_the_legacy_tool_list_matches_the_declared_set(client: FlaskClient) -> None:
+    """An old shim asking what exists gets the same six, not a stale list."""
+    listed = client.post(
+        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 3, "method": "tools/list"}
+    ).get_json()["result"]["tools"]
+
+    assert {tool["name"] for tool in listed} == set(ROUTES)
+    assert all(tool["inputSchema"] for tool in listed)
+
+
+# COVERS: FR-6.5 | negative
+def test_a_refusal_reaches_an_old_shim_as_a_tool_error(client: FlaskClient) -> None:
+    """A bad value fails the call and says why, rather than failing the transport.
+
+    `isError` rather than a JSON-RPC error, because the call was dispatched and
+    the tool refused. A protocol-level error would say the request was malformed,
+    which it was not.
+    """
+    answer = client.post(
+        LEGACY_ENDPOINT,
+        json={
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {"name": "set_voice", "arguments": {"voice": "af-typo"}},
+        },
+    ).get_json()
+
+    assert answer["result"]["isError"] is True
+    assert "af-typo" in answer["result"]["content"][0]["text"]
 
 
 # COVERS: FR-5.3 | edge

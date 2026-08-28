@@ -33,7 +33,7 @@ from skid.client import Backend, Unreachable, build_server
 from skid.config import Config, load_config
 from skid.routes import build_app
 from skid.service import Service
-from skid.tools import ROUTES
+from skid.tools import ROUTES, SCHEMAS
 
 NOWHERE = Path("/nowhere/skid.sock")
 """A socket path nothing is listening on, which is what an absent service is."""
@@ -167,6 +167,32 @@ def test_setting_the_voice_through_the_tool_reaches_the_config(
     _call(server, "set_voice", voice="af_bella")
 
     assert load_config(config_path).voice == "af_bella"
+
+
+# COVERS: FR-5.2 | property
+def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> None:
+    """Two statements of the tool surface, asserted to agree.
+
+    `skid-mcp` derives its schemas from function signatures through the SDK,
+    which is the right source and the one a current client sees.
+    `skid.tools.SCHEMAS` states them again for the compatibility endpoint,
+    because the service answers an older shim's `tools/list` and has no SDK to
+    derive anything with.
+
+    Two statements is exactly the drift `skid.tools` exists to prevent, so they
+    are compared on what a caller can act on: the tool names, the required
+    fields, and the property names. Titles and the SDK's generated wrapper name
+    carry no meaning to a caller and are not compared.
+    """
+    given = {tool.name: tool.input_schema for tool in asyncio.run(server.list_tools())}
+
+    assert set(given) == set(SCHEMAS)
+    for name, schema in SCHEMAS.items():
+        properties = schema.get("properties") or {}
+        assert set(given[name].get("properties", {})) == set(properties), name
+        assert set(given[name].get("required", [])) == set(
+            schema.get("required") or []
+        ), name
 
 
 # COVERS: FR-7.9 | property
