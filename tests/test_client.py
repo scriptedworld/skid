@@ -39,14 +39,14 @@ NOWHERE = Path("/nowhere/skid.sock")
 """A socket path nothing is listening on, which is what an absent service is."""
 
 
-@pytest.fixture
-def config_path(tmp_path: Path) -> Path:
+@pytest.fixture(name="config_path")
+def config_path_fixture(tmp_path: Path) -> Path:
     """A config file path in a directory the test owns."""
     return tmp_path / "config.toml"
 
 
-@pytest.fixture
-def service(tmp_path: Path, config_path: Path) -> Iterator[Service]:
+@pytest.fixture(name="service")
+def service_fixture(tmp_path: Path, config_path: Path) -> Iterator[Service]:
     """A real service with a player that says nothing and exits zero."""
     script = tmp_path / "player.sh"
     script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")
@@ -62,8 +62,8 @@ def service(tmp_path: Path, config_path: Path) -> Iterator[Service]:
     built.stop()
 
 
-@pytest.fixture
-def backend(service: Service, config_path: Path) -> Iterator[Backend]:
+@pytest.fixture(name="backend")
+def backend_fixture(service: Service, config_path: Path) -> Iterator[Backend]:
     """A backend over the real app, reached through a real WSGI request."""
     app = build_app(service, config_path)
     transport = httpx.WSGITransport(app=app)
@@ -71,8 +71,8 @@ def backend(service: Service, config_path: Path) -> Iterator[Backend]:
         yield Backend(http, "/wsgi/skid.sock")
 
 
-@pytest.fixture
-def server(backend: Backend) -> Any:
+@pytest.fixture(name="server")
+def server_fixture(backend: Backend) -> Any:
     """The MCP server over that backend, as a client meets it."""
     return build_server(backend)
 

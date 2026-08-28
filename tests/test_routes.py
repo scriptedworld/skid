@@ -25,14 +25,14 @@ from skid.service import Service
 from skid.tools import ERROR, RESULT, ROUTES
 
 
-@pytest.fixture
-def config_path(tmp_path: Path) -> Path:
+@pytest.fixture(name="config_path")
+def config_path_fixture(tmp_path: Path) -> Path:
     """A config file path in a directory the test owns."""
     return tmp_path / "config.toml"
 
 
-@pytest.fixture
-def client(tmp_path: Path, config_path: Path) -> Iterator[FlaskClient]:
+@pytest.fixture(name="client")
+def client_fixture(tmp_path: Path, config_path: Path) -> Iterator[FlaskClient]:
     """The real app over a real service, with a player that says nothing."""
     script = tmp_path / "player.sh"
     script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")

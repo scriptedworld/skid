@@ -24,7 +24,36 @@ through its real seam, not a double standing in for skid's code.
 **The config file is a real file** (FR-7.1, FR-7.8). Tests write one in a
 temporary directory and point `XDG_CONFIG_HOME` at it.
 
+**The HTTP surface is WSGI** (FR-5.2). Flask hands out a real test client, and
+`httpx.WSGITransport` puts the real MCP server in front of the real app, so a
+tool call in `test_client.py` runs the actual route with an actual `Service`
+behind it and no socket in the way. Nothing is scripted. The file this replaced
+had to hand-write a service that returned 404 on cue, because what it tested was
+recovery from a lost session and a session has to be broken on purpose.
+
 **kokoro has no such seam**, which is the constraint below.
+
+## Fixtures are named, and the function is not
+
+    @pytest.fixture(name="client")
+    def client_fixture(...) -> ...:
+
+**Because `redefined-outer-name` is a check worth keeping.** pylint's W0621
+catches a parameter shadowing a module-level name, which is a real bug: you
+believe you are reading the module's value and you are reading whatever was
+passed. pytest's injection *requires* the parameter name to equal the fixture
+name, so writing fixtures the usual way makes every test that uses one a
+finding, and there were about fifty. A genuine shadowing would have been
+invisible among them.
+
+Naming the fixture separately from the function removes the collision rather
+than the check. Measured 2026-08-28: W0621 went from 20 findings across `tests/`
+to zero and pylint from 9.45 to 9.79, and a deliberately shadowed name added
+afterwards was still reported.
+
+**Not a `disable=` comment.** That is a suppression, and hard rule 4 wants a
+human's answer before one is written. This needs none, because nothing is being
+silenced.
 
 ## What cannot be tested without kokoro
 
