@@ -40,6 +40,53 @@ The two reads are GETs so that a proxy, a log or a person with `curl` can tell
 them apart from the four that change something.
 """
 
+SCHEMAS: dict[str, dict[str, object]] = {
+    "speak": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "messages": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["name", "messages"],
+    },
+    "set_voice": {
+        "type": "object",
+        "properties": {"voice": {"type": "string"}},
+        "required": ["voice"],
+    },
+    "add_substitution": {
+        "type": "object",
+        "properties": {
+            "pattern": {"type": "string"},
+            "replacement": {"type": "string"},
+            "kind": {"type": "string", "default": "literal"},
+        },
+        "required": ["pattern", "replacement"],
+    },
+    "remove_substitution": {
+        "type": "object",
+        "properties": {
+            "pattern": {"type": "string"},
+            "kind": {"type": "string", "default": "literal"},
+        },
+        "required": ["pattern"],
+    },
+    "list_substitutions": {"type": "object", "properties": {}},
+    "status": {"type": "object", "properties": {}},
+}
+"""What each tool takes, for the compatibility endpoint's `tools/list`.
+
+**These are not the schemas a current client sees.** `skid-mcp` derives those
+from its function signatures through the SDK, which is one declaration and the
+right one. These exist because the service has to answer an older shim that asks
+it directly, and it has no SDK to derive anything with.
+
+Two statements of the same thing is the drift this module exists to prevent, so
+`tests/test_client.py` asserts they agree on names, required fields and property
+names. The SDK adds titles and a wrapper name that carry no meaning to a caller,
+and those are not compared.
+"""
+
 RESULT = "result"
 """The member carrying a successful answer, so an empty one is still a shape."""
 
