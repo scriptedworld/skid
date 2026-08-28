@@ -3,13 +3,27 @@
 Work lives in `~/.projects/clank/tasks/skid/`. This is what is not yet work: the
 open decisions, and the things recent enough to be worth restating.
 
-## The one piece of work
+## The work that is agreed
 
 **The installer.** `clank/tasks/skid/install/10-write-the-installer.ready`.
 skid runs here and nowhere else, because everything was installed by hand on
 2026-08-28. `docs/PROJECT.md` lists the five commands it owes.
 
 Everything else in `docs/REQUIREMENTS/` has code and tests.
+
+## Owed, and not yet a task
+
+**A cold read of the revised `docs/SPEC.md`.** The spec was reviewed twice at
+`fd42bdf` and revised against both, and the only pass over the revision was by
+one of its own reviewers checking their findings had landed. They said so
+themselves and asked for a reader with no stake in them. That pass still found a
+regression, FR-5.3, which is the argument for the one that is missing.
+
+**Eleven requirements have no test citing them**: FR-1.5, FR-1.6, FR-1.7,
+FR-2.2, FR-4.2, FR-5.3, FR-5.4, FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Measured
+2026-08-28, 36 of 47 covered. Some are properties of the machine or of the
+systemd units rather than of a function, so the work is deciding what a test for
+each would read before writing any.
 
 ## Decided recently enough to restate
 
@@ -46,6 +60,6 @@ exists, correctly: nothing is mocked and nothing is silenced. There are zero
 fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
 
-**Two tasks fail honestly** and will keep failing until there is more code:
-`docstrings` at 0.0% over one package, and `traceability`, which now reports
-real coverage rather than nothing.
+**`docstrings` passes now**, at 98.7% measured 2026-08-28 over skid's own code.
+It read 0.0% the day before, over an empty package. **`traceability` reports 36
+of 47**, which is a real number and the gap listed above.
