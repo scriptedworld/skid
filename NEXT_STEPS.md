@@ -5,29 +5,7 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-Two ready tasks in `clank/tasks/skid/`, both fully specified, and one written
-and waiting on a deploy window.
-
-**The MCP server has moved into the stdio script, and is not yet deployed.**
-`resilience/40-…in-progress`. Written and verified 2026-08-28 at `0eef559`, and
-the running service is still the old one until somebody restarts it.
-
-`skid-mcp` is the MCP server now, holding the six schemas and the dispatch, and
-the service is six Flask routes served by waitress on the socket systemd already
-manages. No session id exists on either side, so the wedge class has nothing to
-go stale. `skid/tools.py` is the one declaration both derive from.
-
-Proved end to end on a private socket rather than against the live one: waitress
-served the app over a socket it did not create, the socket came out 0600 by
-skid's own bind, and `skid-mcp`'s Backend read and wrote through it.
-`.ephemera/probe-new-stack.py` regenerates that.
-
-**The deploy is the outstanding half, and it is not free.** A restart swaps the
-service to plain HTTP, and every `skid-mcp` process already running is the old
-byte-forwarder that speaks MCP to a route that no longer exists. Those sessions
-lose `speak` until each spawns a new shim, which happens at its next clear. They
-fail rather than hang, which is what the recovery code in `de3abb5` buys on its
-way out, but they do fail. Pick a window rather than doing it mid-session.
+Two ready tasks in `clank/tasks/skid/`, both fully specified.
 
 **The config becomes YAML, and wrench validates it and the spool.**
 `data-files/10-validate-with-wrench-and-a-schema.ready`. Decided 2026-08-28 with
@@ -61,6 +39,31 @@ mispronunciation somebody reaches for the config to fix is worth more than any
 of the reasoning behind them.
 
 ## Landed since this file was last rewritten
+
+**The MCP server moved into the stdio script**, `0eef559`, and is deployed and
+serving. `skid-mcp` holds the six schemas and the dispatch; the service is six
+Flask routes served by waitress on the socket systemd manages. No session id
+exists on either side, so the wedge class has nothing to go stale.
+`skid/tools.py` is the one declaration both derive from.
+
+**Two things the deploy taught that no test could have.**
+
+An editable install carries code but not dependencies. `flask` and `waitress`
+had been declared and locked for hours and `.venv` had them, and the service
+still went into a restart loop on `ModuleNotFoundError`. The tool environment is
+resolved at install time: `uv tool install --editable . --reinstall` is the
+deploy step whenever a dependency changed.
+
+Deleting `/mcp` reintroduced the wedge by a new road, `437dd2b`. An old shim
+posts there, Flask answered 404 with an HTML page, and an HTML page is no more
+matchable to a pending request than a null id was, so the client waited. I had
+traced the recovery path, predicted a clean failure and said so before
+deploying; the first call after the restart was still outstanding at 120
+seconds. `/mcp` now answers 200 with a JSON-RPC error carrying the request's own
+id, verified against this session's own pre-move shim.
+
+**Retire the `/mcp` route** once `pgrep -af skid-mcp` shows nothing predating
+the move. Not urgent, and the drift test names it so removing it is noticed.
 
 **Fixtures are named separately from their functions**, `5aa64be`. pylint's
 `redefined-outer-name` catches a parameter shadowing a module-level name, which
