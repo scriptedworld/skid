@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from skid.config import Config
+from skid.config import Config, load_config
 from skid.generation import GenerationFailed, Generator
 from skid.greeting import QuietTable, greeting_for, should_greet
 from skid.player import PlaybackFailed, Player
@@ -52,11 +52,14 @@ class Service:
         work_dir: Path,
         log_path: Path,
         generator: Generator | None = None,
+        config_path: Path | None = None,
     ) -> None:
         """Compose the units. The generator is shared so the model stays warm."""
         self._config = config
         self._work = work_dir
         self._log_path = log_path
+        self._config_path = config_path
+        self._config_seen: float | None = None
         self._generator = generator or Generator(config.voice)
         self._player = Player(command=config.player)
 
@@ -103,6 +106,28 @@ class Service:
             "recent_failures": list(self._failures[-20:]),
             "voice": self._config.voice,
         }
+
+    def _refresh_config(self) -> None:
+        """Re-read the config if it has changed since it was last read.
+
+        This is what makes FR-6.3's own observable true: setting the voice by
+        either route changes what the next clip is spoken in. Reading once at
+        start would give the tool route effect and the file route none, which is
+        two routes that do not agree.
+        """
+        if self._config_path is None or not self._config_path.exists():
+            return
+        stamp = self._config_path.stat().st_mtime
+        if stamp == self._config_seen:
+            return
+        self._config_seen = stamp
+        try:
+            self._config = load_config(self._config_path)
+        except ValueError as exc:
+            self._record_failure(f"config not reloaded: {exc}")
+            return
+        self._player = Player(command=self._config.player)
+        self._generator.set_voice(self._config.voice)
 
     def _log(self, line: str) -> None:
         """Append one line to the log a person reads when the machine goes quiet."""
@@ -181,6 +206,7 @@ class Service:
         while True:
             if self._incoming.get() is None:
                 return
+            self._refresh_config()
             submission = self._queue.take()
             try:
                 self._speak(submission, index)

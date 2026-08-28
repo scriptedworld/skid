@@ -11,9 +11,25 @@ requires-python = ">=3.12,<3.13"
 # entry order. tomllib reads and cannot write; a parse-and-re-emit would discard
 # both. FR-8.4 makes the entry order load-bearing rather than cosmetic.
 dependencies = [
+    "httpx",
+    # kokoro's English path needs this spaCy model and will try to DOWNLOAD it
+    # at runtime if it is absent, using pip or uv. Under systemd neither is on
+    # PATH, so the service failed to start 76 times before this line existed.
+    # Declared rather than fetched: a service must not need a package installer.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "mcp>=2.0",
     "kokoro>=0.9.4",
     "tomlkit>=0.13",
 ]
+
+[project.scripts]
+skid = "skid.main:main"
+skid-mcp = "skid.client:main"
+
+[tool.hatch.metadata]
+# The spaCy model is a direct URL because it is not on PyPI. Declaring it is
+# what stops the service reaching for a package installer at start-up.
+allow-direct-references = true
 
 [build-system]
 requires = ["hatchling"]
@@ -59,7 +75,13 @@ exclude = ['^bin/']
 extend-exclude = ["bin"]
 
 [tool.pylint.MASTER]
-ignore-paths = ['^bin/.*']
+# .venv is here for a different reason from bin/. The jig runs
+# `pylint --recursive=y .`, which walks the virtualenv, and astroid recurses to
+# death inside torch's generated modules: measured 2026-08-27, pylint over src
+# and tests takes 1.8s, and over `.` it had not finished after 900s and was
+# emitting a RecursionError traceback. So this is not tidiness, it is the
+# difference between a gate that runs and one that never returns.
+ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*']
 
 [tool.bandit]
 exclude_dirs = ["bin", ".ephemera"]
