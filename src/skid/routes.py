@@ -21,6 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import wrench
 from flask import Flask, Response, jsonify, request
 
 from skid.config import load_config, save_config
@@ -28,6 +29,16 @@ from skid.generation import VOICES
 from skid.service import Service
 from skid.substitution import Kind, Substitution
 from skid.tools import ERROR, RESULT, ROUTES, SCHEMAS
+
+COMPILED = {
+    tool: wrench.compile_schema(f"skid {tool} arguments", document)
+    for tool, document in SCHEMAS.items()
+}
+"""The tool argument schemas, compiled once, because they are the same per call.
+
+Same library and same shape as the config and the spool, so one thing in skid
+decides what a valid structure is and says so the same way.
+"""
 
 BAD_REQUEST = 400
 """What a value this service refuses to store comes back as."""
@@ -84,17 +95,23 @@ def build_operations(
     """
 
     def speak(body: dict[str, Any]) -> str:
-        """Queue an array. Returns once it is on disk, not once it is heard."""
-        name = str(body.get("name", ""))
-        messages = [str(message) for message in body.get("messages") or []]
-        if not name.strip() or not messages:
-            raise Refused("speak takes a name and at least one message")
+        """Queue an array. Returns once it is on disk, not once it is heard.
+
+        The schema has already required a non-empty name and at least one
+        message, so nothing here re-checks the shape.
+        """
+        name = str(body["name"])
+        messages = [str(message) for message in body["messages"]]
         service.submit(name, messages)
         return f"queued {len(messages)} message(s) for {name}"
 
     def set_voice(body: dict[str, Any]) -> str:
-        """Change the voice, refusing one kokoro does not have."""
-        voice = str(body.get("voice", ""))
+        """Change the voice, refusing one kokoro does not have.
+
+        Which voices exist is kokoro's to say and not a schema's, so this check
+        stays here where the list lives.
+        """
+        voice = str(body["voice"])
         if voice not in VOICES:
             raise Refused(f"unknown voice: {voice!r}")
         config = load_config(config_path)
@@ -103,12 +120,16 @@ def build_operations(
         return f"voice is now {voice}"
 
     def add_substitution(body: dict[str, Any]) -> str:
-        """Add an entry at the end of the set, refusing one that will not compile."""
+        """Add an entry at the end of the set, refusing one that will not compile.
+
+        Whether a regular expression compiles is not a thing a schema can say,
+        so that check stays here.
+        """
         try:
             entry = Substitution(
                 kind=_kind_of(body.get("kind")),
-                pattern=str(body.get("pattern", "")),
-                replacement=str(body.get("replacement", "")),
+                pattern=str(body["pattern"]),
+                replacement=str(body["replacement"]),
             )
         except ValueError as exc:
             raise Refused(str(exc)) from exc
@@ -119,7 +140,7 @@ def build_operations(
 
     def remove_substitution(body: dict[str, Any]) -> str:
         """Remove an entry by its exact pattern and kind."""
-        pattern = str(body.get("pattern", ""))
+        pattern = str(body["pattern"])
         kind = _kind_of(body.get("kind"))
         config = load_config(config_path)
         kept = [
@@ -147,7 +168,7 @@ def build_operations(
         """Queue depth, recent failures, and the voice in use."""
         return service.status()
 
-    return {
+    written = {
         "speak": speak,
         "set_voice": set_voice,
         "add_substitution": add_substitution,
@@ -155,6 +176,34 @@ def build_operations(
         "list_substitutions": list_substitutions,
         "status": status,
     }
+
+    def validated(tool: str, operation: Callable[[dict[str, Any]], Any]) -> Any:
+        """Wrap one operation so its arguments are checked before it runs.
+
+        Every caller goes through this, so the plain routes and the MCP endpoint
+        are held to the same contract, and it is the contract `tools/list`
+        publishes rather than a second one written for display.
+
+        **`ValueError` and not `wrench.ValidationError`**, which is what the
+        file loaders raise for the same failure. `Schema.validate` raises a bare
+        `ValueError`, measured 2026-08-28, so catching wrench's own class here
+        catches nothing and the refusal escapes as a 500. Filed against wrench;
+        the narrow scope is deliberate, since only the validate call is inside
+        the try.
+        """
+
+        def checked(body: dict[str, Any]) -> Any:
+            try:
+                COMPILED[tool].validate(body)
+            except ValueError as exc:
+                raise Refused(str(exc)) from exc
+            return operation(body)
+
+        checked.__name__ = tool
+        checked.__doc__ = operation.__doc__
+        return checked
+
+    return {tool: validated(tool, call) for tool, call in written.items()}
 
 
 def _body() -> dict[str, Any]:
