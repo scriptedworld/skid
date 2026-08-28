@@ -77,9 +77,21 @@ tool cannot exist on one side only.
 **The installed tool is editable, so a code edit reaches the running service
 only after `systemctl --user restart skid.service`.**
 
-**Say you are deploying before you do that.** It is now a courtesy rather than a
-rescue: a restart costs a connection refused for as long as the service takes to
-come back, and every client reconnects on its next call.
+**An editable install carries code, not dependencies.** The tool environment at
+`~/.local/share/uv/tools/skid/` is resolved when the tool is installed, so a new
+entry in `pyproject.toml` is not there however many times the service restarts.
+Measured 2026-08-28: `flask` and `waitress` had been declared and locked for
+hours, `uv sync` had put them in `.venv`, the suite was green, and the service
+went into a restart loop on `ModuleNotFoundError: No module named 'waitress'`.
+
+    uv tool install --editable . --reinstall
+
+That is the deploy step whenever a dependency changed. `.venv` passing says
+nothing about it, because they are two environments.
+
+**Say you are deploying before you restart.** It is a courtesy rather than a
+rescue now: a restart costs a connection refused for as long as the service
+takes to come back, and every client reconnects on its next call.
 
 **The wedge is gone rather than handled**, as of 2026-08-28. It existed because
 MCP over HTTP kept a session id in the service's memory: a restart forgot it,
@@ -87,6 +99,22 @@ the service answered 404 with a null id, and a client that cannot match a null
 id to its request waited until its harness gave up at 1800 seconds with no
 diagnosis. No session id exists on either side now, so nothing can go stale.
 FR-5.3 and `clank/tasks/skid/resilience/40` carry the detail.
+
+**`/mcp` is still served, and it is a compatibility route rather than a tool.**
+Deleting it reintroduced the wedge by a new road: a `skid-mcp` from before the
+move posts there, Flask answered 404 with an HTML page, and an HTML page is not
+a JSON-RPC message either, so the client waited exactly as before. Measured on
+the live socket after the first deploy: a `status()` call still outstanding at
+120 seconds.
+
+It now answers 200 with a JSON-RPC error carrying the request's own id and a
+message saying to clear the session. 200 rather than 404 deliberately, so a shim
+that reads 404 as a lost session does not reconnect into the same wall.
+
+**Retire it once no pre-move `skid-mcp` is running**, which happens on its own
+as sessions clear. `pgrep -af skid-mcp` counts them; the drift test in
+`tests/test_routes.py` names the route, so removing it is a change something
+notices.
 
 ### Installing
 
