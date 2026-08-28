@@ -103,22 +103,31 @@ making the machine speak and rewriting its config. FR-5.4.
 kokoro and test against the real engine. The seams made it a non-question in the
 end, because the queue and the player are units that never touch audio.
 
-## Open, and needing a decision
+## Settled, and cheaper than it reads
 
-**Whether to widen the interpreter pin past 3.12.** Told first-hand 2026-08-28:
-kokoro runs on 3.13 and 3.14 and has simply not had a release since, so its
-declared `<3.13` is stale metadata rather than a real ceiling.
+**The 3.12 pin costs nothing, so widening it is not work waiting to be done.**
+Told first-hand 2026-08-28: kokoro runs on 3.13 and 3.14 and has simply not had
+a release since, so its declared `<3.13` is stale metadata rather than a real
+ceiling. That makes the wording wrong in a few places and the situation fine.
 
-That does not make the pin wrong. A resolver enforces what is declared, so
-installing skid on 3.13 means overriding another project's stated range, and
-FR-1.7 as written requires skid to sit inside what kokoro declares rather than
-inside what it is known to tolerate. Widening is therefore a decision with two
-halves: whether to carry a resolver override, and whether FR-1.7 should be
-reworded to speak about support rather than declaration.
+**Nothing in skid's source needs an interpreter newer than 3.12.** No
+free-threading, no 3.13 or 3.14 syntax, nothing from a newer stdlib. So sitting
+on the older interpreter is a free choice rather than a concession, and the
+right answer if kokoro's declaration ever does become binding is the one already
+in place: install into an environment holding the interpreter kokoro accepts.
 
-Nothing is blocked on it. `test_skid_runs_only_where_kokoro_does` asserts the
-containment that holds today and fails on the day kokoro re-declares, which is
-the day this gets easy.
+**That is what happens today, with no flag.** `uv tool install --editable` reads
+`requires-python` from `pyproject.toml`, fetches 3.12 and builds the tool
+environment on it, whatever the machine's default is. Measured 2026-08-28:
+
+    python3 -V                                        3.14.7
+    ~/.local/share/uv/tools/skid/bin/python -V         3.12.14
+    ...bin/python -c 'import kokoro'                   imports
+
+So the pin is the mechanism rather than an obstacle to one, and
+`test_skid_runs_only_where_kokoro_does` asserts the containment that holds today
+and fails on the day kokoro re-declares, which is the day to revisit the wording
+of FR-1.7 rather than to carry a resolver override now.
 
 Several documents say kokoro "refuses" 3.13. That is true of the metadata and
 not of the software, and `docs/PROJECT.md` now says so.

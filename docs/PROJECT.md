@@ -187,11 +187,17 @@ machine's default is 3.14.7. **Linux only, first pass**, declared as a
 classifier in `pyproject.toml` so FR-1.6 has something a test can read.
 
 **kokoro's `<3.13` is a declaration, not a ceiling.** Told first-hand
-2026-08-28: it runs on 3.13 and 3.14 and has simply not had a release since. A
-resolver still enforces what is declared, so the 3.12 pin stands and skid still
-installs only where kokoro says it fits, but the wording elsewhere that kokoro
-*refuses* 3.13 is about the metadata rather than the software. Widening the pin
-is open and would mean overriding another project's declared range.
+2026-08-28: it runs on 3.13 and 3.14 and has simply not had a release since. So
+"kokoro refuses 3.13", which several documents said, is about the metadata
+rather than the software.
+
+**The pin stands anyway, because it costs nothing.** Nothing in skid's source
+needs an interpreter newer than 3.12, and `uv tool install --editable` reads
+`requires-python` and builds the tool environment on 3.12 with no flag, whatever
+the machine's default is. Measured 2026-08-28: `python3 -V` gives 3.14.7,
+`~/.local/share/uv/tools/skid/bin/python -V` gives 3.12.14, and kokoro imports
+there. Installing into an environment holding an interpreter kokoro accepts is
+the answer to the declaration, and it is already the arrangement.
 
 ## What is not built
 
