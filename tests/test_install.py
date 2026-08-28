@@ -1,21 +1,24 @@
 """The installer: the plan it would run, and the units it copies.
 
-Nothing here installs anything. Every destination in `Paths` is a parameter, so
-the plan is built against `tmp_path` and asserted as data, and the only commands
-these tests actually run are `systemd-analyze verify`, which parses a file and
-changes nothing.
+Nothing here runs anything. Every destination in `Paths` is a parameter, so the
+plan is built against `tmp_path` and asserted as data, and no test in this file
+imports `subprocess` or executes a command.
 
 That is the whole testing strategy for an installer, and it is deliberate: the
 alternative is a test that writes into the real `~/.config/systemd/user`, and a
 test suite that can break the machine it runs on is worse than one that checks
 less.
+
+**It got stricter on 2026-08-28.** One test did run `systemd-analyze verify` on
+the unit files. That check was right and it was in the wrong place: it only ever
+ran on the machine the suite ran on, and it made this file the only test module
+shelling out. It is a step in the install plan now, so it runs on whichever
+machine is being installed to, and this file asserts the command instead.
 """
 
 from __future__ import annotations
 
 import io
-import shutil
-import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
 from pathlib import Path
 
 import pytest
@@ -55,28 +58,38 @@ def _argvs(steps: list[Step]) -> list[tuple[str, ...]]:
 
 # COVERS: FR-5.4 | property
 @pytest.mark.parametrize("unit", UNITS)
-def test_the_units_in_the_checkout_parse(unit: str) -> None:
-    """systemd accepts both units as written, so an install cannot ship a typo.
+def test_the_installer_checks_each_unit_before_writing_it(
+    unit: str, tmp_path: Path
+) -> None:
+    """systemd is asked to accept a unit before anything is copied.
 
     A unit file is data, and a typo in one is not found until the day it is
-    loaded. This is the cheapest check that says the file is a unit.
+    loaded. This test used to run `systemd-analyze` itself, which put the check
+    in the wrong place twice over: it only ever ran on the machine the suite ran
+    on, and it made the test the only thing shelling out.
+
+    Moving it into the plan checks the units on whichever machine is being
+    installed to, and lets this assert the command rather than run it.
     """
-    if shutil.which("systemd-analyze") is None:
-        pytest.skip("systemd-analyze is not on PATH")
+    plan = _argvs(install_plan(_paths(tmp_path)))
+    source = str(CHECKOUT / "share" / "systemd" / "user" / unit)
 
-    finished = subprocess.run(  # nosec B603 B607 - docs/SUPPRESSIONS.md S-1
-        [
-            "systemd-analyze",
-            "--user",
-            "verify",
-            str(CHECKOUT / "share" / "systemd" / "user" / unit),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    assert ("systemd-analyze", "--user", "verify", source) in plan
 
-    assert finished.returncode == 0, finished.stderr
+
+def test_the_units_are_checked_before_the_first_thing_is_written(
+    tmp_path: Path,
+) -> None:
+    """A unit systemd will reject must be found before the machine is touched.
+
+    Installing one leaves a machine that looks installed and cannot start, and
+    the order is the whole content of the guard, so it is asserted as order.
+    """
+    plan = _argvs(install_plan(_paths(tmp_path)))
+    last_check = max(i for i, argv in enumerate(plan) if argv[0] == "systemd-analyze")
+    first_write = min(i for i, argv in enumerate(plan) if argv[0] != "systemd-analyze")
+
+    assert last_check < first_write
 
 
 # COVERS: FR-5.4 | property
@@ -110,8 +123,8 @@ def test_the_service_is_notify_so_active_means_answerable() -> None:
     assert "Type=notify" in service
 
 
-def test_the_install_plan_is_the_five_commands_it_owes(tmp_path: Path) -> None:
-    """The documented sequence, in order, with the units copied between.
+def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
+    """The documented sequence, in order, with the units checked then copied.
 
     This is the list `docs/PROJECT.md` promised an installer would run. Asserting
     it as data is what stops the two documents drifting apart silently.
@@ -121,6 +134,8 @@ def test_the_install_plan_is_the_five_commands_it_owes(tmp_path: Path) -> None:
     verbs = [argv[:3] for argv in _argvs(install_plan(paths))]
 
     assert verbs == [
+        ("systemd-analyze", "--user", "verify"),
+        ("systemd-analyze", "--user", "verify"),
         ("uv", "tool", "install"),
         ("install", "-D", "-m"),
         ("install", "-D", "-m"),
