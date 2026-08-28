@@ -22,7 +22,62 @@ SAMPLE_RATE = 24000
 """Measured 2026-08-27: kokoro 0.9.4 returns 24 kHz mono."""
 
 VOICES = frozenset(
-    ["af_alloy", "af_aoede", "af_bella", "af_heart", "af_jessica", "af_kore", "af_nicole", "af_nova", "af_river", "af_sarah", "af_sky", "am_adam", "am_echo", "am_eric", "am_fenrir", "am_liam", "am_michael", "am_onyx", "am_puck", "am_santa", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis", "ef_dora", "em_alex", "em_santa", "ff_siwis", "hf_alpha", "hf_beta", "hm_omega", "hm_psi", "if_sara", "im_nicola", "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo", "pf_dora", "pm_alex", "pm_santa", "zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi", "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang"]
+    [
+        "af_alloy",
+        "af_aoede",
+        "af_bella",
+        "af_heart",
+        "af_jessica",
+        "af_kore",
+        "af_nicole",
+        "af_nova",
+        "af_river",
+        "af_sarah",
+        "af_sky",
+        "am_adam",
+        "am_echo",
+        "am_eric",
+        "am_fenrir",
+        "am_liam",
+        "am_michael",
+        "am_onyx",
+        "am_puck",
+        "am_santa",
+        "bf_alice",
+        "bf_emma",
+        "bf_isabella",
+        "bf_lily",
+        "bm_daniel",
+        "bm_fable",
+        "bm_george",
+        "bm_lewis",
+        "ef_dora",
+        "em_alex",
+        "em_santa",
+        "ff_siwis",
+        "hf_alpha",
+        "hf_beta",
+        "hm_omega",
+        "hm_psi",
+        "if_sara",
+        "im_nicola",
+        "jf_alpha",
+        "jf_gongitsune",
+        "jf_nezumi",
+        "jf_tebukuro",
+        "jm_kumo",
+        "pf_dora",
+        "pm_alex",
+        "pm_santa",
+        "zf_xiaobei",
+        "zf_xiaoni",
+        "zf_xiaoxiao",
+        "zf_xiaoyi",
+        "zm_yunjian",
+        "zm_yunxi",
+        "zm_yunxia",
+        "zm_yunyang",
+    ]
 )
 """The 54 voices kokoro 0.9.4 offers.
 
@@ -37,6 +92,16 @@ Held here rather than fetched, because validating a setting must not need the
 network. It drifts when kokoro adds a voice, and a name refused that should not
 be is the symptom.
 """
+
+
+class GenerationFailed(Exception):
+    """Text could not be rendered, whatever the engine's own reason was.
+
+    kokoro sits on torch and can fail in that stack's vocabulary rather than
+    skid's. Converting here means the service handles one domain error instead
+    of catching anything at all, which FR-4.6 needs and a blind catch would only
+    look like.
+    """
 
 
 def _lang_code(voice: str) -> str:
@@ -68,9 +133,16 @@ class Generator:
         return self._pipeline
 
     def generate(self, text: str, path: Path) -> Path:
-        """Render `text` to a WAV at `path`, and return it."""
-        chunks = list(self.pipeline(text, voice=self.voice))
-        audio = np.concatenate([chunk.audio.numpy() for chunk in chunks])
+        """Render `text` to a WAV at `path`, and return it.
+
+        Any failure from the engine becomes GenerationFailed, so a caller has
+        one thing to handle rather than the whole of torch's error surface.
+        """
+        try:
+            chunks = list(self.pipeline(text, voice=self.voice))
+            audio = np.concatenate([chunk.audio.numpy() for chunk in chunks])
+        except Exception as exc:
+            raise GenerationFailed(f"could not render {text!r}: {exc}") from exc
 
         path.parent.mkdir(parents=True, exist_ok=True)
         with wave.open(str(path), "wb") as out:
