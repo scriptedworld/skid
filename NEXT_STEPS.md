@@ -11,8 +11,20 @@ carries a proposed test for each: three read a declaration file, four are
 behavioural and two of those share a blocking-player seam, and FR-7.6 is tested
 by asserting the measurement it rests on still holds.
 
-Traceability reads 38 of 46. It reaches 46 of 46 when that task lands, with
+Traceability reads 40 of 48. It reaches 48 of 48 when that task lands, with
 nothing permanently red and no marker needed in toolbox's checker.
+
+## Landed since this file was last rewritten
+
+**The durable queue**, FR-4.8 and FR-4.9. The queue is a directory now:
+`$XDG_RUNTIME_DIR/skid/spool`, one entry per submission, written before `submit`
+returns and taken in filename order. `SubmissionQueue` is gone, because two
+queues would disagree.
+
+Proved against the live service rather than only in tests: a real `speak` call,
+then `kill -9` on the service, and the submission was still on disk afterwards.
+It had already started playing, so the restart discarded it rather than replaying
+it and said so in the log, which is the decided behaviour and not a bug.
 
 ## Owed, and not yet a task
 
@@ -49,7 +61,7 @@ route would win. Nothing depends on it.
 to be longer than any clip skid produces, and no clip length has been measured
 beyond the 1.75 seconds of one short sentence.
 
-**`docs/SUPPRESSIONS.md` exists now**, carrying one entry: seven `#nosec` marks
+**`docs/SUPPRESSIONS.md` exists now**, carrying one entry: five `#nosec` marks
 covering eight bandit findings about `subprocess`, with the question that was
 put and the answer that was given. A file rather than the `docs/SUPPRESSIONS/`
 directory this line used to anticipate, because one class of suppression is one
@@ -66,8 +78,8 @@ fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
 
 **`docstrings` passes now**, at 98.9% measured 2026-08-28 over skid's own code.
-It read 0.0% the day before, over an empty package. **`traceability` reports 38
-of 46**, which is a real number and the gap listed above.
+It read 0.0% the day before, over an empty package. **`traceability` reports 40
+of 48**, which is a real number and the gap listed above.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a
@@ -75,7 +87,7 @@ scanner. Reading the tail of its output invites the opposite conclusion: the
 summary prints severity and then confidence, so `High: 5` is the confidence
 line.
 
-**Both bandit tasks pass now**, by seven `#nosec` marks registered in
+**Both bandit tasks pass now**, by five `#nosec` marks registered in
 `docs/SUPPRESSIONS.md`. Per-line rather than a threshold change or a tree-wide
 skip, which was the user's choice and is the narrowest of the three: a new
 subprocess call still fails the gate until somebody looks at it.

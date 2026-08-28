@@ -385,6 +385,57 @@ socket systemd hands over.
 
 *Discharges FR-4.5, FR-4.2.*
 
+## The queue is a directory
+
+`$XDG_RUNTIME_DIR/skid/spool`, one JSON file per submission, taken in
+lexicographic name order.
+
+    000042-silo.json          waiting
+    taken/000042-silo.json    being spoken right now
+    000043-wrench.json.tmp    half written, removed at start-up
+
+**The text is what is durable, not the audio.** The entry is written before
+`submit` returns, which is what puts something behind FR-4.5's promise: before
+this the queue was a `deque`, so "queued" meant accepted by something that
+forgets on restart, and the caller had already been told yes. Clips stay a cache
+under `clips/` and may be deleted freely, because losing one costs regeneration
+time rather than data.
+
+A spool of generated audio would not do it. It protects only work already
+generated, and the window this closes is the one between the call returning and
+the first clip existing.
+
+**Order is the sequence in the name, never the file's timestamp.** Creation time
+is generation order, which matches submission order today only because one
+submission is handled at a time, and would diverge silently the moment two are
+prepared at once. FR-4.3 and FR-4.4 both rest on it.
+
+**Written to `.tmp` and renamed into place**, so a file at its final name is a
+whole file. A `kill -9` mid-write leaves a temporary that start-up removes,
+rather than a truncated entry that parses to nonsense and blocks the queue.
+
+**Taken means moved.** An entry lives under `taken/` while it is spoken and is
+removed when the attempt ends, however it ends. That is what makes a poison
+entry impossible: removing only on success would retry a bad entry forever with
+everything behind it waiting. Anything still under `taken/` at start-up was
+interrupted, and is discarded rather than replayed, because FR-4.4 makes a
+submission indivisible and replaying means re-hearing what was already heard.
+
+So the guarantee is precise and smaller than "nothing is lost": accepted and not
+yet started is never lost; being spoken when the process died is dropped.
+
+**Restart, not reboot.** tmpfs, so a reboot starts silent rather than reading
+back an hour of chatter about work that finished before it.
+
+**Age is capped where depth is not.** A submission older than
+`expiry_seconds`, five minutes by default, is discarded with a line in the log
+rather than spoken. Downtime counts toward it, so a service away for ten minutes
+does not come back and read a ten minute old backlog. A thousand submissions
+inside the window are all spoken: age is what makes a message not worth hearing,
+and depth is not.
+
+*Discharges FR-4.8, FR-4.9, FR-7.2, FR-4.3.*
+
 ## What runs it
 
 Python 3.12 exactly, and a uv project. kokoro refuses 3.13 and later, and this

@@ -17,3 +17,10 @@ was heard. FR-1.5's two failure modes therefore surface in the backend rather
 than at the call, which is what FR-4.6 is about.
 
 Raised by `docs/SPEC.md`.
+
+**"Queued" means written to disk, since 2026-08-28.** FR-4.8 makes the durable
+write the thing this row returns after, which is what gives the promise
+something behind it. Before that, queued meant accepted by a `deque` in one
+process, so a restart lost work a caller had already been told was accepted.
+
+The call is one small write slower and considerably more truthful.

@@ -1,90 +1,57 @@
-"""The submission queue: what goes in comes out, in order, and nothing is dropped.
+"""A submission: what one is, and what it refuses to be.
 
-Written before the implementation and expected to fail by not importing.
+`SubmissionQueue` used to live here and was deleted on 2026-08-28. FR-4.8 made
+the queue durable, so the queue is a directory now and `Spool` is it; keeping an
+in-memory one beside it would have been two queues, which is the bug rather than
+the belt and braces.
 
-The queue holds submissions. It does not know what a clip is, so none of this
-needs audio, a generator or a player.
+Its tests moved rather than went. `test_spool.py` covers the queue properties
+FR-7.2 and FR-4.3 against the thing that is actually the queue, and what remains
+here is the part that was never about queueing: a submission validating itself.
+
+Leaving the class in would have been worse than deleting it. Nothing but its own
+tests used it, so the suite would have gone on passing over code no running skid
+could reach, which is the vacuous pass `docs/PROJECT.md` warns about.
 """
 
-from skid.queue import Submission, SubmissionQueue
+import pytest
 
-
-# COVERS: FR-7.2 | edge
-def test_an_empty_queue_has_nothing_waiting() -> None:
-    """The starting state, and the common one."""
-    assert SubmissionQueue().pending() == 0
+from skid.queue import Submission
 
 
 # COVERS: FR-4.1 | positive
-def test_one_submission_goes_in_and_comes_out() -> None:
-    """An array is submitted whole and taken whole."""
-    queue = SubmissionQueue()
-    submission = Submission(name="silo", messages=["first", "second"])
+def test_text_arrives_as_an_array() -> None:
+    """A submission carries a list of messages, not one string."""
+    submission = Submission(name="silo", messages=["one", "two"])
 
-    queue.put(submission)
-
-    assert queue.pending() == 1
-    assert queue.take() == submission
-    assert queue.pending() == 0
-
-
-# COVERS: FR-7.2 | positive
-def test_submissions_come_out_in_the_order_they_went_in() -> None:
-    """An arrival queues behind what is already waiting."""
-    queue = SubmissionQueue()
-    first = Submission(name="silo", messages=["a"])
-    second = Submission(name="wrench", messages=["b"])
-
-    queue.put(first)
-    queue.put(second)
-
-    assert queue.take() == first
-    assert queue.take() == second
-
-
-# COVERS: FR-4.4 | property
-def test_a_submission_is_taken_whole_rather_than_a_message_at_a_time() -> None:
-    """Two submissions never interleave, which is what taking whole ones means.
-
-    Taking one message from each waiting submission in turn would satisfy
-    FR-4.3 and FR-7.2 both, and make a listener follow two speakers at once.
-    """
-    queue = SubmissionQueue()
-    queue.put(Submission(name="silo", messages=["a1", "a2", "a3"]))
-    queue.put(Submission(name="wrench", messages=["b1"]))
-
-    assert queue.take().messages == ["a1", "a2", "a3"]
-    assert queue.take().messages == ["b1"]
+    assert submission.messages == ["one", "two"]
 
 
 # COVERS: FR-4.3 | positive
 def test_the_messages_of_a_submission_keep_their_order() -> None:
-    """An array is spoken in the order given."""
-    submission = Submission(name="silo", messages=["one", "two", "three"])
+    """Order within a submission is the caller's, and nothing reorders it."""
+    submission = Submission(name="silo", messages=["first", "second", "third"])
 
-    assert submission.messages == ["one", "two", "three"]
-
-
-# COVERS: FR-7.2 | property
-def test_nothing_is_rejected_however_much_is_waiting() -> None:
-    """The queue is unbounded: arrivals wait, they are never turned away.
-
-    Unboundedness has no value to assert, so what is tested is the absence of a
-    cap. A hundred is not a magic number; it is more than any bound anyone
-    would have chosen silently.
-    """
-    queue = SubmissionQueue()
-
-    for index in range(100):
-        queue.put(Submission(name="silo", messages=[str(index)]))
-
-    assert queue.pending() == 100
+    assert submission.messages == ["first", "second", "third"]
 
 
 # COVERS: FR-4.1 | edge
 def test_an_array_of_one_is_not_a_special_case() -> None:
-    """A single message is sent as an array of one, like everything else."""
-    queue = SubmissionQueue()
-    queue.put(Submission(name="silo", messages=["only"]))
+    """The common call is one message, and it takes the same path as ten."""
+    submission = Submission(name="silo", messages=["alone"])
 
-    assert queue.take().messages == ["only"]
+    assert submission.messages == ["alone"]
+
+
+# COVERS: FR-3.1 | negative
+def test_a_submission_without_a_name_is_refused() -> None:
+    """Every submission carries the name of the engine that sent it."""
+    with pytest.raises(ValueError):
+        Submission(name="   ", messages=["one"])
+
+
+# COVERS: FR-4.1 | negative
+def test_a_submission_saying_nothing_is_refused() -> None:
+    """An empty array is a caller mistake, and silence is not a thing to queue."""
+    with pytest.raises(ValueError):
+        Submission(name="silo", messages=[])

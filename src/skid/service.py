@@ -23,8 +23,16 @@ from skid.config import Config, load_config
 from skid.generation import GenerationFailed, Generator
 from skid.greeting import QuietTable, greeting_for, should_greet
 from skid.player import PlaybackFailed, Player
-from skid.queue import Submission, SubmissionQueue
+from skid.queue import Submission
+from skid.spool import Entry, Spool
 from skid.substitution import apply_substitutions
+
+WAKE = object()
+"""Put on the wakeup queue to say there is something in the spool.
+
+It carries nothing. The spool is the queue, and this only says to go and look,
+so one wakeup can cover several entries and a restart needs none at all.
+"""
 
 STOP = None
 """What is put on a queue to say there is nothing more coming.
@@ -63,8 +71,10 @@ class Service:
         self._generator = generator or Generator(config.voice)
         self._player = Player(command=config.player)
 
-        self._incoming: queue.Queue[Submission | None] = queue.Queue()
-        self._queue = SubmissionQueue()
+        self._incoming: queue.Queue[object | None] = queue.Queue()
+        self._spool = Spool(
+            work_dir.parent / "spool", ttl_seconds=float(config.expiry_seconds)
+        )
         self._table = QuietTable()
         self._failures: list[str] = []
         self._idle = threading.Event()
@@ -90,8 +100,34 @@ class Service:
         for directory in (self._work, self._log_path.parent):
             directory.mkdir(parents=True, exist_ok=True)
             directory.chmod(0o700)
+        self._recover()
         self._thread = threading.Thread(target=self._serve, daemon=True)
         self._thread.start()
+        if self._spool.pending():
+            self._idle.clear()
+            self._incoming.put(WAKE)
+
+    def _recover(self) -> None:
+        """Clear what a crash left in the spool, and say so where a person reads.
+
+        Everything discarded here was accepted by a `submit` that returned yes,
+        so a silent clean-up would make FR-4.5 a lie in exactly the case nobody
+        would notice.
+        """
+        found = self._spool.recover(now=time.time())
+        for name in found.expired:
+            self._record_failure(
+                f"discarded on start-up, older than the window: {name}"
+            )
+        if found.interrupted:
+            self._record_failure(
+                f"discarded {found.interrupted} submission(s) interrupted mid-speech"
+            )
+        if found.partial or found.unreadable:
+            self._record_failure(
+                f"removed {found.partial} half-written and "
+                f"{found.unreadable} unreadable spool entries"
+            )
 
     def stop(self) -> None:
         """Stop serving after the current submission."""
@@ -101,11 +137,17 @@ class Service:
             self._thread = None
 
     def submit(self, name: str, messages: list[str]) -> None:
-        """Queue an array. Returns once it is queued, not once it is heard."""
+        """Queue an array. Returns once it is on disk, not once it is heard.
+
+        **The write is the promise.** FR-4.5 says this returns when the work is
+        queued, and FR-4.8 makes queued mean durable, so the entry is on disk
+        before the caller is told yes. What goes on `_incoming` afterwards is a
+        wakeup and carries nothing: the spool is the queue.
+        """
         submission = Submission(name=name, messages=list(messages))
-        self._queue.put(submission)
+        self._spool.put(submission, now=time.time())
         self._idle.clear()
-        self._incoming.put(submission)
+        self._incoming.put(WAKE)
 
     def wait_idle(self, timeout: float) -> bool:
         """Block until nothing is waiting or being spoken."""
@@ -114,7 +156,7 @@ class Service:
     def status(self) -> dict[str, object]:
         """Health, queue depth and recent failures, for a caller that cannot log."""
         return {
-            "pending": self._queue.pending(),
+            "pending": self._spool.pending(),
             "recent_failures": list(self._failures[-20:]),
             "voice": self._config.voice,
         }
@@ -213,17 +255,39 @@ class Service:
         self._table.record_finished(submission.name, when=time.monotonic())
 
     def _serve(self) -> None:
-        """Take submissions in turn, each spoken to completion before the next."""
+        """Take submissions in turn, each spoken to completion before the next.
+
+        One wakeup can cover several entries, because a restart finds a spool
+        already holding work and nobody sends a wakeup per entry for it. So the
+        loop drains rather than taking one and waiting again.
+
+        **The entry is removed when the attempt ends, however it ends.** A
+        failure drops the submission, which is what makes a poison entry
+        impossible: an entry removed only on success would be retried forever
+        and everything behind it would wait.
+        """
         index = 0
         while True:
             if self._incoming.get() is None:
                 return
             self._refresh_config()
-            submission = self._queue.take()
-            try:
-                self._speak(submission, index)
-            except (GenerationFailed, PlaybackFailed, OSError) as exc:
-                self._record_failure(f"submission from {submission.name} failed: {exc}")
-            index += len(submission.messages) + 1
-            if self._queue.pending() == 0:
-                self._idle.set()
+            for entry in self._expired_now():
+                self._record_failure(
+                    f"discarded, older than the window: {entry.submission.name}"
+                )
+            while (taken := self._spool.take(now=time.time())) is not None:
+                submission = taken.submission
+                try:
+                    self._speak(submission, index)
+                except (GenerationFailed, PlaybackFailed, OSError) as exc:
+                    self._record_failure(
+                        f"submission from {submission.name} failed: {exc}"
+                    )
+                finally:
+                    self._spool.done(taken)
+                index += len(submission.messages) + 1
+            self._idle.set()
+
+    def _expired_now(self) -> list[Entry]:
+        """Whatever has aged out since the last look, for the log."""
+        return self._spool.take_expired(now=time.time())

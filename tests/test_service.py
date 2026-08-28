@@ -68,6 +68,63 @@ def service_for(
         service.stop()
 
 
+# COVERS: FR-4.8 | property
+def test_a_submission_survives_the_service_going_away(
+    tmp_path: Path, generator: Generator
+) -> None:
+    """The whole point of the spool, end to end through a real service.
+
+    The first service is stopped without ever draining, standing for the process
+    that goes away when an edit is deployed. The second is a different object
+    over the same directories, standing for the one systemd starts next.
+
+    Not a restart simulated with a flag: two Service instances, and the only
+    thing passing between them is what is on disk.
+    """
+    made = Config(player=_player_that("true", tmp_path))
+    first = Service(
+        config=made,
+        work_dir=tmp_path / "work",
+        log_path=tmp_path / "log",
+        generator=generator,
+    )
+    first.submit("silo", ["survives"])
+    first.stop()
+
+    second = Service(
+        config=made,
+        work_dir=tmp_path / "work",
+        log_path=tmp_path / "log",
+        generator=generator,
+    )
+    second.start()
+    second.wait_idle(timeout=300)
+    second.stop()
+
+    assert [text for _, text in second.spoken] == ["survives"]
+
+
+# COVERS: FR-4.8 | property
+def test_an_accepted_submission_is_on_disk_before_submit_returns(
+    tmp_path: Path, generator: Generator
+) -> None:
+    """FR-4.5 tells the caller yes, and FR-4.8 is what stands behind the yes.
+
+    Asserted without starting the service at all, so nothing can have drained
+    it: after `submit` returns and before anything runs, the work is durable.
+    """
+    service = Service(
+        config=Config(player=_player_that("true", tmp_path)),
+        work_dir=tmp_path / "work",
+        log_path=tmp_path / "log",
+        generator=generator,
+    )
+
+    service.submit("silo", ["written"])
+
+    assert service.status()["pending"] == 1
+
+
 # COVERS: FR-4.5 | positive
 def test_submitting_returns_before_the_clip_is_heard(
     service_for: Callable[..., Service],
