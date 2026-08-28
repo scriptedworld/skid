@@ -37,16 +37,20 @@ CHECKOUT = Path(__file__).resolve().parent.parent
 
 SOURCE = CHECKOUT / "src" / "skid"
 
-THIRD_PARTY = {"httpx", "kokoro", "mcp", "numpy", "starlette", "tomlkit", "uvicorn"}
+THIRD_PARTY = {"flask", "httpx", "kokoro", "mcp", "numpy", "tomlkit", "waitress"}
 """Every non-stdlib package skid's own source imports. Measured 2026-08-28.
 
 Written out rather than counted, because which names are in it is the whole
 point. Not one is an audio library, and the only route from skid to a device is
 the `subprocess` call in `player.py`.
 
-`flask` and `waitress` are declared dependencies and are deliberately absent:
-nothing imports them until `clank/tasks/skid/resilience/40` lands. This set is
-what the source reaches for, not what the project has been given.
+**`uvicorn` and `starlette` left when the MCP server moved into the stdio
+script**, and `flask` and `waitress` arrived in their place. This test is what
+noticed: the swap was made in `main.py` and the suite failed here, which is the
+row doing its job on a change nobody wrote it for.
+
+`mcp` is still here because `client.py` is the MCP server now. It is the
+script's dependency alone, and nothing the service imports reaches it.
 """
 
 ML_STACK = {"torch", "transformers", "numpy"}

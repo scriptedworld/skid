@@ -1,93 +1,63 @@
-"""A stdio front end for the one running service.
+"""skid-mcp: the MCP server, and the only thing in skid that speaks the protocol.
 
-MCP clients configure a command and speak JSON-RPC over its stdin and stdout.
-skid serves MCP over HTTP on a unix socket instead, because that is what keeps
-it a single warm process and owner-only (FR-5.1, FR-5.4). This bridges the two:
-one line in, one POST, one line out.
+MCP clients configure a command and talk JSON-RPC over its stdin and stdout, so
+this process is where the protocol belongs. It holds the six tool schemas and
+the dispatch; the service holds the model, the queue and the config, and what
+crosses the socket between them is plain HTTP.
 
-**It holds nothing that matters.** No model, no queue, no config. Every client
-that starts one is talking to the same service, which is the whole point: a
-stdio server per client would load kokoro per client. It does hold the session
-id and the handshake that established it, and that is what the next paragraph is
-about.
+**It holds nothing that survives a call.** No model, no queue, no config, and
+now no session either. Every client that starts one is talking to the same
+service, which is the point: a stdio server per client would load kokoro per
+client (FR-5.1).
 
-**The session lives in the service's memory, so a restart forgets it.** The
-service then answers every later request `404 Session not found` with a null
-id, which is not a response to anything the client asked, so a client that was
-handed it waits until something outside gives up. Measured 2026-08-28:
-restarting the service left calls from three sessions outstanding, and the one
-allowed to run its course was aborted by the MCP client's own backstop after
-**1800 seconds** with no diagnosis attached.
+**The session is what used to be here, and removing it is why this file was
+rewritten.** MCP over HTTP puts a session id in the service's memory. A restart
+forgot it, the service answered every later request `404 Session not found` with
+a null id, and a JSON-RPC client cannot match that to the request it is waiting
+on, so it waited until something outside gave up. Measured 2026-08-28: a call
+left to run its course was aborted by the MCP client's own backstop after
+**1800 seconds** carrying no diagnosis.
 
-**That bound is the wrong layer's and is worse than no bound would be.** Half an
-hour is indistinguishable from slow work, because `TIMEOUT` below is long on
-purpose to cover a cold start loading a model, so nothing before the abort reads
-as a fault to anybody watching. The harness cannot say which of wedged, slow or
-absent it saw. This file can, at the moment it happens.
+`de3abb5` and `40eea92` recovered from that by caching the handshake and
+replaying it. This removes the thing being recovered from: no session id exists
+on either side, so nothing can go stale, and a restart costs a connection refused
+for as long as the service takes to come back.
 
-So the shim caches the handshake and replays it when the service says the
-session is gone, and a restart costs a reconnection instead. Restarting is the
-documented way to deploy an edit under an editable install, so this is an
-ordinary event rather than a rare one.
+**What went with it.** The replay, and the invariant it rested on that nothing
+but a docstring guarded: the retry was safe only because `404` arrived before
+dispatch, and admitting a `503` would have made the machine speak twice. Also
+the quiet reconnection that could hide a changed tool surface, since there is no
+reconnection. And two SDK imports left the service, one of them there only
+because the SDK answers 421 on an unknown Host header over a socket no browser
+can reach.
 
-**And that is exactly why the reconnection is quiet about a changed tool
-surface, which is the one thing to watch here.** The client never sees the
-second `initialize` result: the shim consumes it. So a new instance answering
-with different capabilities or a different tool list leaves the client believing
-what the old one said, and the shim cannot synthesise a
-`notifications/tools/list_changed` to correct it.
-
-That is safe today because the six tools are stable, which is a property of the
-tool set and not of this file. The restart being recovered from is a code
-deploy, so **the moment a reconnection is most likely to hide a changed surface
-is the moment the surface is most likely to have changed.** Renaming a tool and
-restarting would leave every reconnected client calling the old name until it
-restarts, invisibly rather than loudly. Anyone changing the tool surface should
-expect to restart the clients too.
-
-**Anything it cannot recover becomes a JSON-RPC error carrying the request's own
-id.** That is what FR-5.3 is really asking for. The row names an absent backend
-and a wedged one; the case that bit was a backend answering promptly with
-something that was not an answer, and silence is the one outcome a client cannot
-report.
+**A call fails rather than hangs, which is FR-5.3 and is now nearly free.** A
+service that is absent, refusing or slow produces an httpx error or a status,
+and either becomes a tool error naming the socket. There is no state in which
+this process is waiting on something it cannot describe.
 """
 
 from __future__ import annotations
 
-import json
 import os
-import sys
 from pathlib import Path
-from typing import IO, Any
+from typing import Any
 
 import httpx
+from mcp.server.mcpserver import MCPServer
 
-ENDPOINT = "/mcp"
+from skid.tools import ERROR, RESULT, method_and_path
+
 HOST = "http://localhost"
+"""A name for the URL, since a unix socket has no host and httpx wants one."""
+
 TIMEOUT = 300.0
-"""Long enough to cover a cold start that loads the model."""
+"""Long enough to cover a cold start that loads the model.
 
-SESSION_HEADER = "mcp-session-id"
-"""Where the service puts the session id, and where it expects it back."""
-
-SESSION_LOST = 404
-"""What the service answers for a session id it has never heard of.
-
-Measured 2026-08-28 against the live socket. The body is
-`{"jsonrpc": "2.0", "id": null, "error": {"code": -32600,
-"message": "Session not found"}}`, and the null id is why forwarding it hangs a
-client rather than failing it.
+It bounds a request rather than a session now, so a slow answer is the only
+thing it can be waiting for. Under the old arrangement this was also the window
+in which a wedged session looked like slow work.
 """
-
-HANDSHAKE = ("initialize", "notifications/initialized")
-"""The two messages that establish a session, in the order a client sends them.
-
-Replaying these is what rebuilds a session the service has forgotten. Nothing
-else is ever replayed, because nothing else is safe to send twice.
-"""
-
-INTERNAL_ERROR = -32603
-"""JSON-RPC's code for a server-side failure, used for what skid cannot recover."""
 
 
 def socket_path() -> Path:
@@ -97,216 +67,140 @@ def socket_path() -> Path:
     return root / "skid" / "skid.sock"
 
 
-def _payloads(response: httpx.Response) -> list[str]:
-    """Pull JSON-RPC messages out of a response, plain or server-sent events."""
-    body = response.text
-    if not body.strip():
-        return []
-    if "text/event-stream" in response.headers.get("content-type", ""):
-        return [
-            line[len("data:") :].strip()
-            for line in body.splitlines()
-            if line.startswith("data:")
-        ]
-    return [body.strip()]
+class Unreachable(Exception):
+    """The service could not be reached, or refused what was asked.
 
-
-def _request_id(request: str) -> Any:
-    """The id the client is waiting on, or None for a notification.
-
-    A malformed line has no id either, and gets the same treatment: nothing is
-    written back, because there is nothing that could be waiting for it.
+    One exception for both because a caller can act on neither: the tool failed
+    and the message says why. The SDK turns it into a tool error carrying the
+    calling request's own id, which is what a client can match.
     """
-    try:
-        return json.loads(request).get("id")
-    except (json.JSONDecodeError, AttributeError):
-        return None
 
 
-def _refusal(response: httpx.Response) -> str:
-    """The JSON-RPC error message in a 200, or empty if the answer was an answer.
+class Backend:
+    """Plain HTTP to the service, holding nothing between calls."""
 
-    A transport that succeeded says nothing about whether the protocol did. This
-    is the founding mistake of this module pointed at its own recovery path:
-    reading the status and not the body is what made a 404 look like a reply.
-    """
-    for payload in _payloads(response):
-        try:
-            error = json.loads(payload).get("error")
-        except (json.JSONDecodeError, AttributeError):
-            continue
-        if error:
-            return str(error.get("message", error))
-    return ""
-
-
-def _error_for(request: str, detail: str) -> list[str]:
-    """A JSON-RPC error the client can match to its own request, or nothing.
-
-    Answering a notification is forbidden by JSON-RPC, and a client waiting on
-    nothing cannot be unblocked, so a message with no id gets no reply.
-    """
-    request_id = _request_id(request)
-    if request_id is None:
-        return []
-    error = {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "error": {"code": INTERNAL_ERROR, "message": f"skid: {detail}"},
-    }
-    return [json.dumps(error)]
-
-
-class Session:
-    """One MCP session over the socket, rebuilt when the service forgets it."""
-
-    def __init__(self, http: httpx.Client) -> None:
-        """Start with no session and no handshake to replay."""
+    def __init__(self, http: httpx.Client, path: Path | str) -> None:
+        """Take the client and the socket path, which is only used in messages."""
         self._http = http
-        self._id: str | None = None
-        self._handshake: dict[str, str] = {}
+        self._path = path
 
-    def disown(self) -> None:
-        """Hold an id the service cannot know, which is what a restart leaves.
+    def call(self, tool: str, **arguments: Any) -> Any:
+        """Make one request for `tool` and return what the service answered.
 
-        Not the same as having no id, and the difference is the whole point: a
-        restarted service answers `404 Session not found` to an id it does not
-        recognise, where it answers `400 Missing session ID` to no id at all.
-        Only the first is the failure this class exists for.
-
-        This is how the failure is reproduced against a real service without
-        restarting it and wedging every other client whose shim predates it.
+        Raises `Unreachable` for a transport failure and for a refusal alike.
+        The status is read before the body, which is the lesson this file learnt
+        expensively: a transport that succeeded says nothing about whether the
+        request did.
         """
-        self._id = "disowned-" + "0" * 24
-
-    def _post(self, request: str) -> httpx.Response:
-        """Send one request, carrying the session id if there is one."""
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-        }
-        if self._id:
-            headers[SESSION_HEADER] = self._id
-        response = self._http.post(ENDPOINT, content=request, headers=headers)
-        self._id = response.headers.get(SESSION_HEADER, self._id)
-        return response
-
-    def _remember(self, request: str) -> None:
-        """Keep the handshake messages, which are what rebuild a lost session.
-
-        `initialize` and the `notifications/initialized` that follows it are the
-        only two a client sends before it can do anything, so caching those two
-        is enough to become a session again. Everything else is the client's own
-        traffic and is never replayed.
-
-        **Keyed by method, so a client that initializes twice replaces rather
-        than accumulates.** Appending to a list would replay a stale
-        `initialize` alongside the current one, in that order, and the session
-        rebuilt from it would be the one the client has already moved on from.
-        """
+        method, path = method_and_path(tool)
         try:
-            method = json.loads(request).get("method")
-        except (json.JSONDecodeError, AttributeError):
-            return
-        if method in HANDSHAKE:
-            self._handshake[method] = request
-
-    def _reinitialize(self) -> tuple[bool, str]:
-        """Become a new session by replaying the handshake, in the order sent.
-
-        **A 200 is not success, which is the same mistake one layer in.** An
-        `initialize` refused at the JSON-RPC layer, a protocol version the
-        service will not accept being the obvious case, comes back 200 carrying
-        an `error` member. Reading only the status would call that a rebuilt
-        session, retry into it, and hand the client `the service answered 404`
-        in place of the service's own account of what was wrong.
-
-        Returns whether the session is usable, and what to say if it is not.
-        """
-        replay = [
-            self._handshake[method] for method in HANDSHAKE if method in self._handshake
-        ]
-        if not replay:
-            return False, "no handshake to replay"
-        self._id = None
-        for request in replay:
-            response = self._post(request)
-            if response.status_code >= 400:
-                return False, f"reconnecting failed with {response.status_code}"
-            refusal = _refusal(response)
-            if refusal:
-                return False, f"reconnecting was refused: {refusal}"
-        return True, ""
-
-    def _lost(self, response: httpx.Response) -> bool:
-        """Whether this answer means the session is gone rather than the request bad.
-
-        **A status belongs here only if the service is known to emit it before
-        dispatching the request**, because `send` replays the request on the
-        strength of it. `speak` is not idempotent: a retry that crossed a
-        dispatch boundary would make the machine say the same thing twice, and
-        nobody would suspect the shim.
-
-        `404 Session not found` qualifies, and is checked in the session manager
-        before any tool is reached. A 503 or a connection reset does **not**
-        qualify, however much they look like the same kind of trouble, because
-        either can arrive after the work has been done.
-
-        `400 Missing session ID` was here and was removed. It is what the
-        service says to a shim holding no id at all, and tracing `_id` showed
-        that state cannot be reached after the first handshake: `_post` only
-        ever widens the id, and nothing clears it outside `_reinitialize`, which
-        re-posts immediately. So the branch could only fire before a session had
-        ever existed, where there is nothing lost to recover. It was a live test
-        over a dead path, which is a green light that means nothing.
-        """
-        return response.status_code == SESSION_LOST
-
-    def send(self, request: str) -> list[str]:
-        """Forward one request, rebuilding the session once if it has been lost.
-
-        The replay is safe because `_lost` admits only statuses the service
-        emits before dispatching, so the original request provably did not run.
-        Read `_lost` before adding one.
-        """
-        self._remember(request)
-        response = self._post(request)
-
-        if self._lost(response):
-            rebuilt, why = self._reinitialize()
-            if not rebuilt:
-                return _error_for(request, why)
-            response = self._post(request)
-
-        if response.status_code >= 400:
-            return _error_for(request, f"the service answered {response.status_code}")
-        return _payloads(response)
-
-
-def pump(http: httpx.Client, stdin: IO[str], stdout: IO[str], path: str | Path) -> int:
-    """Forward every line of stdin to the service and its answers to stdout."""
-    session = Session(http)
-    for line in stdin:
-        request = line.strip()
-        if not request:
-            continue
-        try:
-            replies = session.send(request)
+            if method == "GET":
+                response = self._http.get(path)
+            else:
+                response = self._http.post(path, json=arguments)
         except httpx.HTTPError as exc:
-            sys.stderr.write(f"skid is not reachable at {path}: {exc}\n")
-            return 1
-        for reply in replies:
-            stdout.write(reply + "\n")
-            stdout.flush()
-    return 0
+            raise Unreachable(f"skid is not reachable at {self._path}: {exc}") from exc
+
+        body = self._decoded(response)
+        if response.status_code >= 400:
+            detail = body.get(ERROR) or f"the service answered {response.status_code}"
+            raise Unreachable(str(detail))
+        return body.get(RESULT)
+
+    def _decoded(self, response: httpx.Response) -> dict[str, Any]:
+        """The answer's JSON object, or an empty one if it did not send one.
+
+        A body that will not parse is not an error by itself: the status is what
+        says whether the request succeeded, and a 500 from something upstream of
+        the app would carry HTML rather than a reason.
+        """
+        try:
+            found = response.json()
+        except ValueError:
+            return {}
+        return found if isinstance(found, dict) else {}
+
+
+def build_server(backend: Backend) -> MCPServer:
+    """Build the MCP server over a backend, declaring the six tools.
+
+    The schemas are derived from these signatures, so the arguments a client
+    sees and the arguments sent to the service are one declaration. What each
+    route is, is `skid.tools`; what each tool means is here; what it does is the
+    service's.
+    """
+    server = MCPServer("skid")
+
+    @server.tool()
+    def speak(name: str, messages: list[str]) -> str:
+        """Say an array of messages, in order, in the voice skid is set to.
+
+        Returns once the work is queued, not once it has been heard. Nothing is
+        rejected and nothing already queued is replaced.
+        """
+        return str(backend.call("speak", name=name, messages=messages))
+
+    @server.tool()
+    def set_voice(voice: str) -> str:
+        """Change the voice, and write it to the config file.
+
+        Refuses a voice kokoro does not have rather than storing it, because a
+        stored bad voice fails every later submission and survives a restart.
+        """
+        return str(backend.call("set_voice", voice=voice))
+
+    @server.tool()
+    def add_substitution(pattern: str, replacement: str, kind: str = "literal") -> str:
+        """Add a pronunciation substitution to the end of the set.
+
+        The set is global and applies whatever name submitted the text, and the
+        order entries appear in the file is the order they are applied in. A
+        regular expression that does not compile is refused.
+        """
+        return str(
+            backend.call(
+                "add_substitution",
+                pattern=pattern,
+                replacement=replacement,
+                kind=kind,
+            )
+        )
+
+    @server.tool()
+    def remove_substitution(pattern: str, kind: str = "literal") -> str:
+        """Remove an entry by its exact pattern and kind.
+
+        The kind is needed as well as the pattern, because a literal `a` and a
+        regular expression `a` are different entries.
+        """
+        return str(backend.call("remove_substitution", pattern=pattern, kind=kind))
+
+    @server.tool()
+    def list_substitutions() -> list[dict[str, str]]:
+        """Every substitution, in the order they are applied."""
+        listed = backend.call("list_substitutions")
+        return list(listed) if listed else []
+
+    @server.tool()
+    def status() -> dict[str, Any]:
+        """Queue depth, recent failures, and the voice in use.
+
+        `speak` returns at queue time, so a caller that wants to know whether
+        anything was actually heard asks here. A person reads the log instead.
+        """
+        reported = backend.call("status")
+        return dict(reported) if reported else {}
+
+    return server
 
 
 def main() -> int:
-    """Bridge this process's stdio to the service on the socket."""
+    """Serve MCP on this process's stdio, reaching the service over the socket."""
     path = socket_path()
     transport = httpx.HTTPTransport(uds=str(path))
     with httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT) as http:
-        return pump(http, sys.stdin, sys.stdout, path)
+        build_server(Backend(http, path)).run("stdio")
+    return 0
 
 
 if __name__ == "__main__":
