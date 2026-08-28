@@ -57,6 +57,15 @@ FR-4.4, FR-7.2, FR-7.3 and FR-4.2. It is slower and it is not forbidden. The one
 row it fails is FR-5.1, which says of itself that it is "wanted rather than
 required", so an argument that this design is forced would rest on a want.
 
+**What that want costs, measured 2026-08-28.** The warm service holds 1.66 GB,
+of which 1.31 GB is private and dirty and so cannot be shared with a second
+instance. N stdio servers is therefore 1.31 GB per session: 12.2 GB across the
+nine sessions running that day, against 2.0 GB for one service and nine 35 MB
+shims, on a machine with 20 GB free. Cold start is 6.2 seconds.
+
+So the design is still not forced and the alternative is no longer cheap to
+wave at. FR-5.1 carries the commands.
+
 What one process is chosen for:
 
 - **The warm model**, FR-5.1, held by the only process there is.
