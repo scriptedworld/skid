@@ -64,6 +64,13 @@ name a unix socket. Without it every session would load kokoro for itself.
 **The installed tool is editable, so a code edit reaches the running service
 only after `systemctl --user restart skid.service`.**
 
+**Say you are deploying before you do that.** A restart wedges every client
+whose shim predates skid `de3abb5`: the shim holds an MCP session id the new
+process has never heard of, gets a 404 with a null id, and the caller waits
+until its harness gives up at 1800 seconds with no diagnosis. FR-5.3 has the
+detail. A shim spawned after `de3abb5` rebuilds its session and is unaffected,
+so this stops mattering once every session has been through one restart.
+
 ### Installing
 
     python3 src/skid/install.py       from a checkout
