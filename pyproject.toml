@@ -20,7 +20,30 @@ dependencies = [
     "mcp>=2.0",
     "kokoro>=0.9.4",
     "tomlkit>=0.13",
+    # The backend becomes six plain HTTP routes on the socket systemd hands it,
+    # and the MCP server moves into the stdio script, which is what removes the
+    # session state a restart invalidates. Chosen 2026-08-28.
+    #
+    # waitress rather than gunicorn because it takes an inherited fd, which is
+    # how socket activation reaches this process. Flask is WSGI and has no
+    # server of its own for that.
+    #
+    # DECLARED BEFORE USE. Nothing imports these until
+    # clank/tasks/skid/resilience/40 lands, and mcp becomes the script's
+    # dependency alone at the same time.
+    "flask>=3.0",
+    "waitress>=3.0",
 ]
+
+# Declared 2026-08-28, having never been. pytest was in the virtualenv because
+# somebody installed it rather than because this file asked for it, so `uv sync`
+# removed it and a fresh clone could never have run the suite at all.
+#
+# The linters are not here on purpose: the gate runs ruff, mypy, pylint, bandit
+# and the rest as uv tools from PATH, so declaring them would be a second
+# statement of what toolbox's jig already pins.
+[dependency-groups]
+dev = ["pytest>=8.0"]
 
 [project.scripts]
 skid = "skid.main:main"

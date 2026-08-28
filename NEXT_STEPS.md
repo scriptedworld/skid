@@ -5,14 +5,44 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
+Three ready tasks in `clank/tasks/skid/`, all fully specified.
+
+**The config becomes YAML, and wrench validates it and the spool.**
+`data-files/10-validate-with-wrench-and-a-schema.ready`. Decided 2026-08-28 with
+the user, who approved wrench's canonical form including its quoted keys.
+`silo/docs/DECISIONS/yaml-everywhere-validated-against-the-decoded-structure.md`
+says every structured file in the ecosystem is YAML; skid chose TOML 83 minutes
+before that was recorded, so it predates it and is now the outlier.
+
+Nothing blocks it: **no config file exists on this machine**, so there is
+nothing to migrate. It drops `tomlkit` rather than adding a dependency, and
+retires FR-7.8's comment clause and `docs/SPEC.md:289` with it.
+
+**The systemd watchdog and the restart limit.**
+`resilience/20-the-watchdog-and-the-restart-limit.ready`. `WatchdogUSec=0`
+today, so a wedged service is undetected, and the start limit is systemd's
+default, so five failures in ten seconds leaves it dead until somebody runs
+`reset-failed`. Neither value was chosen.
+
 **Test the eight uncovered rows.**
-`clank/tasks/skid/traceability/10-test-the-eight-testable-rows.ready`. The task
-carries a proposed test for each: three read a declaration file, four are
-behavioural and two of those share a blocking-player seam, and FR-7.6 is tested
-by asserting the measurement it rests on still holds.
+`traceability/10-test-the-eight-testable-rows.ready`. A proposed test for each:
+three read a declaration file, four are behavioural and two of those share a
+blocking-player seam, and FR-7.6 is tested by asserting the measurement it rests
+on still holds.
 
 Traceability reads 40 of 48. It reaches 48 of 48 when that task lands, with
 nothing permanently red and no marker needed in toolbox's checker.
+
+## Not settled by use
+
+**Nobody has heard skid mispronounce anything.** FACT 2026-08-28, from the user:
+total real use is a handful of messages from silo and skid itself. So the
+substitution surface, first-match-wins ordering, the literal-and-regex split and
+FR-8.4 making file order load-bearing, is designed against an imagined need.
+
+Treat those rows as settled by argument, not by evidence. The first real
+mispronunciation somebody reaches for the config to fix is worth more than any
+of the reasoning behind them.
 
 ## Landed since this file was last rewritten
 
@@ -34,8 +64,10 @@ one of its own reviewers checking their findings had landed. They said so
 themselves and asked for a reader with no stake in them. That pass still found a
 regression, FR-5.3, which is the argument for the one that is missing.
 
-It is the only thing left in this section. The nine uncovered rows were here
-until 2026-08-28 and are now a task and a question, above.
+**A doc review**, `.reviews/doc-review.md`, scored 24 of 35 on 2026-08-28 and
+is gitignored so it does not ship. Its three worst findings are fixed: PROJECT.md
+went 559 lines to 192, the pytest command it printed now runs, and an inference
+it called "Measured" is marked as one. What is left from it is small.
 
 ## Decided recently enough to restate
 
