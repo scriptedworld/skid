@@ -341,6 +341,30 @@ other sessions could not get an answer at all. That is `claude mcp list`
 reporting Connected, one layer down: a green check beside a wedged caller is the
 expected combination rather than a contradiction.
 
+**The service issues a session id alongside a JSON-RPC rejection.** Measured
+2026-08-28: an `initialize` missing `clientInfo` comes back `200` carrying
+`Invalid request parameters` **and** an `mcp-session-id` header. So a client
+that reads the header and not the body believes it has a session, and behaves
+as though the handshake succeeded.
+
+That is worth knowing before writing anything that talks to this socket. It was
+found by tightening `_reinitialize` to read the body: the recovery probe had
+been handshaking that way since it was written, and had been passing.
+
+**Four things on this machine report success about a narrower question than the
+one being asked**, and none of them is lying:
+
+    claude mcp list says Connected   about a fresh connection, not your session
+    a probe says pending 0           about the probe's session, not the hung caller
+    the schema loads                 about registration, not about returning
+    a session id is issued           about the transport, not about acceptance
+
+There is nothing to catch in any of them, only a scope quietly substituted,
+which is why they survive careful reading. The remedy is one line: make the call
+you actually depend on, and read what came back rather than that something came
+back. Synthesised by the agent-support session from four measurements, three of
+them skid's, at `agent-support 286547c`.
+
 `client.py` now caches the handshake, rebuilds the session when the service says
 it is gone, and retries once, so a restart costs a reconnection. What it cannot
 recover becomes a JSON-RPC error carrying the request's own id.
