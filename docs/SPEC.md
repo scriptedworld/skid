@@ -277,16 +277,29 @@ skid imports no audio library, opens no device, and sets no volume.
 
 ## The config file
 
-`$XDG_CONFIG_HOME/skid/config.toml`, defaulting to `~/.config/skid/config.toml`.
+`$XDG_CONFIG_HOME/skid/config.yaml`, defaulting to `~/.config/skid/config.yaml`.
 
-    voice = "af_heart"
-    player = "paplay {file}"
-    greeting_window_seconds = 30
+    "greeting_window_seconds": 30
+    "player": "paplay {file}"
+    "substitution":
+      - "kind": "literal"
+        "pattern": "kokoro"
+        "replacement": "koh koh roh"
+    "voice": "af_heart"
 
-    [[substitution]]
-    kind = "literal"
-    pattern = "kokoro"
-    replacement = "koh koh roh"
+**YAML, read and written by wrench against a schema in `skid/schemas.py`.**
+Every structured file in the ecosystem is YAML; skid chose TOML 83 minutes
+before that was recorded, so it predates the decision rather than having ignored
+it, and moved on 2026-08-28.
+
+The form above is wrench's canonical output, quoted keys and sorted names. A
+person may write plain unquoted YAML and it loads; what skid *emits* is
+canonical. `docs/config.sample.yaml` is the readable version.
+
+**The schema is validated on the way in and on the way out.** A key skid does
+not know is refused by name rather than ignored, so `voce: af_bella` fails at
+start-up instead of silently keeping the default voice. Validating the write is
+what stops a tool storing a shape skid could never read back.
 
 **The file is the record**, and the backend is its only writer.
 
@@ -296,16 +309,21 @@ own observable true for both routes: setting the voice by either one changes
 what the next clip is spoken in. Reading once at start would give the tool route
 effect and the file route none, which is two routes that do not agree.
 
-**How it is written.** Read, modify, then write a temporary file in the same
-directory, flush it, and rename over the original. The rename is atomic, so a
-kill during a write cannot leave a truncated config and lose the substitution
-set. The read-modify-write is done under the same mtime check, so a hand edit
+**How it is written.** wrench writes bytes to a temporary file beside the target
+and renames it into place, its own FR-6.3, so a kill during a write cannot leave
+a truncated config and lose the substitution set. skid no longer hand-rolls
+that. The read-modify-write is done under the same mtime check, so a hand edit
 made since the last read is not silently discarded.
 
-**Writing preserves what a person put there**: comments, key order and the order
-of substitution entries, because FR-8.4 makes entry order meaningful and a
-comment is the only place a reason can live. That means a style-preserving TOML
-round trip rather than parse-and-re-emit.
+**Writing preserves the order of substitution entries**, because FR-8.4 makes it
+meaningful. A YAML sequence carries its order in the decoded structure, so this
+needs nothing that preserves formatting.
+
+**It does not preserve comments, and that clause is retired.** It existed
+because a comment was the only place a reason could live, which is what made a
+style-preserving round trip worth a dependency. `docs/config.sample.yaml` is
+that place now, and the live file carries values alone. FR-7.1 records the
+retirement.
 
 A missing config file is not an error. Defaults apply and the file is created by
 the first write. A config file that is present but malformed **is** an error, and
@@ -466,9 +484,15 @@ what is declared, and nothing in skid needs a newer interpreter, so the pin
 costs nothing and stays.
 
 Dependencies: `kokoro`, `flask` and `waitress` for the service, the Anthropic
-MCP SDK for Python for the script alone, `httpx` between them, `tomlkit` for the
-style-preserving round trip FR-7.1 and FR-7.8 need, and numpy, which arrives
-with kokoro. Measured 2026-08-27: kokoro 0.9.4 and its torch stack install and
+MCP SDK for Python for the script alone, `httpx` between them, `wrench` for the
+config and the spool, and numpy, which arrives with kokoro.
+
+**wrench is a path dependency and that is a real constraint.** It is not
+published and must be installed editable, because it reads its schemas from its
+own repository root. `[tool.uv.sources]` points at `../wrench/python`, which
+holds on any machine set up from `dotfiles/repos.live.toml` and **not** on a
+standalone clone. Publishing wrench, or fetching it in the bootstrap, is a
+prerequisite for skid going public. Measured 2026-08-27: kokoro 0.9.4 and its torch stack install and
 run under 3.12.14, and the WAV writer is the stdlib's.
 
 **The MCP SDK under 3.12 was the open risk in the pin and is now settled.**

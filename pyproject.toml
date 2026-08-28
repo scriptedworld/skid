@@ -16,10 +16,6 @@ classifiers = [
 # a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
 # measurement and says to retire the row rather than edit this in place.
 requires-python = ">=3.12,<3.13"
-# tomlkit rather than tomllib: FR-7.1 and FR-7.8 make the config the record, and
-# writing into a file a person owns means preserving their comments and their
-# entry order. tomllib reads and cannot write; a parse-and-re-emit would discard
-# both. FR-8.4 makes the entry order load-bearing rather than cosmetic.
 dependencies = [
     "httpx",
     # kokoro's English path needs this spaCy model and will try to DOWNLOAD it
@@ -29,7 +25,12 @@ dependencies = [
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "mcp>=2.0",
     "kokoro>=0.9.4",
-    "tomlkit>=0.13",
+    # The config and the spool are read, written and validated through wrench,
+    # which is the ecosystem's one answer for structured files. It replaced
+    # tomlkit, which was here to preserve comments in a file a person edits;
+    # `docs/config.sample.yaml` does that job now, so the live file needs no
+    # comments and can be emitted canonically.
+    "wrench",
     # The backend becomes six plain HTTP routes on the socket systemd hands it,
     # and the MCP server moves into the stdio script, which is what removes the
     # session state a restart invalidates. Chosen 2026-08-28.
@@ -44,6 +45,21 @@ dependencies = [
     "flask>=3.0",
     "waitress>=3.0",
 ]
+
+# wrench is not published and must be installed EDITABLE: it reads its schemas
+# from `schemas/` at its repository root, two levels above the package, so a
+# copied install leaves it looking for files that are not beside it.
+# `wrench/docs/PROJECT.md` states that as a constraint rather than a preference.
+#
+# A relative path, because every repository here sits at `~/.projects/<name>`
+# and `dotfiles/repos.live.toml` is what clones them, so the sibling is there on
+# any machine set up from the roster.
+#
+# **This is what stops skid installing from a standalone clone**, and it has to
+# be resolved before skid goes public: wrench needs publishing, or the bootstrap
+# needs to fetch it. Chosen with our user 2026-08-28 over staying on TOML.
+[tool.uv.sources]
+wrench = { path = "../wrench/python", editable = true }
 
 # Declared 2026-08-28, having never been. pytest was in the virtualenv because
 # somebody installed it rather than because this file asked for it, so `uv sync`

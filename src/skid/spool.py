@@ -20,7 +20,9 @@ prepared at once. FR-4.3 and FR-4.4 both rest on this.
 
 **Written to a temporary name and renamed into place**, so a file at its final
 name is a whole file. A `kill -9` mid-write leaves a `.tmp` rather than a
-truncated entry that parses to nonsense and blocks everything behind it.
+truncated entry that parses to nonsense and blocks everything behind it. That is
+wrench's FR-6.3 now rather than hand-rolled here; the `.tmp` handling on the
+reading side stays, because entries written by an older skid may still be there.
 
 **Taken means moved, not copied.** An entry lives under `taken/` while it is
 being spoken and is removed when the attempt ends, however it ends. Anything
@@ -34,12 +36,17 @@ and not yet started is never lost; being spoken when the process died is dropped
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import wrench
+
+from skid import schemas
 from skid.queue import Submission
+
+SCHEMA = wrench.compile_schema("skid spool entry", schemas.SPOOL_ENTRY)
+"""Compiled once at import, because it is the same document for every entry."""
 
 TAKEN = "taken"
 """Where an entry lives while it is being spoken."""
@@ -116,16 +123,14 @@ class Spool:
         sequence = self._next_sequence()
         safe = "".join(c if c.isalnum() else "_" for c in submission.name)[:40]
         final = self.directory / f"{sequence:06d}-{safe}{SUFFIX}"
-        partial = final.with_suffix(SUFFIX + PARTIAL)
 
         payload = {
             "name": submission.name,
             "messages": submission.messages,
             "queued_at": now,
         }
-        partial.write_text(json.dumps(payload), encoding="utf-8")
-        partial.chmod(0o600)
-        os.rename(partial, final)
+        wrench.save_json_file(payload, final, SCHEMA, wrench.LOCAL_FILE)
+        final.chmod(0o600)
         return final
 
     def pending(self) -> int:
@@ -133,21 +138,30 @@ class Spool:
         return len(list(self.directory.glob(f"*{SUFFIX}")))
 
     def _read(self, path: Path) -> Entry | None:
-        """Parse one entry, or None if it is not one.
+        """Parse one entry, or None if the file is not one.
 
-        An entry that cannot be read is not retried. A failure drops a
-        submission, and an entry nothing can parse takes the same path rather
-        than blocking everything behind it forever.
+        An entry that is not a valid submission is not retried. A failure drops
+        a submission, and one nothing can parse takes the same path rather than
+        blocking everything behind it forever.
+
+        **A disk error is not a poison entry, and this used to treat them the
+        same.** The old catch-all took `OSError` alongside four shape errors, so
+        a permissions problem or a bad sector read as "this file is nonsense,
+        discard it" and the submission was dropped silently. wrench separates
+        them: `ParseError` and `ValidationError` are the file being wrong, which
+        is this method's business, and `ReadError` is the disk, which is not,
+        and is raised so the caller records a failure a person can act on.
         """
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            submission = Submission(name=payload["name"], messages=payload["messages"])
-        except (json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
+            payload = wrench.load_json_file(path, SCHEMA, wrench.LOCAL_FILE)
+        except (wrench.ParseError, wrench.ValidationError):
             return None
         return Entry(
-            submission=submission,
+            submission=Submission(
+                name=payload["name"], messages=list(payload["messages"])
+            ),
             path=path,
-            queued_at=float(payload.get("queued_at", 0.0)),
+            queued_at=float(payload["queued_at"]),
         )
 
     def _waiting(self) -> list[Path]:

@@ -1,26 +1,33 @@
 # skid, every setting with its default.
 #
-# Copy to ~/.config/skid/config.toml and change what you want. The file need
+# Copy to ~/.config/skid/config.yaml and change what you want. The file need
 # only hold what differs; a missing file is not an error and every key below
 # falls back to the value shown.
 #
 # skid writes to this file when a setting is changed through an MCP tool, so it
 # is a file both you and skid edit.
+#
+# THIS FILE IS WHERE THE REASONS LIVE. skid rewrites the live config
+# canonically, with every key quoted and sorted, so comments you put there do
+# not survive a tool call. Keep your notes here and copy values across.
+#
+# A key skid does not recognise is REFUSED rather than ignored, so a typo tells
+# you at start-up instead of silently leaving the default in place.
 
 # Any kokoro voice.
-voice = "af_heart"
+voice: af_heart
 
 # The command that plays a clip. {file} is substituted with the path.
 # It must not return before the audio is inaudible, or the next clip overlaps.
-player = "paplay {file}"
+player: paplay {file}
 
 # Seconds of quiet after which a name announces itself again, measured from the
 # end of the last clip spoken for that name.
-greeting_window_seconds = 30
+greeting_window_seconds: 30
 
 # Seconds after which a queued submission is discarded rather than spoken, with
 # a line in the log. Time the service spends stopped counts toward this.
-expiry_seconds = 300
+expiry_seconds: 300
 
 # Pronunciation substitutions, applied on the way to the engine only: they
 # change nothing you submitted and nothing the log records.
@@ -30,16 +37,14 @@ expiry_seconds = 300
 # matches there wins; the scan then resumes after what the replacement produced,
 # so no entry sees another's output. Reordering them means editing this file.
 #
-# kind is "literal" or "regex". A literal is matched whole-word where the
-# adjacent character is a word character, so it does not fire inside a longer
-# word. A regex is matched case-insensitively.
+# kind is "literal" or "regex", and defaults to literal. A literal is matched
+# whole-word where the adjacent character is a word character, so it does not
+# fire inside a longer word. A regex is matched case-insensitively.
+substitution:
+  - kind: literal
+    pattern: kokoro
+    replacement: koh koh roh
 
-[[substitution]]
-kind = "literal"
-pattern = "kokoro"
-replacement = "koh koh roh"
-
-[[substitution]]
-kind = "regex"
-pattern = "\\bFR-([0-9]+)\\.([0-9]+)\\b"
-replacement = "requirement \\1 point \\2"
+  - kind: regex
+    pattern: \bFR-([0-9]+)\.([0-9]+)\b
+    replacement: requirement \1 point \2

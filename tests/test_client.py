@@ -42,7 +42,7 @@ NOWHERE = Path("/nowhere/skid.sock")
 @pytest.fixture(name="config_path")
 def config_path_fixture(tmp_path: Path) -> Path:
     """A config file path in a directory the test owns."""
-    return tmp_path / "config.toml"
+    return tmp_path / "config.yaml"
 
 
 @pytest.fixture(name="service")
