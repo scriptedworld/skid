@@ -5,16 +5,14 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**Test the seven uncovered rows a test can fail.**
-`clank/tasks/skid/traceability/10-test-the-seven-testable-rows.ready`. The task
+**Test the eight uncovered rows.**
+`clank/tasks/skid/traceability/10-test-the-eight-testable-rows.ready`. The task
 carries a proposed test for each: three read a declaration file, four are
-behavioural and two of those share a blocking-player seam.
+behavioural and two of those share a blocking-player seam, and FR-7.6 is tested
+by asserting the measurement it rests on still holds.
 
-**Two rows no test can fail** are a question rather than work, at
-`clank/tasks/skid/traceability/20-two-rows-no-test-can-fail.questions`. FR-2.2
-licenses a mechanism rather than requiring behaviour, and FR-7.6 records the
-choice of Python. Neither states something the software could stop doing, so a
-`COVERS:` mark on either would move the number without testing anything.
+Traceability reads 38 of 46. It reaches 46 of 46 when that task lands, with
+nothing permanently red and no marker needed in toolbox's checker.
 
 ## Owed, and not yet a task
 
@@ -64,7 +62,7 @@ Run the rest of the jig and read `result.yaml`.
 
 **`docstrings` passes now**, at 98.9% measured 2026-08-28 over skid's own code.
 It read 0.0% the day before, over an empty package. **`traceability` reports 38
-of 47**, which is a real number and the gap listed above.
+of 46**, which is a real number and the gap listed above.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer, which are what running commands looks like to a scanner.

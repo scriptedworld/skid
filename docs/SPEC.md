@@ -32,8 +32,8 @@ stdio is started per client, so several agents would mean several servers, and
 exclusion would have to reach across them. Over HTTP the agents are clients of
 one server, and the question does not arise.
 
-**The requirements do not compel this.** FR-2.2 permits a lock file explicitly,
-"against every process that agrees to take it", and a design of N stdio servers
+**The requirements do not compel this.** FR-2.1 constrains the property and not
+the mechanism, so a lock file is permitted, and a design of N stdio servers
 each loading kokoro and taking a lock file around playback satisfies FR-2.1,
 FR-4.4, FR-7.2, FR-7.3 and FR-4.2. It is slower and it is not forbidden. The one
 row it fails is FR-5.1, which says of itself that it is "wanted rather than
@@ -59,7 +59,7 @@ one decision seen twice. Citing the boundary as a second reason counts one
 decision twice. The criterion still holds under this shape, and more plainly: a
 persistent service is the background process.
 
-*Discharges FR-2.1, FR-2.2, FR-5.1.*
+*Discharges FR-2.1, FR-5.1.*
 
 ### What it buys the lock
 
@@ -75,7 +75,7 @@ nor cleans it.
 
 The mutex is sufficient only while every clip is played by this process.
 
-*Discharges FR-2.1, FR-2.2, FR-7.3.*
+*Discharges FR-2.1, FR-7.3.*
 
 ## The socket, and who owns it
 

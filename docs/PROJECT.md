@@ -96,7 +96,8 @@ which is a claim about the migration commit rather than about the tree now:
 
 The tree has moved since and the current rows are not that set. Ten of the 32
 were `[?]` and were rewritten as settled statements at the same ids as they
-closed, and rows have been added since, so 47 rows now stand where 32 did.
+closed, and rows have been added since, so 46 rows now stand where 32 did, with
+one retired.
 
 `docs/REQUIREMENTS/README.md` carries the status markers and what each category
 holds.
@@ -161,7 +162,7 @@ skid wrote, and says so beside the exclusions. Filed as
 
     docstrings   0.0%, failing      docstrings   98.9%, passing
     tests        exits 5, no tests  tests        72 pass
-    traceability 0 of 45 covered    traceability 38 of 47 covered
+    traceability 0 of 45 covered    traceability 38 of 46 covered
 
 The left column was measured against bolt
 `v0.0.0-20260827201109-7604557974a5`, reading `result.yaml` from a named
@@ -188,17 +189,32 @@ A green task that was measuring somebody else's repository is exactly what the
 vacuous-pass warning is about, and it took another project fixing its jig to
 surface it here.
 
-**Nine requirements have no test citing them**, which is the gap traceability
-exists to report: FR-1.5, FR-1.6, FR-1.7, FR-2.2, FR-4.2, FR-6.3, FR-7.3,
-FR-7.6 and FR-8.3. Several are properties of the machine rather than of a
-function, so closing them is a question of what a test for each would read, not
-of writing nine more assertions.
+**Eight requirements have no test citing them**, which is the gap traceability
+exists to report: FR-1.5, FR-1.6, FR-1.7, FR-4.2, FR-6.3, FR-7.3, FR-7.6 and
+FR-8.3. Several are properties of the machine rather than of a function, so
+closing them is a question of what a test for each would read, not of writing
+eight more assertions.
 
-FR-5.3 and FR-5.4 left that list when the installer arrived, and how is the
-useful part: both are properties of the systemd units, so the tests read the
-unit files and assert `SocketMode=0600` and `Type=notify`. A requirement whose
-subject is a config file is tested by reading the config file. Several of the
-nine are the same shape.
+Three rows have left that list and each left differently, which is the useful
+part:
+
+**FR-5.3 and FR-5.4 got tests**, when the installer arrived. Both are properties
+of the systemd units, so the tests read the unit files and assert
+`SocketMode=0600` and `Type=notify`. A requirement whose subject is a config
+file is tested by reading that file.
+
+**FR-7.6 got one on a second look**, and generalises: a decision row is tested by
+asserting its **premise** still holds, not its consequence. The consequence is
+tautological. FR-7.6 rests on kokoro being a Python project rather than a
+binding, which is a measurement over its dependencies, so a test on it fails on
+the day the decision is up for re-examination.
+
+**FR-2.2 was retired**, because no test could fail it and none should have been
+written. It licensed a mechanism where FR-2.1 requires the property, and nothing
+external could retire it and nothing internal could violate it. See `## Retired`
+in `docs/REQUIREMENTS/README.md`; the id is not reused.
+
+47 rows became 46.
 
 ## Where the work is
 
@@ -266,7 +282,7 @@ all nine closed on 2026-08-27. Each closed at the id it already carried, so
 nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
 rather than kept empty.
 
-47 requirements, none marked `[?]`.
+46 requirements, none marked `[?]`.
 
 **`docs/SPEC.md` answered the design questions this section used to list**: where
 the config lives and in what format, what the MCP tool surface is, and how the
@@ -499,7 +515,7 @@ directory carries the property instead.
 ## What is not built
 
 Nothing that a requirement names. Everything in `docs/REQUIREMENTS/` has code,
-and 38 of the 47 rows have a test citing them.
+and 38 of the 46 rows have a test citing them.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 are installed under Python
 3.12.14, and the whole path has been run end to end and heard: an MCP client
