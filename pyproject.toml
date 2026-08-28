@@ -6,7 +6,14 @@ description = "Voice output for the agents. Text in, one clip at a time out."
 # a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
 # measurement and says to retire the row rather than edit this in place.
 requires-python = ">=3.12,<3.13"
-dependencies = []
+# tomlkit rather than tomllib: FR-7.1 and FR-7.8 make the config the record, and
+# writing into a file a person owns means preserving their comments and their
+# entry order. tomllib reads and cannot write; a parse-and-re-emit would discard
+# both. FR-8.4 makes the entry order load-bearing rather than cosmetic.
+dependencies = [
+    "kokoro>=0.9.4",
+    "tomlkit>=0.13",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import pytest
+
 from skid.player import PlaybackFailed, Player
 
 
@@ -128,12 +129,18 @@ def test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it(
     FR-7.5 allows any command line, so a player that backgrounds itself releases
     the lock while its audio is still going. skid cannot detect that, and this
     test asserts the limit rather than a guarantee skid does not provide.
+
+    **The background job must detach its output as well.** skid captures the
+    player's streams, and a child that keeps the stdout pipe open holds the wait
+    open with it, so a naively backgrounded player does not overlap after all.
+    That accident is not the guarantee FR-1.8 says skid lacks: a real player
+    that redirects or closes its output escapes it, which is what this does.
     """
     log = tmp_path / "log"
     script = tmp_path / "player.sh"
     script.write_text(
         f'#!/bin/sh\n( echo "start $(date +%s.%N)" >> {log}; sleep 0.3;'
-        f' echo "end $(date +%s.%N)" >> {log} ) &\n',
+        f' echo "end $(date +%s.%N)" >> {log} ) >/dev/null 2>&1 &\n',
         encoding="utf-8",
     )
     script.chmod(0o755)
