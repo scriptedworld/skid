@@ -32,6 +32,41 @@ from skid.tools import ERROR, RESULT, ROUTES
 BAD_REQUEST = 400
 """What a value this service refuses to store comes back as."""
 
+ACCEPTED = 202
+"""What a notification gets, since JSON-RPC forbids answering one."""
+
+LEGACY_ENDPOINT = "/mcp"
+"""Where the MCP server used to be, kept so an old shim fails instead of hanging.
+
+**This route exists because removing it reintroduced the exact bug the move was
+meant to delete.** A `skid-mcp` from before 2026-08-28 forwards MCP to this path.
+With nothing here, Flask answers 404 with an HTML body, which is not a JSON-RPC
+message at all, so a client cannot match it to the request it is waiting on and
+waits until something outside gives up. Measured on the live socket immediately
+after the deploy: a `status()` call was still outstanding at 120 seconds.
+
+Answering **200 with a JSON-RPC error carrying the request's own id** unblocks
+every vintage of shim. One that checks for a lost session sees a refusal rather
+than a 404 and reports it; one that forwards verbatim hands the client an error
+it can match. Both fail in a way somebody can read.
+
+*Discharges FR-5.3 across the version boundary.*
+
+It can go once no `skid-mcp` predating the move is running, which happens on its
+own as sessions clear. It is not in `ROUTES` because it is not a tool.
+"""
+
+METHOD_NOT_FOUND = -32601
+"""JSON-RPC's code for a method the server does not provide."""
+
+MOVED = (
+    "skid no longer serves MCP on this socket. The MCP server moved into "
+    "skid-mcp, which now speaks plain HTTP to the service. This client is "
+    "running a skid-mcp from before that change: clear or restart the session "
+    "to pick up the new one."
+)
+"""What an old shim's caller is told, written for the person who has to act."""
+
 
 def _body() -> dict[str, Any]:
     """The request's JSON object, or an empty one where it sent nothing.
@@ -136,5 +171,25 @@ def build_app(service: Service, config_path: Path) -> Flask:
     def status() -> Response:
         """Queue depth, recent failures, and the voice in use."""
         return ok(service.status())
+
+    @app.post(LEGACY_ENDPOINT)
+    def moved() -> Response | tuple[Response, int]:
+        """Tell an old shim's caller the protocol left, in a message it can match.
+
+        The id is echoed because that is the whole point: an error carrying a
+        null id, or an HTML page, is not an answer to anything the client asked,
+        and it waits rather than failing. A notification has no id and gets no
+        reply, because nothing is waiting on one.
+        """
+        asked = _body().get("id")
+        if asked is None:
+            return jsonify({}), ACCEPTED
+        return jsonify(
+            {
+                "jsonrpc": "2.0",
+                "id": asked,
+                "error": {"code": METHOD_NOT_FOUND, "message": MOVED},
+            }
+        )
 
     return app
