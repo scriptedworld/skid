@@ -315,6 +315,36 @@ config, because MCP clients speak stdio and an http URL cannot name a unix
 socket. One line in, one POST, one line out. Without it every session would load
 kokoro for itself, which is what FR-5.1 exists to prevent.
 
+### Restarting the service used to wedge every client attached to it
+
+**Fixed 2026-08-28, and worth keeping because the symptom was indistinguishable
+from the section below.** The MCP session lives in the service's memory, so a
+restart left every connected `skid-mcp` holding an id the new process had never
+heard of. It answered `404 Session not found` with `"id": null`, the shim
+forwarded that verbatim, and a JSON-RPC client cannot match a null id to the
+request it is waiting on. Three sessions hung, one for five minutes, with no
+error for anyone to read.
+
+`systemctl --user restart skid.service` is the documented way to deploy an edit
+under an editable install, so this fired on the ordinary action and the service
+came back healthy every time.
+
+**The two failures look identical from inside a session and have opposite
+remedies in spirit.** A session older than the registration never had the tool;
+a wedged session had it and lost it, and would have kept it if nothing had been
+deployed. Both are cleared by restarting the client, which is why the difference
+went unnoticed.
+
+**Health measured from a new connection says nothing about sessions already
+attached.** A fresh probe answered `status` in under ten milliseconds while two
+other sessions could not get an answer at all. That is `claude mcp list`
+reporting Connected, one layer down: a green check beside a wedged caller is the
+expected combination rather than a contradiction.
+
+`client.py` now caches the handshake, rebuilds the session when the service says
+it is gone, and retries once, so a restart costs a reconnection. What it cannot
+recover becomes a JSON-RPC error carrying the request's own id.
+
 ### A session older than the registration cannot call it
 
 **Registering an MCP server does not reach sessions that are already running.**
