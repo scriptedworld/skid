@@ -1,16 +1,20 @@
 # Placeholder values for the jigs skid adopts, overriding their own defaults.
 #
-#     bolt common-quality . --definitions skid
+#     bolt --definitions skid common-quality .
 #
-# The common jig defaults `requirements` to REQUIREMENTS.md, which is the
-# retired single-file layout. skid holds requirements as a directory, ruled in
+# The flag goes BEFORE the positionals. After them it becomes a positional and
+# bolt refuses with usage, writing no run directory at all.
+#
+# `requirements` defaults to REQUIREMENTS.md, the retired single-file layout.
+# skid holds requirements as a directory, ruled in
 # silo/docs/DECISIONS/requirements-are-a-directory.md, so the check is pointed
-# at where they actually live.
+# at where they actually live. THIS IS NOT SILENCING THE CHECK: the decision
+# names the wrong move by name, which is concatenating the tree into a file to
+# feed the checker.
 #
-# THIS IS NOT SILENCING THE CHECK. The decision names the wrong move by name:
-# concatenating the tree into a file to feed the checker. Naming the real
-# location is the opposite of that, and whether the checker can read a directory
-# is its own question, filed as
-# clank/inbox/toolbox/traceability-must-read-a-directory.
+# `suppressions` defaults to SUPPRESSIONS at the run root. skid's register is
+# docs/SUPPRESSIONS.md. Without this line the checker looks for a register that
+# is not there and fails skid for holding five registered pragmas.
 
 requirements: docs/REQUIREMENTS
+suppressions: docs/SUPPRESSIONS.md
