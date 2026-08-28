@@ -5,20 +5,29 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-Three ready tasks in `clank/tasks/skid/`, all fully specified.
+Two ready tasks in `clank/tasks/skid/`, both fully specified, and one written
+and waiting on a deploy window.
 
-**The MCP server moves into the stdio script.**
-`resilience/40-the-mcp-server-moves-into-the-stdio-script.ready`. Designed with
-the user 2026-08-28. The script becomes the MCP server and the service becomes
-six plain HTTP routes, so no session id exists on either side and the wedge
-class has nothing to go stale. Flask and waitress are chosen and declared;
-waitress because it takes an already-bound socket, proved on the live socket
-rather than assumed.
+**The MCP server has moved into the stdio script, and is not yet deployed.**
+`resilience/40-…in-progress`. Written and verified 2026-08-28 at `0eef559`, and
+the running service is still the old one until somebody restarts it.
 
-It supersedes much of `de3abb5` and `40eea92`, which recover from the wedge
-rather than removing it, so that recovery code is not worth polishing. A smaller
-fallback needing no service change is recorded in the same task: a fresh MCP
-session per tool call, measured at two round trips of 0.00s each.
+`skid-mcp` is the MCP server now, holding the six schemas and the dispatch, and
+the service is six Flask routes served by waitress on the socket systemd already
+manages. No session id exists on either side, so the wedge class has nothing to
+go stale. `skid/tools.py` is the one declaration both derive from.
+
+Proved end to end on a private socket rather than against the live one: waitress
+served the app over a socket it did not create, the socket came out 0600 by
+skid's own bind, and `skid-mcp`'s Backend read and wrote through it.
+`.ephemera/probe-new-stack.py` regenerates that.
+
+**The deploy is the outstanding half, and it is not free.** A restart swaps the
+service to plain HTTP, and every `skid-mcp` process already running is the old
+byte-forwarder that speaks MCP to a route that no longer exists. Those sessions
+lose `speak` until each spawns a new shim, which happens at its next clear. They
+fail rather than hang, which is what the recovery code in `de3abb5` buys on its
+way out, but they do fail. Pick a window rather than doing it mid-session.
 
 **The config becomes YAML, and wrench validates it and the spool.**
 `data-files/10-validate-with-wrench-and-a-schema.ready`. Decided 2026-08-28 with
@@ -52,6 +61,15 @@ mispronunciation somebody reaches for the config to fix is worth more than any
 of the reasoning behind them.
 
 ## Landed since this file was last rewritten
+
+**Fixtures are named separately from their functions**, `5aa64be`. pylint's
+`redefined-outer-name` catches a parameter shadowing a module-level name, which
+is a real bug, and pytest's injection requires exactly that collision, so every
+test using a fixture was a finding and a genuine one would have been invisible
+among them. `@pytest.fixture(name="client")` on `client_fixture` removes the
+collision rather than the check, so it needs no suppression. W0621 went 20 to 0
+and pylint 9.45 to 9.79, and a deliberately shadowed name added afterwards was
+still reported.
 
 **Traceability closed at 48 of 48.** Nine tests over the last eight rows, and
 `pyproject.toml` gained the Linux classifier FR-1.6 needed so the row had a
