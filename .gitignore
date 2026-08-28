@@ -1,6 +1,17 @@
 # Session entry point: ephemeral by design, rewritten each session.
 START_HERE.md
 
+# Agentic review reports. Kept where the review protocol puts them so the skills
+# need no special case, and ignored so they do not ship: a report scoring this
+# repository and listing its worst prose is for whoever is working on it, not
+# for anyone who clones it.
+#
+# The protocol expects this and handles it: a project that ignores .reviews/ has
+# decided, and the skill is told not to un-ignore it or force it in. The cost is
+# that .reviews/archive/ is then the only review history there is, since a
+# fresh clone carries none of it.
+.reviews/
+
 # In-process and working files, including the message a commit is given with
 # -F. Gitignored so that naming it on the command line can never put it into
 # the commit it describes.
