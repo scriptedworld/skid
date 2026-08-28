@@ -2,13 +2,16 @@
 
 | ID | Requirement | |
 |---|---|---|
-| FR-5.3 | A call the backend does not answer within a bounded time fails as an error naming the backend. It never hangs. | [D] |
+| FR-5.3 | Every request produces either a JSON-RPC response carrying that request's own id, or an error naming skid. There is no third outcome, and no request waits without a bound. | [D] |
 
 Derived from FR-5.2 and FR-4.5. The client is an MCP server and submitting
 returns when the work is queued, so a caller that cannot reach the backend has
 to be told, and told quickly, because the agent is waiting on the call.
 
-**One rule covers two cases**, and only the first was ever written down:
+**Stated as a property rather than a list, because the list was the defect.**
+An earlier wording enumerated two cases, absent and wedged, and read as complete
+to everyone who met it, including the reviews that produced it. The case that
+actually bit was in neither:
 
 - **Absent.** Largely answered by socket activation: a connection starts the
   service and systemd restarts it if it dies, so a crash costs a wait rather
@@ -16,13 +19,41 @@ to be told, and told quickly, because the agent is waiting on the call.
   model.
 - **Wedged.** Running and not answering, which nothing removes. `Type=notify`
   separates "started" from "ready" and makes it less likely; a process can still
-  stop answering after both.
+  stop answering after both. Measured 2026-08-28, `WatchdogUSec=0`, so nothing
+  detects it yet.
+- **Answering with something that is not an answer.** The service is healthy
+  and replies in under ten milliseconds; the reply just does not belong to the
+  question. No timeout can catch this, because nothing is slow.
 
-A timeout naming the service distinguishes both from a call that failed on its
-own merits, which matters because FR-4.7's log lives inside skid and is exactly
-what a caller cannot reach when this fires.
+The third is why the row is a property now. Any enumeration invites a reader to
+check their case against the list and stop; a rule makes a new shape fail the
+requirement without anybody having predicted it.
 
-## Why it is a row rather than a line of spec
+## How the third one arrived
+
+The MCP session lives in the service's memory, so restarting the service left
+`skid-mcp` holding an id the new process had never heard of. It answered
+`404 Session not found` with `"id": null`, the shim forwarded it verbatim, and
+a JSON-RPC client cannot match a null id to the request it is waiting on. Three
+sessions hung, one for five minutes, with no error for anyone to read.
+
+**A reply that matches no pending request is worse than no reply**, because the
+client's bookkeeping is correct and the conclusion it draws from it is wrong.
+
+Restarting is the documented way to deploy an edit under an editable install, so
+this fired on an ordinary action rather than a rare fault, and the service came
+back healthy every time.
+
+Answered in `client.py`: the shim caches the handshake, rebuilds the session
+when the service says it is gone, and retries once. What it cannot recover
+becomes a JSON-RPC error carrying the request's own id, because a client can
+report an error and cannot report silence.
+
+A timeout naming the service distinguishes all three from a call that failed on
+its own merits, which matters because FR-4.7's log lives inside skid and is
+exactly what a caller cannot reach when this fires.
+
+## Why it is a row rather than a line of spec, twice over
 
 It was a line of spec, at `fd42bdf`: "the backend is unreachable, which
 `skid-mcp` returns as a tool error rather than hanging". Rewriting that section
