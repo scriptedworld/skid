@@ -182,7 +182,8 @@ machine's default is 3.14.7. **Linux only, first pass.**
 
 ## What is not built
 
-Nothing a requirement names. Two tasks are open and both ready: the systemd
+Nothing a requirement names. Four tasks are open and all four ready: the MCP
+server moving into the stdio script, the config becoming YAML, the systemd
 watchdog and start limit, and the eight uncovered rows.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 under Python 3.12.14.
