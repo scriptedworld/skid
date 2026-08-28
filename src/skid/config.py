@@ -27,6 +27,15 @@ DEFAULT_VOICE = "af_heart"
 DEFAULT_PLAYER = "paplay {file}"
 DEFAULT_WINDOW_SECONDS = 30
 
+DEFAULT_EXPIRY_SECONDS = 300
+"""Five minutes, FR-4.9. How long a queued submission stays worth speaking.
+
+A PREFERENCE rather than a measurement: a judgement about how long a summary
+stays current, not a property of the machine. Being ten times the greeting
+window is a coincidence, since the two answer different questions and neither
+constrains the other.
+"""
+
 
 def default_config_path() -> Path:
     """Where the config lives, honouring XDG_CONFIG_HOME."""
@@ -42,6 +51,7 @@ class Config:
     voice: str = DEFAULT_VOICE
     player: str = DEFAULT_PLAYER
     greeting_window_seconds: int = DEFAULT_WINDOW_SECONDS
+    expiry_seconds: int = DEFAULT_EXPIRY_SECONDS
     substitutions: list[Substitution] = field(default_factory=list)
     _document: TOMLDocument | None = field(default=None, repr=False, compare=False)
 
@@ -83,6 +93,7 @@ def load_config(path: Path | None = None) -> Config:
         greeting_window_seconds=int(
             document.get("greeting_window_seconds", DEFAULT_WINDOW_SECONDS)
         ),
+        expiry_seconds=int(document.get("expiry_seconds", DEFAULT_EXPIRY_SECONDS)),
         substitutions=_substitutions_from(document),
         _document=document,
     )
@@ -100,6 +111,7 @@ def _apply(config: Config, document: TOMLDocument) -> None:
     document["voice"] = config.voice
     document["player"] = config.player
     document["greeting_window_seconds"] = config.greeting_window_seconds
+    document["expiry_seconds"] = config.expiry_seconds
 
     if not config.substitutions and "substitution" not in document:
         return

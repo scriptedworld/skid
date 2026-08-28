@@ -96,7 +96,7 @@ which is a claim about the migration commit rather than about the tree now:
 
 The tree has moved since and the current rows are not that set. Ten of the 32
 were `[?]` and were rewritten as settled statements at the same ids as they
-closed, and rows have been added since, so 46 rows now stand where 32 did, with
+closed, and rows have been added since, so 48 rows now stand where 32 did, with
 one retired.
 
 `docs/REQUIREMENTS/README.md` carries the status markers and what each category
@@ -162,7 +162,7 @@ skid wrote, and says so beside the exclusions. Filed as
 
     docstrings   0.0%, failing      docstrings   98.9%, passing
     tests        exits 5, no tests  tests        72 pass
-    traceability 0 of 45 covered    traceability 38 of 46 covered
+    traceability 0 of 45 covered    traceability 40 of 48 covered
 
 The left column was measured against bolt
 `v0.0.0-20260827201109-7604557974a5`, reading `result.yaml` from a named
@@ -282,7 +282,7 @@ all nine closed on 2026-08-27. Each closed at the id it already carried, so
 nothing was retired and no id was reused, and `docs/REQUIREMENTS/open/` is gone
 rather than kept empty.
 
-46 requirements, none marked `[?]`.
+48 requirements, none marked `[?]`.
 
 **`docs/SPEC.md` answered the design questions this section used to list**: where
 the config lives and in what format, what the MCP tool surface is, and how the
@@ -515,7 +515,7 @@ directory carries the property instead.
 ## What is not built
 
 Nothing that a requirement names. Everything in `docs/REQUIREMENTS/` has code,
-and 38 of the 46 rows have a test citing them.
+and 40 of the 48 rows have a test citing them.
 
 Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 are installed under Python
 3.12.14, and the whole path has been run end to end and heard: an MCP client
