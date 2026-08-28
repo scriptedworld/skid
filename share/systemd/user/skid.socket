@@ -1,0 +1,17 @@
+[Unit]
+Description=skid, voice output for the agents (socket)
+Documentation=file://%h/.projects/skid/docs/PROJECT.md
+
+[Socket]
+# %t is XDG_RUNTIME_DIR for a user unit. systemd creates and owns this socket:
+# skid never binds or unlinks it, which is what removes the stale-path problem
+# a hand-rolled start protocol would have had.
+ListenStream=%t/skid/skid.sock
+
+# The whole of skid's access control. Reaching these tools means making the
+# machine speak and rewriting the config, so it is owner-only by construction
+# rather than because nothing else happened to connect.
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

@@ -16,6 +16,7 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import tomlkit
 from tomlkit import TOMLDocument
@@ -88,10 +89,44 @@ def load_config(path: Path | None = None) -> Config:
 
 
 def _apply(config: Config, document: TOMLDocument) -> None:
-    """Put the scalar settings back into the document, leaving the rest alone."""
+    """Put the settings back into the document, keeping what a person wrote.
+
+    Substitution entries are reconciled rather than rewritten. An entry that is
+    unchanged keeps the table it came from, and with it any comment somebody put
+    beside it; only genuinely new entries are built fresh. That matters because
+    FR-8.4 makes the order meaningful, so the file is where a person reasons
+    about the set and the comments are where they say why.
+    """
     document["voice"] = config.voice
     document["player"] = config.player
     document["greeting_window_seconds"] = config.greeting_window_seconds
+
+    if not config.substitutions and "substitution" not in document:
+        return
+
+    existing: dict[tuple[str, str, str], Any] = {}
+    for table in document.get("substitution", []):
+        key = (
+            str(table.get("kind", "literal")),
+            str(table["pattern"]),
+            str(table["replacement"]),
+        )
+        existing.setdefault(key, table)
+
+    rebuilt = tomlkit.aot()
+    for entry in config.substitutions:
+        key = (entry.kind, entry.pattern, entry.replacement)
+        kept = existing.get(key)
+        if kept is not None:
+            rebuilt.append(kept)
+            continue
+        table = tomlkit.table()
+        table["kind"] = entry.kind
+        table["pattern"] = entry.pattern
+        table["replacement"] = entry.replacement
+        rebuilt.append(table)
+
+    document["substitution"] = rebuilt
 
 
 def save_config(config: Config, path: Path | None = None) -> None:

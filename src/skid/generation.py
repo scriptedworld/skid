@@ -123,13 +123,39 @@ class Generator:
         self.voice = voice
         self._pipeline: Any | None = None
 
+    def warm(self) -> None:
+        """Load the model now, rather than on the first message that needs it.
+
+        What FR-5.1 asks for, made explicit so a caller can decide when to pay
+        it. The service pays it at start-up, so that being active and being able
+        to answer are the same thing.
+        """
+        if self._pipeline is None:
+            self._pipeline = self._build()
+
+    def _build(self) -> Any:
+        """Construct the kokoro pipeline for this voice's language."""
+        from kokoro import KPipeline
+
+        return KPipeline(lang_code=_lang_code(self.voice))
+
+    def set_voice(self, voice: str) -> None:
+        """Change the voice, refusing one kokoro does not have.
+
+        A voice in another language needs a different pipeline, so the warm one
+        is dropped only when the language actually changes. Switching between
+        two American voices keeps the model loaded.
+        """
+        if voice not in VOICES:
+            raise ValueError(f"unknown voice: {voice!r}")
+        if _lang_code(voice) != _lang_code(self.voice):
+            self._pipeline = None
+        self.voice = voice
+
     @property
     def pipeline(self) -> Any:
         """The warm pipeline, built once on first use."""
-        if self._pipeline is None:
-            from kokoro import KPipeline
-
-            self._pipeline = KPipeline(lang_code=_lang_code(self.voice))
+        self.warm()
         return self._pipeline
 
     def generate(self, text: str, path: Path) -> Path:
