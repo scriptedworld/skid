@@ -5,8 +5,16 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**Nothing.** The installer landed on 2026-08-28 and the task tree for skid is
-empty of anything `.ready`, `.blocked` or `.questions`.
+**Test the seven uncovered rows a test can fail.**
+`clank/tasks/skid/traceability/10-test-the-seven-testable-rows.ready`. The task
+carries a proposed test for each: three read a declaration file, four are
+behavioural and two of those share a blocking-player seam.
+
+**Two rows no test can fail** are a question rather than work, at
+`clank/tasks/skid/traceability/20-two-rows-no-test-can-fail.questions`. FR-2.2
+licenses a mechanism rather than requiring behaviour, and FR-7.6 records the
+choice of Python. Neither states something the software could stop doing, so a
+`COVERS:` mark on either would move the number without testing anything.
 
 ## Owed, and not yet a task
 
@@ -16,14 +24,8 @@ one of its own reviewers checking their findings had landed. They said so
 themselves and asked for a reader with no stake in them. That pass still found a
 regression, FR-5.3, which is the argument for the one that is missing.
 
-**Nine requirements have no test citing them**: FR-1.5, FR-1.6, FR-1.7, FR-2.2,
-FR-4.2, FR-6.3, FR-7.3, FR-7.6 and FR-8.3. Measured 2026-08-28, 38 of 47
-covered. Some are properties of the machine rather than of a function, so the
-work is deciding what a test for each would read before writing any.
-
-FR-5.3 and FR-5.4 came off that list with the installer, by testing the systemd
-units as the data they are. That is the shape to try on the rest before
-concluding a requirement is untestable.
+It is the only thing left in this section. The nine uncovered rows were here
+until 2026-08-28 and are now a task and a question, above.
 
 ## Decided recently enough to restate
 
