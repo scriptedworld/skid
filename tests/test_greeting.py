@@ -9,6 +9,7 @@ backend and is covered separately.
 """
 
 import pytest
+
 from skid.greeting import QuietTable, greeting_for, should_greet
 
 WINDOW = 30.0

@@ -9,6 +9,7 @@ earlier draft of the spec disagreed about which of two matching entries wins.
 """
 
 import pytest
+
 from skid.substitution import Substitution, apply_substitutions
 
 
