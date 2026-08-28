@@ -279,17 +279,89 @@ by the spec, and the spec cites nothing that is not a requirement:
 What the spec still leaves open is listed in the spec itself, and none of it is
 a question for anyone else to answer.
 
+## How it runs, as of 2026-08-28
+
+**skid is a live service on this machine and every Claude Code session can
+reach it.**
+
+    systemd   ~/.config/systemd/user/skid.{socket,service}
+              socket-activated at $XDG_RUNTIME_DIR/skid/skid.sock, mode 0600
+    tool      uv tool install --editable, giving `skid` and `skid-mcp`
+    client    claude mcp add --scope user skid -- skid-mcp
+
+    claude mcp list        skid: skid-mcp  - Connected
+
+`skid` is the service: one process, one warm model, MCP over HTTP on the socket
+systemd hands it. `skid-mcp` is a stdio shim holding no model, no queue and no
+config, because MCP clients speak stdio and an http URL cannot name a unix
+socket. One line in, one POST, one line out. Without it every session would load
+kokoro for itself, which is what FR-5.1 exists to prevent.
+
+### A session older than the registration cannot call it
+
+**Registering an MCP server does not reach sessions that are already running.**
+A client picks the server up when it starts, so a session that predates
+`claude mcp add` has no `speak` however healthy the service is.
+
+Confirmed first-hand 2026-08-28 by the session that did the registering: it
+could not call its own tool afterwards, and the silo session hit the same thing
+independently.
+
+**`claude mcp list` does not answer this.** It says the server is up, not that
+the asking session can reach it. So the diagnosis for "skid is running and I
+cannot speak" is almost always the session's age rather than the service, and
+the fix is restarting the client rather than anything here.
+
+It has an unfortunate shape worth naming: the sessions with most worth saying
+are the long-running ones, and those are exactly the ones that cannot say it
+until they restart.
+
+### The installer does not exist, and that is the gap that matters
+
+The units at `share/systemd/user/` are the real ones, and they were installed by
+hand. **So skid works here and is reproducible nowhere**, and the difference
+between those two states lived only in a session until this paragraph.
+
+What an installer owes, in order:
+
+    uv tool install --editable <checkout>
+    cp share/systemd/user/skid.{socket,service} ~/.config/systemd/user/
+    systemctl --user daemon-reload
+    systemctl --user enable --now skid.socket
+    claude mcp add --scope user skid -- skid-mcp
+
+Queued as `clank/tasks/skid/`. Nothing else stands between skid and another
+machine.
+
+## What deploying it taught, which the tests could not
+
+Three things that only appeared when it ran as a service, all now fixed and all
+worth keeping because each would have been found again:
+
+**kokoro downloads a spaCy model at start-up** using pip or uv, and neither is
+on PATH under systemd. The service failed to start 76 times before
+`en_core_web_sm` was declared as a dependency. A service must not need a package
+installer to start.
+
+**The MCP SDK returns 421 on an unknown Host header**, even over a unix socket
+where no browser can reach it. The allowed hosts are declared rather than the
+protection disabled, because scoping a guard and switching it off are not the
+same act.
+
+**`mkdir(mode=0o700)` does nothing to a directory that already exists**, and the
+service created the runtime directory before `main` could set its mode, so it
+came out 0775 holding a 0666 socket. Only systemd's own 0700 runtime directory
+kept FR-5.4 true. Under the unit the socket is `srw-------` because systemd sets
+it; run by hand, uvicorn chmods it to 0666 whatever the umask, so the 0700
+directory carries the property instead.
+
 ## What is not built
 
-Everything. `src/skid/__init__.py` is empty and `tests/` holds a `.gitkeep`.
+The installer, above. Everything else in the requirements has code and tests.
 
-Measured 2026-08-27: kokoro is not installed here, so nothing in FR-1 or FR-5
-has been run against the real engine.
-
-    python3 -c "import kokoro"    ModuleNotFoundError: No module named 'kokoro'
-
-It cannot be installed against this machine's default interpreter either, which
-is 3.14.7. FR-1.7 is the constraint and `pyproject.toml` carries it.
+Measured 2026-08-28: kokoro 0.9.4 and torch 2.13.0 are installed under Python
+3.12.14, and the whole path has been run end to end and heard: an MCP client
+over the socket called `speak`, and the machine said it.
 
 Players, measured the same day with `command -v`: `paplay` (which is `pacat`),
 `aplay` and `pw-play` (which is `pw-cat`) are present; `ffplay`, `mpv` and
