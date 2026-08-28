@@ -54,15 +54,30 @@ reports as a pass is the failure this plan is trying not to build.
 | FR-1.2 | `test_generation_writes_a_readable_wav` | integration |
 | FR-1.3 | `test_the_player_runs_as_a_subprocess` | positive |
 | FR-1.4 | `test_no_device_is_named_on_the_player_command` | negative |
-| FR-1.5 | `test_no_audio_library_is_imported` | property |
-| FR-1.6 | `test_the_package_declares_linux_only` | property |
-| FR-1.7 | `test_requires_python_is_3_12_only` | property |
+| FR-1.5 | `test_skid_imports_no_audio_library` | property |
+| FR-1.6 | `test_linux_is_declared_rather_than_intended` | property |
+| FR-1.7 | `test_skid_runs_only_where_kokoro_does` | property |
 | FR-1.8 | `test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it` | negative |
 | FR-1.9 | `test_a_player_that_never_exits_is_killed` | edge |
 
 **FR-1.5 is a source property, not a call.** It reads skid's own imports and
 asserts none is an audio library. `soundfile` fails it and the stdlib `wave`
-module passes, which is why the spec picks `wave`.
+module passes, which is why the spec picks `wave`. Asserted as the whole
+third-party set rather than as an absence, because a denylist of audio libraries
+only catches the ones somebody thought of.
+
+**FR-1.7 asserts a containment, not a version.** The planned name was
+`test_requires_python_is_3_12_only`, which is the row copied into an assertion:
+it passes whenever somebody edits both the row and the test, and fails only when
+they edit one. What the row requires is that skid's range sits inside kokoro's,
+and the outer range belongs to somebody else, so the test reads it from kokoro's
+installed metadata and checks every interpreter skid admits against it.
+
+**What it watches is what kokoro DECLARES, which is not what kokoro SUPPORTS.**
+Told first-hand 2026-08-28: kokoro runs on 3.13 and 3.14 and has simply not had
+a release since, so `<3.13` is stale packaging metadata rather than a real
+ceiling. The declaration is still what a resolver enforces, so it is still the
+thing skid has to sit inside in order to install, and still the thing that moves.
 
 **FR-1.8 tests a documented limit rather than a guarantee.** skid cannot detect
 a player that returns early, so the test configures one, observes the overlap,
@@ -109,19 +124,33 @@ shipped.
 | Requirement | Test | Kind |
 |---|---|---|
 | FR-4.1 | `test_an_array_is_submitted_whole`, `test_an_array_of_one` | positive, edge |
-| FR-4.2 | `test_generation_runs_ahead_of_playback` | property |
+| FR-4.2 | `test_the_rest_are_prepared_while_one_is_being_spoken` | property |
 | FR-4.3 | `test_an_array_is_spoken_in_order` | positive |
 | FR-4.4 | `test_two_submissions_do_not_interleave` | property |
 | FR-4.5 | `test_speak_returns_before_the_clip_is_heard` | positive |
 | FR-4.6 | `test_one_failed_message_does_not_cancel_its_array` | negative |
 | FR-4.7 | `test_a_failure_reaches_the_log`, `test_a_failure_reaches_status` | positive |
 | FR-7.2 | `test_an_arrival_queues_rather_than_being_rejected` | positive |
-| FR-7.3 | `test_generation_proceeds_while_a_clip_is_playing` | property |
+| FR-7.3 | `test_generation_runs_ahead_of_the_speaker_without_a_bound` | property |
 
 **FR-4.2 and FR-7.3 are the same observation from two sides**, and both are the
-absence of a cap rather than a value. The test asserts generation of message N
-begins before playback of message N-1 returns. It fails against a lock covering
-both, which is the silent failure FR-7.3 exists to prevent.
+absence of a cap rather than a value. FR-4.2 says the two overlap; FR-7.3 says
+how far ahead generation may get, which is as far as it likes. Both hold the
+speaker with a blocking player rather than timing anything, since FR-7.5 makes
+the player a command line and that is the seam.
+
+**Presence is not overlap, and the difference was measured rather than
+reasoned.** The first FR-4.2 test asserted which clips existed while the speaker
+was held, and a service that generated the whole array before playing a note of
+it satisfies that completely while being the one design where the two never
+overlap. Run against generation made to take the playback lock, that version
+passed. What the test asserts now is *arrival*: the clip set is snapshotted the
+moment the player reports it is holding, and the test waits for one that was not
+in it. Against the same lock it fails, which is the silent failure FR-7.3 exists
+to prevent.
+
+FR-7.3 is the one that catches a bound. Run against a clip queue capped at one
+it reports three clips where five were due.
 
 **FR-4.6 needs a message that fails.** The player script exits non-zero for a
 named clip, and the test asserts the rest of the array is still spoken.
@@ -139,15 +168,24 @@ named clip, and the test asserts the rest of the array is still spoken.
 |---|---|---|
 | FR-6.1 | `test_the_voice_is_set_through_the_tool` | positive |
 | FR-6.2 | `test_the_voice_is_read_from_the_config` | positive |
-| FR-6.3 | `test_both_routes_change_the_next_clip` | property |
+| FR-6.3 | `test_both_routes_reach_one_voice` | property |
 | FR-6.4 | `test_a_missing_config_uses_defaults`, `test_the_first_write_creates_it` | edge, positive |
 | FR-6.5 | `test_an_unknown_voice_is_refused_and_not_written` | negative |
 | FR-7.1 | `test_a_tool_set_voice_survives_a_restart` | positive |
 
 **FR-6.3's own body names the observable**: setting the voice by either route
-changes what the next clip is spoken in. The test edits the file directly and
-asserts the change takes effect without a restart, which is what the mtime
-re-read is for.
+changes what the next clip is spoken in. Both routes run against one started
+service, because the case the row rules out is each keeping its own copy with
+neither wrong, and a test that exercises one route cannot see that. The tool
+half is the stronger: `test_the_voice_is_set_through_the_tool` already proves
+the tool reaches the file, and what this adds is that the file it reaches is the
+one the running service generates from, without the test touching the service.
+The file half edits the file directly and asserts the change takes effect
+without a restart, which is what the mtime re-read is for.
+
+**The test player goes in the config file, not only in the constructor.** A
+reload rebuilds the player from what it read, so a config carrying only a voice
+hands playback back to the default `paplay` and the suite makes the machine talk.
 
 **FR-6.5 is the one-call-bricks-it case.** Set an invalid voice, assert it is
 refused, and assert the config on disk is unchanged.
@@ -158,11 +196,29 @@ refused, and assert the config on disk is unchanged.
 |---|---|---|
 | FR-8.1 | `test_a_substitution_is_declared_through_the_tool` | positive |
 | FR-8.2 | `test_a_replacement_need_not_be_a_word` | positive |
-| FR-8.3 | `test_the_log_records_the_submitted_text` | property |
+| FR-8.3 | `test_a_substitution_does_not_change_what_a_caller_is_told`, `test_a_substitution_does_not_reach_the_log` | property |
 | FR-8.4 | `test_entries_apply_in_file_order`, `test_reordering_the_file_changes_the_result` | positive, regression |
 | FR-8.5 | `test_a_replacement_is_not_re_examined`, `test_overlapping_entries_take_the_earlier_position` | property, regression |
 | FR-7.7 | `test_both_kinds_are_supported`, `test_an_invalid_regex_is_refused` | positive, negative |
 | FR-7.9 | `test_two_names_share_one_substitution_set` | positive |
+
+**FR-8.3 has two clauses and gets a test each**, because the row says a
+substitution changes nothing a caller submitted *or a log records* and those are
+different surfaces. The first asserts what the service reports back is the
+submitted spelling; the second asserts the same of the log.
+
+Reaching the log needs a generation failure, since `_generate_into` is the only
+place that both substitutes and logs text. There are no mocks here, so the
+failure is arranged in the filesystem: the clips directory is replaced by a file
+once the service is running, and generation fails on the `mkdir` before writing
+a clip. Taking the write bit off instead also fails, but later, inside
+`wave.open`, leaving a half-built `Wave_write` whose `__del__` raises and a
+passing test carrying an unraisable-exception warning.
+
+Both use a replacement sharing no substring with its pattern, so that finding
+the submitted spelling cannot also be finding the substituted one, and both
+assert the set actually transforms the text. Without that, a service whose
+substitutions never fired would pass either of them trivially.
 
 **FR-8.5 carries the case that caught the contradiction.** Entries `b -> x`
 (regex) then `ab -> Z` (literal), input `ab`. Position wins, so the answer is
@@ -174,7 +230,21 @@ and the spec disagreed on it before 2026-08-27.
 | Requirement | Test | Kind |
 |---|---|---|
 | FR-7.5 | `test_paplay_is_the_default_player`, `test_a_configured_command_is_used` | positive |
-| FR-7.6 | `test_the_project_is_python` | property |
+| FR-7.6 | `test_kokoro_is_still_a_python_project` | property |
+
+**FR-7.6 is a decision row, and a decision row is tested by asserting its
+premise still holds rather than its consequence.** The consequence, that skid is
+written in Python, is tautological: this suite is Python and could not run
+otherwise, so a test named `test_the_project_is_python` asserts that the test
+exists. The premise is a measurement, and measurements expire. What settles
+whether kokoro is a Python project rather than a binding over something compiled
+is what it depends on, so the test reads kokoro's `Requires-Dist` and asserts
+torch, transformers and numpy are still in it.
+
+It fails on the day kokoro becomes a thin wrapper over a compiled runtime, which
+is the day the choice of language is worth re-examining rather than inheriting.
+Same file and same shape as FR-1.7's test; both are tripwires on an external
+premise. Ruled at `clank/tasks/skid/traceability/20`.
 
 ## What this plan does not cover, and why
 
