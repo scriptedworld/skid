@@ -5,21 +5,32 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-One ready task in `clank/tasks/skid/`, fully specified.
+**Nothing is queued.** `clank/tasks/skid/` holds no `.ready`, `.blocked` or
+`.questions` task. Every row a requirement names is built, traceability reads 48
+of 48, and the four resilience tasks are complete and deployed.
 
-**The config becomes YAML, and wrench validates it and the spool.**
-`data-files/10-validate-with-wrench-and-a-schema.ready`. Decided 2026-08-28 with
-the user, who approved wrench's canonical form including its quoted keys.
-`silo/docs/DECISIONS/yaml-everywhere-validated-against-the-decoded-structure.md`
-says every structured file in the ecosystem is YAML; skid chose TOML 83 minutes
-before that was recorded, so it predates it and is now the outlier.
+What is below is what is open rather than what is agreed: one decision skid
+cannot take alone, two questions nothing depends on, and a surface nobody has
+tested by using it.
 
-Nothing blocks it: **no config file exists on this machine**, so there is
-nothing to migrate. It drops `tomlkit` rather than adding a dependency, and
-retires FR-7.8's comment clause and `docs/SPEC.md:289` with it.
+## Open, and skid cannot settle it alone
 
-Traceability reads 48 of 48, with nothing permanently red and no marker needed
-in toolbox's checker.
+**wrench must be published, or fetched by the bootstrap, before skid goes
+public.** skid depends on it by relative path, `../wrench/python`, because
+wrench is unpublished and must be installed editable: it reads its schemas from
+its own repository root, so a copied install breaks it.
+
+That holds on any machine set up from `dotfiles/repos.live.toml`, and a
+standalone clone of skid **cannot install at all**. Chosen with our user
+2026-08-28 over staying on TOML, with the cost stated.
+
+wrench's own record says its install is not reproducible from any manifest, and
+that gap is now skid's problem too: a machine rebuilt from `dotfiles/bin/setup`
+gets every tool, no wrench, and a service that will not start.
+
+Also filed: `clank/inbox/wrench/python-pack-ships-no-py-typed`. wrench ships no
+`py.typed`, so three imports are three mypy errors in skid's gate that are not
+about skid's code. Not suppressed, because that needs a human's answer.
 
 ## Not settled by use
 
@@ -33,6 +44,22 @@ mispronunciation somebody reaches for the config to fix is worth more than any
 of the reasoning behind them.
 
 ## Landed since this file was last rewritten
+
+**The config is YAML and wrench validates it and the spool**, `3639f7c`,
+deployed. Both structured files are read, written and validated against a schema
+in `skid/schemas.py`.
+
+What it bought is in the errors. `greeting_window_seconds: thirty` used to load
+and fail somewhere downstream; `voce: af_bella` used to load and silently keep
+the default voice. Both are refused by name at the file now. Writes are
+validated too, so a tool cannot store a shape skid could never read back.
+
+`spool.py` lost its catch-all, which took `OSError` alongside four shape errors
+and so dropped a submission silently when the real fault was the disk. wrench
+separates the file being wrong from the disk being wrong.
+
+FR-7.1's comment clause is retired; FR-8.4's ordering is not, because a YAML
+sequence carries order in the decoded structure. `tomlkit` is gone.
 
 **The watchdog and the start limit**, `6ca9a7a`, deployed and live:
 `WatchdogUSec=2min` where it was 0, and the start limit 10 over 120s where it
@@ -200,10 +227,16 @@ are zero `noqa` and zero `type: ignore` in `src/` and `tests/`.
 fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
 
-**`docstrings` passes now**, at 99.3% measured 2026-08-28 over skid's own code.
+**`docstrings` passes now**, at 99.4% measured 2026-08-28 over skid's own code.
 It read 0.0% the day before, over an empty package. **`traceability` reports 48
 of 48**, and every mark cites a row `REQUIREMENTS.md` defines: checked in both
 directions, so no test cites a row that does not exist or one that is retired.
+
+**`types` reports four errors and all four are untyped imports.** One is kokoro
+and three are wrench, which ships no `py.typed` so its annotations are invisible
+to a consumer. None is about skid's own code and none is suppressed, because a
+mypy override needs a human's answer under hard rule 4. Filed at
+`clank/inbox/wrench/python-pack-ships-no-py-typed` with the two-line fix.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a

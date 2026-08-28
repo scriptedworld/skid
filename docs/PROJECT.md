@@ -229,7 +229,31 @@ that name.
 
 **The config file is the record**, for the voice and the substitutions alike. A
 setting made through an MCP tool is written through and survives a restart, and
-comments and ordering in the file are preserved.
+the ordering of substitutions is preserved.
+
+**It is YAML, at `~/.config/skid/config.yaml`, read and written by wrench
+against a schema in `skid/schemas.py`.** skid was the last TOML holdout, having
+chosen it 83 minutes before the ecosystem decision was recorded. Moved
+2026-08-28; no config file existed on this machine, so nothing was migrated.
+
+skid emits wrench's canonical form, quoted keys and sorted names. A person may
+write plain unquoted YAML and it loads. `docs/config.sample.yaml` is the
+readable version and the place reasons live, since the live file is rewritten
+whenever a tool changes a setting.
+
+**A key skid does not know is refused by name.** `voce: af_bella` used to load
+and silently keep the default voice. That is a deliberate behaviour change;
+FR-6.4 is untouched, so a *missing* config is still not an error.
+
+**Comments are no longer preserved, and FR-7.1's clause for it is retired.** It
+was what `tomlkit` was a dependency for. FR-8.4's ordering survives on its own
+terms, because a YAML sequence carries order in the decoded structure.
+
+**wrench is a path dependency, and skid cannot be installed without it.** It is
+unpublished and must be installed editable, so `[tool.uv.sources]` points at
+`../wrench/python`. That holds on any machine set up from
+`dotfiles/repos.live.toml` and not on a standalone clone. **Publishing wrench,
+or fetching it in the bootstrap, is a prerequisite for skid going public.**
 
 **Substitutions are global**, each declaring itself literal or regular
 expression, applied in one left-to-right pass whose output no later entry
