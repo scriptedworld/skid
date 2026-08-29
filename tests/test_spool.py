@@ -223,6 +223,7 @@ def test_downtime_counts_toward_the_window(tmp_path: Path) -> None:
     assert after.pending() == 0
 
 
+# COVERS: FR-4.8 | positive
 def test_recovery_keeps_what_is_still_current(tmp_path: Path) -> None:
     """A short restart loses nothing, which is the whole point of the spool."""
     before = _spool(tmp_path)
@@ -235,6 +236,7 @@ def test_recovery_keeps_what_is_still_current(tmp_path: Path) -> None:
     assert after.pending() == 1
 
 
+# COVERS: FR-5.4 | property
 def test_the_directory_is_owner_only(tmp_path: Path) -> None:
     """It holds what agents said, which is not for other local users to read."""
     spool = _spool(tmp_path)
@@ -242,11 +244,25 @@ def test_the_directory_is_owner_only(tmp_path: Path) -> None:
     assert spool.directory.stat().st_mode & 0o777 == 0o700
 
 
+# COVERS: FR-5.3 | edge
 def test_taking_from_an_empty_spool_is_not_an_error(tmp_path: Path) -> None:
-    """The common state, and the serve loop asks on every wakeup."""
+    """The common state, and the serve loop asks on every wakeup.
+
+    **The citation is a judgement and the reasoning is here to be overturned.**
+    This is the spool-level half of the property `test_an_idle_service_is_
+    progressing` covers at the service level, and that test cites FR-5.3 for the
+    same reason: a service parked on an empty queue is healthy, and one that
+    errored on every wakeup would be wedged, which is the outcome FR-5.3 exists
+    to rule out.
+
+    It was the last test in the repository citing nothing, and the alternative
+    was to write a requirement for it. That was refused: a row invented to give
+    a test somewhere to point makes the gate green and the trace worse.
+    """
     assert _spool(tmp_path).take(now=1000.0) is None
 
 
+# COVERS: FR-4.1 | negative
 @pytest.mark.parametrize("messages", [[], ["  "]])
 def test_a_spool_refuses_what_the_queue_refuses(
     tmp_path: Path, messages: list[str]
