@@ -22,7 +22,6 @@ the call instead of hanging it.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -30,45 +29,12 @@ import httpx
 import pytest
 
 from skid.client import Backend, Unreachable, build_server
-from skid.config import Config, load_config
-from skid.routes import build_app
+from skid.config import load_config
 from skid.service import Service
 from skid.tools import ROUTES, SCHEMAS
 
 NOWHERE = Path("/nowhere/skid.sock")
 """A socket path nothing is listening on, which is what an absent service is."""
-
-
-@pytest.fixture(name="config_path")
-def config_path_fixture(tmp_path: Path) -> Path:
-    """A config file path in a directory the test owns."""
-    return tmp_path / "config.yaml"
-
-
-@pytest.fixture(name="service")
-def service_fixture(tmp_path: Path, config_path: Path) -> Iterator[Service]:
-    """A real service with a player that says nothing and exits zero."""
-    script = tmp_path / "player.sh"
-    script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")
-    script.chmod(0o755)
-
-    built = Service(
-        config=Config(player=f"{script} {{file}}"),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
-        config_path=config_path,
-    )
-    yield built
-    built.stop()
-
-
-@pytest.fixture(name="backend")
-def backend_fixture(service: Service, config_path: Path) -> Iterator[Backend]:
-    """A backend over the real app, reached through a real WSGI request."""
-    app = build_app(service, config_path)
-    transport = httpx.WSGITransport(app=app)
-    with httpx.Client(transport=transport, base_url="http://localhost") as http:
-        yield Backend(http, "/wsgi/skid.sock")
 
 
 @pytest.fixture(name="server")
