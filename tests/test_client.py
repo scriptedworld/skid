@@ -188,8 +188,9 @@ def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> N
 
     assert set(given) == set(SCHEMAS)
     for name, schema in SCHEMAS.items():
-        properties = schema.get("properties") or {}
-        assert set(given[name].get("properties", {})) == set(properties), name
+        assert set(given[name].get("properties", {})) == set(
+            schema.get("properties") or {}
+        ), name
         assert set(given[name].get("required", [])) == set(
             schema.get("required") or []
         ), name
