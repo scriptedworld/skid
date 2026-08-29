@@ -175,23 +175,21 @@ counts toward it.
 **Read `result.yaml` in the run directory, never the runner's summary line**,
 and read all of it: the reasons list is longer than a truncated grep shows.
 
-**The summary line is not merely coarse, it is wrong, and this instruction
-earns itself twice in opposite directions.** The Go bolt prints the *execution
-total* labelled with the run's verdict, so the number never counts failures and
-only the word in front of it changes. skid's common-quality
-said `failed: 3` with two failing, skid's `secrets` said `failed: 2` with one,
-and the wrench session's A/B over one gate printed `failed: 23` red and
-`passed: 23` green with 23 executions both times.
+The shell exit status says only that bolt carried the run out. Both jigs exit 0
+while failing, so `success` in `result.yaml` is the verdict. `--result-to-exitcode`
+asks for the other behaviour where a caller wants it.
 
-**It dies with the tree it lives in.** The bolt session measured that the Rust
-rebuild has no summary line at all: `src/cli.rs:137` prints the result path on
-success and nothing else, by its FR-10.3, so there is no count to be wrong. The
-defect is the Go bolt's only, and `~/bin/bolt` resolves to
-`~/.projects/bolt.go/bin/bolt` today. The filed entry was rejected on those
-grounds rather than acted on, which is the right outcome.
+**`~/bin/bolt` is the Rust build**, cut over 2026-08-29, and `~/bin/bolt.go`
+still reaches the Go one. Three differences a reader will meet:
 
-So this instruction stops being about a wrong number and becomes ordinary once
-the symlink moves. Reading `result.yaml` is correct either way.
+    task ordinals start at 1        `tests-1` where Go wrote `tests-0`
+    evidence is keyed, not a list   "tests-1": {args, result}
+    flags may follow the positionals, which Go refuses with usage
+
+The Rust build prints the result path and nothing else, by its FR-10.3, so there
+is no summary line to misread. `bolt.go` prints one and it counts every
+execution rather than the failures, labelled with the run's verdict, so the same
+gate prints `failed: 23` red and `passed: 23` green.
 
 The common jig needs three things it does not state: `--definitions` before the
 positionals, `bolt.skid.definitions.yaml` pointing `requirements` at
@@ -201,15 +199,16 @@ The two jigs fail differently.
 
 `bolt python-std-quality .`:
 
-    analyse   pylint rates skid 9.59/10, and the findings are skid's own,
-              mostly redefined-outer-name from pytest fixtures
-    tests     coverage runs from PATH's python 3.14.7, which cannot import
-              skid's dependencies
-    types     mypy, the same
+    analyse    pylint rates skid 9.59/10, and the findings are skid's own,
+               mostly redefined-outer-name from pytest fixtures
+    cognitive  complexipy, over the tree rather than the files skid checks
+    tests      coverage runs from PATH's python 3.14.7, which cannot import
+               skid's dependencies
+    types      mypy, the same
 
 The last two are one defect and it is toolbox's: the jig runs Python tools from
-PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro refuses
-3.13. Filed at `clank/tasks/toolbox/jig-validation/30`.
+PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro's
+metadata declares `<3.13`. Filed at `clank/tasks/toolbox/jig-validation/30`.
 
 `bolt --definitions skid common-quality .`:
 
