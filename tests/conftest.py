@@ -1,16 +1,14 @@
 """The fixtures more than one test file needs, and nothing else.
 
-**Why these are here rather than copied.** `config_path` and `service` were
-written out verbatim in `test_routes`, `test_client` and then `test_say`, and
-pylint's duplicate-code found the first pair before the third arrived. Three
-statements of one service are three things to keep in step, and the failure is
-quiet: a file whose copy has drifted still passes, against a service that is no
-longer the one the others test.
+`test_routes`, `test_client` and `test_say` all want the same service. Three
+copies would be three things to keep in step, and the drift is quiet: a file
+whose copy has moved on still passes, against a service that is no longer the
+one the others test.
 
-**Nothing here is a double.** The service is real, with a player that is a
-shell script exiting zero, and the transports are real requests into the real
-Flask app. Only `speak` reaches the engine and it returns at queue time, so
-these stay fast without anything being stood in for.
+Nothing here is a double. The service is real, with a player that is a shell
+script exiting zero, and the transports are real requests into the real Flask
+app. Only `speak` reaches the engine and it returns at queue time, so these stay
+fast without anything being stood in for.
 
 The worker thread is deliberately not started. A test that wants the queue
 drained starts it; every other one can read the spool knowing nothing is moving

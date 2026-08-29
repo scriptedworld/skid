@@ -135,10 +135,8 @@ collision rather than the check, so it needs no suppression. W0621 went 20 to 0
 and pylint 9.45 to 9.79, and a deliberately shadowed name added afterwards was
 still reported.
 
-**Traceability closed at 48 of 48 in the requirement direction**, which is the
-half this line meant and did not say. It is closed in both directions now, at
-62 of 62, after the installer got the requirements it never had. Nine tests over
-the last eight rows, and
+**Traceability is closed in both directions, 62 of 62.** Nine tests over the
+last eight rows, and
 `pyproject.toml` gained the Linux classifier FR-1.6 needed so the row had a
 declaration to read. Four rows read a declaration, four are behavioural, and
 FR-8.3 took two because its row names two surfaces.
@@ -223,10 +221,11 @@ not of the software, and `docs/PROJECT.md` now says so.
 file. FR-3.4 requires only that it is configurable, and FR-7.1 already says which
 route would win. Nothing depends on it.
 
-**The bound in FR-1.9**, the time after which a stuck player is killed, is now
-measured against real clips rather than guessed. 6.4 characters per second of
-audio, 2026-08-28, so the 300 second default admits about 1950 characters and
-cuts off anything longer mid-sentence.
+**The bound in FR-1.9**, the time after which a stuck player is killed, is
+measured against real clips rather than guessed. About 15.5 characters per
+second of audio, so the 300 second default admits about 4,660 characters and
+cuts off anything longer mid-sentence. That is an essay rather than a summary,
+so it is not reached by accident often.
 
 Whether that is the right ceiling is the open half. Nothing caps a message's
 length at submission, so the choice is between raising the bound, capping the

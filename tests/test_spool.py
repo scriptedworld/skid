@@ -248,16 +248,11 @@ def test_the_directory_is_owner_only(tmp_path: Path) -> None:
 def test_taking_from_an_empty_spool_is_not_an_error(tmp_path: Path) -> None:
     """The common state, and the serve loop asks on every wakeup.
 
-    **The citation is a judgement and the reasoning is here to be overturned.**
-    This is the spool-level half of the property `test_an_idle_service_is_
-    progressing` covers at the service level, and that test cites FR-5.3 for the
-    same reason: a service parked on an empty queue is healthy, and one that
-    errored on every wakeup would be wedged, which is the outcome FR-5.3 exists
-    to rule out.
-
-    It was the last test in the repository citing nothing, and the alternative
-    was to write a requirement for it. That was refused: a row invented to give
-    a test somewhere to point makes the gate green and the trace worse.
+    The citation is a judgement, and the reasoning is here to be overturned.
+    This is the spool-level half of what `test_an_idle_service_is_progressing`
+    covers at the service level, and that test cites FR-5.3 for the same reason:
+    a service parked on an empty queue is healthy, and one that errored on every
+    wakeup would be wedged, which is what FR-5.3 rules out.
     """
     assert _spool(tmp_path).take(now=1000.0) is None
 
