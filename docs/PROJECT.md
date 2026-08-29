@@ -177,6 +177,24 @@ counts toward it.
 **Read `result.yaml` in the run directory, never the runner's summary line**,
 and read all of it: the reasons list is longer than a truncated grep shows.
 
+**The summary line is not merely coarse, it is wrong, and this instruction
+earns itself twice in opposite directions.** The Go bolt prints the *execution
+total* labelled with the run's verdict, so the number never counts failures and
+only the word in front of it changes. Measured 2026-08-28: skid's common-quality
+said `failed: 3` with two failing, skid's `secrets` said `failed: 2` with one,
+and the wrench session's A/B over one gate printed `failed: 23` red and
+`passed: 23` green with 23 executions both times.
+
+**It dies with the tree it lives in.** The bolt session measured that the Rust
+rebuild has no summary line at all: `src/cli.rs:137` prints the result path on
+success and nothing else, by its FR-10.3, so there is no count to be wrong. The
+defect is the Go bolt's only, and `~/bin/bolt` resolves to
+`~/.projects/bolt.go/bin/bolt` today. The filed entry was rejected on those
+grounds rather than acted on, which is the right outcome.
+
+So this instruction stops being about a wrong number and becomes ordinary once
+the symlink moves. Reading `result.yaml` is correct either way.
+
 The common jig needs three things it does not state: `--definitions` before the
 positionals, `bolt.skid.definitions.yaml` pointing `requirements` at
 `docs/REQUIREMENTS`, and `bin/` holding the two links into toolbox.
