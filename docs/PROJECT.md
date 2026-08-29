@@ -309,10 +309,15 @@ was what `tomlkit` was a dependency for. FR-8.4's ordering survives on its own
 terms, because a YAML sequence carries order in the decoded structure.
 
 **wrench is a path dependency, and skid cannot be installed without it.** It is
-unpublished and must be installed editable, so `[tool.uv.sources]` points at
-`../wrench/python`. That holds on any machine set up from
-`dotfiles/repos.live.toml` and not on a standalone clone. **Publishing wrench,
-or fetching it in the bootstrap, is a prerequisite for skid going public.**
+unpublished, so `[tool.uv.sources]` points at `../wrench/python`. That holds on
+any machine set up from `dotfiles/repos.live.toml` and not on a standalone
+clone. **Publishing wrench, or fetching it in the bootstrap, is a prerequisite
+for skid going public.**
+
+It is installed as an ordinary copy rather than editable. wrench used to resolve
+its schemas by walking up from `__file__`, which forced an editable install, and
+a PEP 660 import hook is something mypy cannot follow, so wrench's `py.typed`
+was invisible and every import of it was an error.
 
 **Substitutions are global**, each declaring itself literal or regular
 expression, applied in one left-to-right pass whose output no later entry
