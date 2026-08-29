@@ -64,9 +64,15 @@ def run(backend: Backend, arguments: argparse.Namespace) -> str:
     )
 
 
-def main() -> int:
-    """Reach the service over its socket and report what it said."""
-    arguments = build_parser().parse_args()
+def main(argv: list[str] | None = None) -> int:
+    """Reach the service over its socket and report what it said.
+
+    `argv` defaults to None, which is what `parse_args` already reads
+    `sys.argv` for, so the console script is unchanged. Naming it lets a test
+    call this entry point with its own arguments rather than writing over the
+    process's, which is the whole seam and it costs nothing.
+    """
+    arguments = build_parser().parse_args(argv)
     path = socket_path()
     transport = httpx.HTTPTransport(uds=str(path))
     with httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT) as http:
