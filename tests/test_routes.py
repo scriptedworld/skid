@@ -12,49 +12,15 @@ stay fast without anything being stood in for.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import pytest
 from flask.testing import FlaskClient
 
-from skid.config import Config, load_config
-from skid.routes import LEGACY_ENDPOINT, build_app
+from skid.config import load_config
+from skid.routes import LEGACY_ENDPOINT
 from skid.service import Service
 from skid.tools import ERROR, RESULT, ROUTES
-
-
-@pytest.fixture(name="config_path")
-def config_path_fixture(tmp_path: Path) -> Path:
-    """A config file path in a directory the test owns."""
-    return tmp_path / "config.yaml"
-
-
-@pytest.fixture(name="service")
-def service_fixture(tmp_path: Path, config_path: Path) -> Iterator[Service]:
-    """A real service with a player that says nothing and exits zero."""
-    script = tmp_path / "player.sh"
-    script.write_text("#!/bin/sh\ntrue\n", encoding="utf-8")
-    script.chmod(0o755)
-
-    built = Service(
-        config=Config(player=f"{script} {{file}}"),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
-        config_path=config_path,
-    )
-    yield built
-    built.stop()
-
-
-@pytest.fixture(name="client")
-def client_fixture(service: Service, config_path: Path) -> Iterator[FlaskClient]:
-    """The real app over that service, called as a client calls it."""
-    app = build_app(service, config_path)
-    app.config["TESTING"] = True
-    with app.test_client() as http:
-        yield http
 
 
 def _result(response: Any) -> Any:
