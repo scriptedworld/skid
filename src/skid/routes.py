@@ -184,17 +184,17 @@ def build_operations(
         are held to the same contract, and it is the contract `tools/list`
         publishes rather than a second one written for display.
 
-        **`wrench.ValidationError`**, which is what the file loaders raise for
-        the same failure, so one class covers a refused call and a refused file
-        alike. It derives from `wrench.WrenchError` and not from `ValueError`,
-        so a catch written for the latter catches nothing and the refusal
-        escapes as a 500.
+        `wrench.ValidationError`, which is what the file loaders raise for the
+        same failure, so one class covers a refused call and a refused file
+        alike. It derives from `wrench.Error` and not from `ValueError`: a
+        schema failure can be a wrong value or a wrong type, and `ValueError`
+        excludes the second by definition, so it is a subclass of neither.
 
-        **`wrench.SchemaError` is deliberately not caught.** `validate` raises
-        it for a document that will not compile or a reference it cannot
-        resolve, which is a broken schema in this repository rather than a bad
-        argument from a caller, and a 500 is the honest answer to it. The narrow
-        scope is the same reason only the validate call sits inside the try.
+        `wrench.SchemaError` is deliberately not caught. `validate` raises it
+        for a document that will not compile or a reference it cannot resolve,
+        which is a broken schema here rather than a bad argument from a caller,
+        and 500 is the honest answer. That is why only the validate call sits
+        inside the try.
         """
 
         def checked(body: dict[str, Any]) -> Any:
