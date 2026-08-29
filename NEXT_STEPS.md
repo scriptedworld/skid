@@ -41,12 +41,10 @@ tested by using it.
 
 **wrench must be published, or fetched by the bootstrap, before skid goes
 public.** skid depends on it by relative path, `../wrench/python`, because
-wrench is unpublished and must be installed editable: it reads its schemas from
-its own repository root, so a copied install breaks it.
+wrench is unpublished.
 
 That holds on any machine set up from `dotfiles/repos.live.toml`, and a
-standalone clone of skid **cannot install at all**. Chosen with our user
-2026-08-28 over staying on TOML, with the cost stated.
+standalone clone of skid **cannot install at all**.
 
 wrench's own record says its install is not reproducible from any manifest, and
 that gap is now skid's problem too: a machine rebuilt from `dotfiles/bin/setup`
@@ -280,29 +278,22 @@ It read 0.0% the day before, over an empty package. **`traceability` reports 48
 of 48**, and every mark cites a row `REQUIREMENTS.md` defines: checked in both
 directions, so no test cites a row that does not exist or one that is retired.
 
-**`types` reports five errors and all five are untyped imports.** One is kokoro
-and four are wrench. None is about skid's own code and none is suppressed,
-because a mypy override needs a human's answer under hard rule 4.
+**`types` reports five errors.** One is kokoro, which ships no `py.typed`. The
+other four are skid's own and are waiting on an answer from wrench:
 
-**wrench now ships `py.typed`**, added 2026-08-28 at wrench `0859f00` by this
-session at our user's instruction, and skid's count did not move. Two reasons,
-both measured rather than reasoned:
+    config.py:111  Argument 1 to "load_yaml_file" has incompatible type "Path"; expected "str"
+    config.py:165  Argument 2 to "save_yaml_file" has incompatible type "Path"; expected "str"
+    spool.py:132   Argument 2 to "save_json_file" has incompatible type "Path"; expected "str"
+    spool.py:156   Argument 1 to "load_json_file" has incompatible type "Path"; expected "str"
 
-A setuptools editable install exposes the package through a PEP 660 import hook,
-`__editable___wrench_0_1_0_finder`, and mypy resolves statically so it cannot
-follow one. `MYPYPATH=~/.projects/wrench/python` is the only way it becomes
-visible. wrench's own `PROJECT.md` requires the editable install, because its
-schemas resolve from its repository root, so this is not a choice skid made.
+wrench annotates those parameters `str`. skid passes `Path` and it works, so the
+annotation is narrower than the contract; `str | os.PathLike[str]` is what
+`open()` takes. Asked rather than worked around, because wrapping four call
+sites in `str()` would be adapting to an annotation rather than to a contract.
 
-And when it does resolve, wrench's public API is unannotated:
-`load_yaml_file`, `save_yaml_file`, `load_json_file` and `save_json_file` all
-report `Function is missing a type annotation`, so skid's calls become
-`Call to untyped function in typed context`. **skid goes from 5 errors to 31
-with the pack visible**, which is why nothing here points `MYPYPATH` at it yet.
-
-The wrench session measured 22 errors from its own end and has taken the
-annotation work along with a `--strict` task in its gate.
-`clank/inbox/wrench/python-pack-ships-no-py-typed` carries all of it.
+These became visible when wrench stopped needing an editable install. Nothing
+here is suppressed, because a mypy override needs a human's answer under hard
+rule 4.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a

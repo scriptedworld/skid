@@ -1712,7 +1712,7 @@ requires-dist = [
     { name = "kokoro", specifier = ">=0.9.4" },
     { name = "mcp", specifier = ">=2.0" },
     { name = "waitress", specifier = ">=3.0" },
-    { name = "wrench", editable = "../wrench/python" },
+    { name = "wrench", directory = "../wrench/python" },
 ]
 
 [package.metadata.requires-dev]
@@ -2226,7 +2226,7 @@ wheels = [
 [[package]]
 name = "wrench"
 version = "0.1.0"
-source = { editable = "../wrench/python" }
+source = { directory = "../wrench/python" }
 dependencies = [
     { name = "jsonschema" },
     { name = "pyyaml" },
