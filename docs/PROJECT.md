@@ -44,8 +44,20 @@ waiting.
 `silo/docs/DECISIONS/requirements-are-a-directory.md`. Each row is kept
 verbatim, so concatenating the tree reproduces the document the checker parses.
 
-**48 rows, none open, 48 with a test citing them.** Traceability is closed, with
-nothing permanently red and no marker needed in toolbox's checker.
+**48 rows, none open, 48 with a test citing them**, and no marker needed in
+toolbox's checker.
+
+**That is one direction of two, and the other is open.** The checker also
+requires every test to say what it discharges, and **18 do not**: 14 in
+`tests/test_install.py` and 4 in `tests/test_spool.py`. So the `traceability`
+task exits 1 while reporting 48 of 48, and a reader taking the requirement
+figure alone concludes the opposite of what the gate says. Measured 2026-08-28:
+
+    python3 bin/test-traceability.py --requirements docs/REQUIREMENTS .
+
+`clank/tasks/skid/traceability/30` holds it. It is not mechanical: no
+requirement names the installer at all, so those 14 tests may need a
+requirement written rather than a mark added.
 
 Four of the last eight are discharged by reading a declaration rather than by
 calling anything, which for those rows is the right shape: an import set, a
@@ -169,7 +181,10 @@ The common jig needs three things it does not state: `--definitions` before the
 positionals, `bolt.skid.definitions.yaml` pointing `requirements` at
 `docs/REQUIREMENTS`, and `bin/` holding the two links into toolbox.
 
-Three tasks fail as of 2026-08-28:
+**The two jigs fail differently, and the earlier version of this section named
+only the first jig's failures.** Measured 2026-08-28 by running both.
+
+`bolt python-std-quality .`:
 
     analyse   pylint rates skid 9.59/10, and the findings are skid's own,
               mostly redefined-outer-name from pytest fixtures
@@ -180,6 +195,23 @@ Three tasks fail as of 2026-08-28:
 The last two are one defect and it is toolbox's: the jig runs Python tools from
 PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro refuses
 3.13. Filed at `clank/tasks/toolbox/jig-validation/30`.
+
+`bolt --definitions skid common-quality .`:
+
+    traceability   18 tests carry no `# COVERS:` line, above
+    complexity     5 functions over lizard's 60-line length bound
+    suppressions   passing since 2026-08-28, see below
+
+**`suppressions` was failing for a formatting reason and is fixed.** The
+register's index rows named the bandit rule without the pragma spelling, and the
+checker reads those rows with the same patterns it scans the source with, so all
+five fully-justified marks read as unregistered. `docs/SUPPRESSIONS.md` carries
+the row format and why it matters.
+
+**`complexity` is five length warnings and no complexity ones**, all `length >
+60` with cyclomatic complexity of 4 or less: `build_operations` and `build_app`
+in `routes.py`, `install_plan`, `build_server`, and `Service.__init__`. Three of
+the five are long because they are declaration blocks rather than logic.
 
 Locally, use the project interpreter:
 

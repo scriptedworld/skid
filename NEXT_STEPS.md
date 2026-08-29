@@ -5,15 +5,18 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**Nothing is `.ready`.** Every row a requirement names is built, traceability
-reads 48 of 48, and the resilience tasks are complete and deployed. Four tasks
-stand in `clank/tasks/skid/`, and none of them is waiting on somebody to pick it
-up:
+**Nothing is `.ready`.** Every row a requirement names is built and the
+resilience tasks are complete and deployed. Five tasks stand in
+`clank/tasks/skid/`, and none of them is waiting on somebody to pick it up:
 
-    interfaces/20   .questions   a forwarder shim in Go or Rust
-    playback/20     .questions   how long a stuck player is given
-    resilience/50   .blocked     retire /mcp, gated on a process check
-    interfaces/30   .planning    the entry points are barely covered
+    interfaces/20    .questions   a forwarder shim in Go or Rust
+    playback/20      .questions   how long a stuck player is given
+    traceability/30  .questions   18 tests cite no requirement
+    resilience/50    .blocked     retire /mcp, gated on a process check
+    interfaces/30    .planning    the entry points are barely covered
+
+**Three of the five are questions for our user**, which is where the work
+actually is right now.
 
 **`resilience/50` is blocked on a measurement, not a date.** Every running
 `skid-mcp` must postdate the 2026-08-28 deploy before `/mcp` can go, and
@@ -127,7 +130,10 @@ collision rather than the check, so it needs no suppression. W0621 went 20 to 0
 and pylint 9.45 to 9.79, and a deliberately shadowed name added afterwards was
 still reported.
 
-**Traceability closed at 48 of 48.** Nine tests over the last eight rows, and
+**Traceability closed at 48 of 48 in the requirement direction**, which is the
+half this line meant and did not say. The `traceability` task still exits 1,
+because 18 tests cite nothing; `traceability/30` holds it. Nine tests over the
+last eight rows, and
 `pyproject.toml` gained the Linux classifier FR-1.6 needed so the row had a
 declaration to read. Four rows read a declaration, four are behavioural, and
 FR-8.3 took two because its row names two surfaces.

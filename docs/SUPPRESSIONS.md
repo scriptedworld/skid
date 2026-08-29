@@ -14,11 +14,17 @@ nothing until there are several.
 **Five marks, two rules, two files, and no test carries one.** `B404` for
 importing `subprocess`, `B603` for calling it without `shell=True`.
 
-    src/skid/install.py   B404   import subprocess
-    src/skid/install.py   B603   the spaCy model check
-    src/skid/install.py   B603   running one step of the plan
-    src/skid/player.py    B404   import subprocess
-    src/skid/player.py    B603   playing a clip
+    src/skid/install.py        #nosec B404    import subprocess
+    src/skid/install.py   ×2   #nosec B603    the spaCy check, and a plan step
+    src/skid/player.py         #nosec B404    import subprocess
+    src/skid/player.py         #nosec B603    playing a clip
+
+**The rows carry the pragma as it is spelled in the source, and `×N` where a
+file holds more than one.** That is what makes this an index rather than a
+description of one: the checker reads these rows with the same patterns it scans
+the source with, so a row naming no recognised pragma is prose to it. Written as
+`B404` alone, all five marks read as unregistered while this document sat here
+describing them in full.
 
 Line numbers are deliberately not recorded. They go stale on the next edit and a
 stale line number is worse than none, because it sends a reader to the wrong
