@@ -32,6 +32,24 @@ omission: only `[?]` is exempt from needing a test that cites it.
     warm                  the backend, and the MCP server
     voice-selection       two routes to one setting, and which is the record
     saying-it-right       pronunciation substitutions
+    putting-it-on-a-machine   what an install may write, what it checks first,
+                              and what an uninstall takes back
+
+**`putting-it-on-a-machine` was added 2026-08-28, and its absence is the
+lesson.** The installer had fourteen tests and no requirements, so the gate
+reported 48 of 48 while fourteen tests said nothing about what they discharged.
+The tests asserted whatever the installer already did, which is not the same as
+asserting what it owes.
+
+Writing the rows found **four obligations nothing tested at all**: that a dry run
+changes nothing, that every path changed is named, that an install which cannot
+produce a startable service fails, and that the installer imports nothing it
+installs. It also found one test citing FR-5.4, "only the owner can reach skid",
+for asserting that systemd checks a unit file, which that row does not say.
+
+That is the argument for requirements stated as its own evidence: **the tests
+could not have told anyone the installer was under-tested, because they were the
+only statement of what it should do.**
 
 **A category is a subject, not a number range.** `FR-7` was the open set rather
 than a seventh subject, and a question closes at the id it already carried,

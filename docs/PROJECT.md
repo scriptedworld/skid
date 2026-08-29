@@ -44,20 +44,29 @@ waiting.
 `silo/docs/DECISIONS/requirements-are-a-directory.md`. Each row is kept
 verbatim, so concatenating the tree reproduces the document the checker parses.
 
-**48 rows, none open, 48 with a test citing them**, and no marker needed in
-toolbox's checker.
-
-**That is one direction of two, and the other is open.** The checker also
-requires every test to say what it discharges, and **18 do not**: 14 in
-`tests/test_install.py` and 4 in `tests/test_spool.py`. So the `traceability`
-task exits 1 while reporting 48 of 48, and a reader taking the requirement
-figure alone concludes the opposite of what the gate says. Measured 2026-08-28:
+**62 rows, none open, 62 with a test citing them, and every test citing a row.**
+Both directions, and the `traceability` task exits 0. Measured 2026-08-28:
 
     python3 bin/test-traceability.py --requirements docs/REQUIREMENTS .
 
-`clank/tasks/skid/traceability/30` holds it. It is not mechanical: no
-requirement names the installer at all, so those 14 tests may need a
-requirement written rather than a mark added.
+**It read 48 of 48 and exited 1 for most of that day**, because the requirement
+direction was closed and the other was not: 18 tests said nothing about what
+they discharged, 14 of them the installer's. A reader taking the requirement
+figure alone concluded the opposite of what the gate said, and three documents
+did.
+
+**The installer had no requirements at all**, which is why. Fourteen tests
+asserted what it already did, and nothing said what it owed.
+`putting-it-on-a-machine` now holds FR-9.1 to FR-9.14, and writing them found
+four obligations with no test anywhere: `--dry-run` changing nothing,
+`report_what_changed` naming every path, the check that refuses an install which
+cannot start, and the installer importing nothing it installs. Those four tests
+exist now and each was verified against a mutation.
+
+It also found `test_the_installer_checks_each_unit_before_writing_it` citing
+FR-5.4, *only the owner can reach skid*, for asserting that systemd is asked to
+accept a unit. **The checker cannot catch that**, because FR-5.4 exists; only
+reading the row against the test can. It cites FR-9.6 now.
 
 Four of the last eight are discharged by reading a declaration rather than by
 calling anything, which for those rows is the right shape: an import set, a
@@ -216,9 +225,9 @@ PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro refuses
 
 `bolt --definitions skid common-quality .`:
 
-    traceability   18 tests carry no `# COVERS:` line, above
     complexity     5 functions over lizard's 60-line length bound
     suppressions   passing since 2026-08-28, see below
+    traceability   passing since 2026-08-28, 62 of 62 and every test citing
 
 **`suppressions` was failing for a formatting reason and is fixed.** The
 register's index rows named the bandit rule without the pragma spelling, and the

@@ -6,17 +6,22 @@ open decisions, and the things recent enough to be worth restating.
 ## The work that is agreed
 
 **Nothing is `.ready`.** Every row a requirement names is built and the
-resilience tasks are complete and deployed. Five tasks stand in
+resilience tasks are complete and deployed. Four tasks stand in
 `clank/tasks/skid/`, and none of them is waiting on somebody to pick it up:
 
     interfaces/20    .questions   a forwarder shim in Go or Rust
     playback/20      .questions   how long a stuck player is given
-    traceability/30  .questions   18 tests cite no requirement
     resilience/50    .blocked     retire /mcp, gated on a process check
     interfaces/30    .planning    the entry points are barely covered
 
-**Three of the five are questions for our user**, which is where the work
-actually is right now.
+**Two of the four are questions for our user**, which is where the work actually
+is right now.
+
+`traceability/30` closed 2026-08-28. It asked whether the installer was inside
+the requirement set or outside it, and the answer was inside: **otherwise there
+is no way to know the right things were tested.** FR-9.1 to FR-9.14 in
+`putting-it-on-a-machine`, and writing them found four obligations with no test
+at all.
 
 **`resilience/50` is blocked on a measurement, not a date.** Every running
 `skid-mcp` must postdate the 2026-08-28 deploy before `/mcp` can go, and
@@ -131,9 +136,9 @@ and pylint 9.45 to 9.79, and a deliberately shadowed name added afterwards was
 still reported.
 
 **Traceability closed at 48 of 48 in the requirement direction**, which is the
-half this line meant and did not say. The `traceability` task still exits 1,
-because 18 tests cite nothing; `traceability/30` holds it. Nine tests over the
-last eight rows, and
+half this line meant and did not say. It is closed in both directions now, at
+62 of 62, after the installer got the requirements it never had. Nine tests over
+the last eight rows, and
 `pyproject.toml` gained the Linux classifier FR-1.6 needed so the row had a
 declaration to read. Four rows read a declaration, four are behavioural, and
 FR-8.3 took two because its row names two surfaces.
@@ -252,9 +257,12 @@ are zero `noqa` and zero `type: ignore` in `src/` and `tests/`.
     TOTAL                 979 stmts  186 miss   78%
 
 `say.py` was the third and is now 100%. **Nothing is watching this number.**
-Traceability reads 48 of 48 because it measures requirement-to-test, and the
-gate's `coverage` task runs Python tools from PATH, which cannot import skid's
-dependencies, so it has never reported on this project. `interfaces/30` holds
+Traceability now reads 62 of 62 in both directions and says nothing about
+coverage, because it measures requirement-to-test and test-to-requirement rather
+than line-to-test: `install.py` sits at 36% with all fourteen of its rows
+covered. The gate's `coverage` task runs Python tools from PATH, which cannot
+import skid's dependencies, so it has never reported on this project.
+`interfaces/30` holds
 the decision about what to do, which is not simply "write more tests": both
 files are entry points a test process does not reach by importing them, and
 hard rule 5 bears on it in Go's spelling.
