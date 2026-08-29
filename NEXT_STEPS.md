@@ -278,22 +278,11 @@ It read 0.0% the day before, over an empty package. **`traceability` reports 48
 of 48**, and every mark cites a row `REQUIREMENTS.md` defines: checked in both
 directions, so no test cites a row that does not exist or one that is retired.
 
-**`types` reports five errors.** One is kokoro, which ships no `py.typed`. The
-other four are skid's own and are waiting on an answer from wrench:
+**`types` reports one error**, kokoro, which ships no `py.typed`. Nothing is
+suppressed, because a mypy override needs a human's answer under hard rule 4.
 
-    config.py:111  Argument 1 to "load_yaml_file" has incompatible type "Path"; expected "str"
-    config.py:165  Argument 2 to "save_yaml_file" has incompatible type "Path"; expected "str"
-    spool.py:132   Argument 2 to "save_json_file" has incompatible type "Path"; expected "str"
-    spool.py:156   Argument 1 to "load_json_file" has incompatible type "Path"; expected "str"
-
-wrench annotates those parameters `str`. skid passes `Path` and it works, so the
-annotation is narrower than the contract; `str | os.PathLike[str]` is what
-`open()` takes. Asked rather than worked around, because wrapping four call
-sites in `str()` would be adapting to an annotation rather than to a contract.
-
-These became visible when wrench stopped needing an editable install. Nothing
-here is suppressed, because a mypy override needs a human's answer under hard
-rule 4.
+wrench is fully typed and resolves, so its calls are checked. Its path
+parameters take `str | os.PathLike[str]`, which is what skid passes.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a

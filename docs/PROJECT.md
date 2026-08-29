@@ -319,6 +319,13 @@ its schemas by walking up from `__file__`, which forced an editable install, and
 a PEP 660 import hook is something mypy cannot follow, so wrench's `py.typed`
 was invisible and every import of it was an error.
 
+**A copy does not track the sibling checkout.** Editing `../wrench/python` no
+longer reaches skid's virtualenv, so a wrench change needs
+
+    uv sync --reinstall-package wrench
+
+which is the same shape as the tool environment not tracking `pyproject.toml`.
+
 **Substitutions are global**, each declaring itself literal or regular
 expression, applied in one left-to-right pass whose output no later entry
 examines. File order is the order.
