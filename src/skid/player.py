@@ -18,7 +18,13 @@ from threading import Lock
 from time import monotonic
 
 DEFAULT_TIMEOUT = 300.0
-"""Longer than any clip skid produces: a stuck-process detector, not a policy."""
+"""Seconds a player may run before it is killed. A stuck-process detector.
+
+It does not clear every clip skid can produce. At about 15.5 characters per
+second of audio this is roughly 4,660 characters, and nothing caps a message at
+submission, so a longer one is cut off mid-sentence. Whether that is the right
+ceiling is open, at `clank/tasks/skid/playback/20`.
+"""
 
 
 class PlaybackFailed(Exception):

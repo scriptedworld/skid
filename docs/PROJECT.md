@@ -45,28 +45,17 @@ waiting.
 verbatim, so concatenating the tree reproduces the document the checker parses.
 
 **62 rows, none open, 62 with a test citing them, and every test citing a row.**
-Both directions, and the `traceability` task exits 0. Measured 2026-08-28:
+Both directions, and the `traceability` task exits 0:
 
     python3 bin/test-traceability.py --requirements docs/REQUIREMENTS .
 
-**It read 48 of 48 and exited 1 for most of that day**, because the requirement
-direction was closed and the other was not: 18 tests said nothing about what
-they discharged, 14 of them the installer's. A reader taking the requirement
-figure alone concluded the opposite of what the gate said, and three documents
-did.
+The checker holds both directions: every row needs a test, and every test needs
+a row. The second is the one worth watching, because a suite can be complete
+against the code and say nothing about what the code owes.
 
-**The installer had no requirements at all**, which is why. Fourteen tests
-asserted what it already did, and nothing said what it owed.
-`putting-it-on-a-machine` now holds FR-9.1 to FR-9.14, and writing them found
-four obligations with no test anywhere: `--dry-run` changing nothing,
-`report_what_changed` naming every path, the check that refuses an install which
-cannot start, and the installer importing nothing it installs. Those four tests
-exist now and each was verified against a mutation.
-
-It also found `test_the_installer_checks_each_unit_before_writing_it` citing
-FR-5.4, *only the owner can reach skid*, for asserting that systemd is asked to
-accept a unit. **The checker cannot catch that**, because FR-5.4 exists; only
-reading the row against the test can. It cites FR-9.6 now.
+A mark can still point at the wrong row, and the checker cannot catch it: it
+sees a citation and a requirement that exists. Only reading the row against the
+test does.
 
 Four of the last eight are discharged by reading a declaration rather than by
 calling anything, which for those rows is the right shape: an import set, a
@@ -189,7 +178,7 @@ and read all of it: the reasons list is longer than a truncated grep shows.
 **The summary line is not merely coarse, it is wrong, and this instruction
 earns itself twice in opposite directions.** The Go bolt prints the *execution
 total* labelled with the run's verdict, so the number never counts failures and
-only the word in front of it changes. Measured 2026-08-28: skid's common-quality
+only the word in front of it changes. skid's common-quality
 said `failed: 3` with two failing, skid's `secrets` said `failed: 2` with one,
 and the wrench session's A/B over one gate printed `failed: 23` red and
 `passed: 23` green with 23 executions both times.
@@ -208,8 +197,7 @@ The common jig needs three things it does not state: `--definitions` before the
 positionals, `bolt.skid.definitions.yaml` pointing `requirements` at
 `docs/REQUIREMENTS`, and `bin/` holding the two links into toolbox.
 
-**The two jigs fail differently, and the earlier version of this section named
-only the first jig's failures.** Measured 2026-08-28 by running both.
+The two jigs fail differently.
 
 `bolt python-std-quality .`:
 
@@ -226,14 +214,12 @@ PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro refuses
 `bolt --definitions skid common-quality .`:
 
     complexity     5 functions over lizard's 60-line length bound
-    suppressions   passing since 2026-08-28, see below
-    traceability   passing since 2026-08-28, 62 of 62 and every test citing
 
-**`suppressions` was failing for a formatting reason and is fixed.** The
-register's index rows named the bandit rule without the pragma spelling, and the
-checker reads those rows with the same patterns it scans the source with, so all
-five fully-justified marks read as unregistered. `docs/SUPPRESSIONS.md` carries
-the row format and why it matters.
+`suppressions` and `traceability` pass. The register's index rows have to spell
+the pragma as the source does, because the checker reads them with the same
+patterns it scans the source with; a row naming only the bandit rule is prose to
+it, and the marks behind it read as unregistered. `docs/SUPPRESSIONS.md` carries
+the format.
 
 **`complexity` is five length warnings and no complexity ones**, all `length >
 60` with cyclomatic complexity of 4 or less: `build_operations` and `build_app`
@@ -264,10 +250,24 @@ mechanism: a timer on a thread that is always alive proves the timer runs, which
 is the failure being detected. Health is idle, or a clip on the speaker, or a
 step within `PROGRESS_GRACE`.
 
-It is not keyed to clip length. Measured 2026-08-28, 6.4 characters per second
-of audio, so 1196 characters plays for 77 seconds and nothing caps a message.
-Playback pings, so what the window must clear is one generation step instead:
-about 30 seconds for the longest clip the player's 300s ceiling admits.
+It is not keyed to clip length:
+
+    sample      chars  generate s   audio s   ratio
+    short           5        0.38      1.27    3.36
+    typical        43        0.49      2.83    5.73
+    long          398        3.78     25.62    6.77
+    longest      1196       11.35     76.88    6.77
+
+Two numbers come out of this and they are easy to confuse. `ratio` is audio
+seconds per second of generation, about 6.8x realtime. The speaking rate is
+about 15.5 characters per second of audio, or 155 words a minute.
+`docs/LESSONS/a-derived-figure-next-to-its-premise-is-checkable.md`.
+
+So 1196 characters plays for 77 seconds and nothing caps a message. Playback
+pings, so the window has to clear one generation step instead. Generation is
+linear in length, and the longest clip the 300s ceiling admits takes about 44
+seconds to make, well inside `WatchdogSec=120`.
+
 `.ephemera/measure-clip-length.py` regenerates the table.
 
 **The start limit is 10 attempts over 120 seconds**, where systemd's default was

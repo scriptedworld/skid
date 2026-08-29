@@ -15,22 +15,15 @@ ran on the machine the suite ran on, and it made this file the only test module
 shelling out. It is a step in the install plan now, so it runs on whichever
 machine is being installed to, and this file asserts the command instead.
 
-**One test now causes a command to run, and the strategy is unchanged.**
+One test does cause a command to run.
 `test_an_environment_without_the_model_cannot_start` calls
 `spacy_model_present`, which asks the tool environment's own interpreter whether
-it can import the model. The interpreter it asks is a script this test wrote
-inside `tmp_path`, so what runs is the test's own fixture and nothing outside
-the temporary directory is read or written.
+it can import the model, and the interpreter it asks is a script the test wrote
+inside `tmp_path`. Nothing outside the temporary directory is read or written.
 
 That is `test_player.py`'s pattern rather than an exception to it: the
 production code runs the command and the test never does, so no test in this
-repository imports `subprocess`. `docs/SUPPRESSIONS.md` states that property and
-it still holds.
-
-**Written because the requirements were written.** FR-9.9 exists because an
-install that produced an unstartable service must say so, and asking which test
-discharged it found that none did. The check it covers is the one that stops a
-repeat of 76 restarts.
+repository imports `subprocess`. `docs/SUPPRESSIONS.md` states that property.
 """
 
 from __future__ import annotations
