@@ -5,9 +5,25 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**Nothing is queued.** `clank/tasks/skid/` holds no `.ready`, `.blocked` or
-`.questions` task. Every row a requirement names is built, traceability reads 48
-of 48, and the four resilience tasks are complete and deployed.
+**Nothing is `.ready`.** Every row a requirement names is built, traceability
+reads 48 of 48, and the resilience tasks are complete and deployed. Four tasks
+stand in `clank/tasks/skid/`, and none of them is waiting on somebody to pick it
+up:
+
+    interfaces/20   .questions   a forwarder shim in Go or Rust
+    playback/20     .questions   how long a stuck player is given
+    resilience/50   .blocked     retire /mcp, gated on a process check
+    interfaces/30   .planning    the entry points are barely covered
+
+**`resilience/50` is blocked on a measurement, not a date.** Every running
+`skid-mcp` must postdate the 2026-08-28 deploy before `/mcp` can go, and
+deleting it early takes the voice off every session holding an older shim.
+`docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md` is what
+happened the first time. Checked 2026-08-28 at 18:47 and it is **not** clear:
+eight of the nine shims running started between 02:06 and 10:48, before the
+10:51 deploy.
+
+    for p in $(pgrep -f skid-mcp); do ps -o pid=,lstart= -p $p; done
 
 What is below is what is open rather than what is agreed: one decision skid
 cannot take alone, two questions nothing depends on, and a surface nobody has
@@ -222,10 +238,29 @@ are zero `noqa` and zero `type: ignore` in `src/` and `tests/`.
 
 ## Known and not blocking
 
+**The package is at 78% and two entry points are most of the gap.** Measured
+2026-08-28 with `.venv/bin/python -m coverage report`:
+
+    src/skid/main.py       97 stmts   60 miss   35%
+    src/skid/install.py   148 stmts   84 miss   36%
+    TOTAL                 979 stmts  186 miss   78%
+
+`say.py` was the third and is now 100%. **Nothing is watching this number.**
+Traceability reads 48 of 48 because it measures requirement-to-test, and the
+gate's `coverage` task runs Python tools from PATH, which cannot import skid's
+dependencies, so it has never reported on this project. `interfaces/30` holds
+the decision about what to do, which is not simply "write more tests": both
+files are entry points a test process does not reach by importing them, and
+hard rule 5 bears on it in Go's spelling.
+
 **The gate's `analyse` task cannot pass.** `pylint --recursive=y .` walks
 `.venv` and does not return; skid's own code lints in 2 seconds. Not skid's to
 fix, filed at `clank/inbox/toolbox/pylint-walks-the-virtualenv` with a repro.
 Run the rest of the jig and read `result.yaml`.
+
+With `--ignore=.venv,venv` skid's own code rates **9.83/10**, measured
+2026-08-28 after the test fixtures moved into `tests/conftest.py`, which cleared
+both `duplicate-code` findings.
 
 **`docstrings` passes now**, at 99.4% measured 2026-08-28 over skid's own code.
 It read 0.0% the day before, over an empty package. **`traceability` reports 48
