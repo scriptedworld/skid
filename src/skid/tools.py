@@ -22,6 +22,8 @@ nor stdio.
 
 from __future__ import annotations
 
+from typing import Any
+
 ROUTES: dict[str, tuple[str, str]] = {
     "speak": ("POST", "/speak"),
     "set_voice": ("POST", "/voice"),
@@ -40,7 +42,7 @@ The two reads are GETs so that a proxy, a log or a person with `curl` can tell
 them apart from the four that change something.
 """
 
-SCHEMAS: dict[str, dict[str, object]] = {
+SCHEMAS: dict[str, dict[str, Any]] = {
     "speak": {
         "type": "object",
         "properties": {

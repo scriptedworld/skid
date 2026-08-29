@@ -232,11 +232,29 @@ It read 0.0% the day before, over an empty package. **`traceability` reports 48
 of 48**, and every mark cites a row `REQUIREMENTS.md` defines: checked in both
 directions, so no test cites a row that does not exist or one that is retired.
 
-**`types` reports four errors and all four are untyped imports.** One is kokoro
-and three are wrench, which ships no `py.typed` so its annotations are invisible
-to a consumer. None is about skid's own code and none is suppressed, because a
-mypy override needs a human's answer under hard rule 4. Filed at
-`clank/inbox/wrench/python-pack-ships-no-py-typed` with the two-line fix.
+**`types` reports five errors and all five are untyped imports.** One is kokoro
+and four are wrench. None is about skid's own code and none is suppressed,
+because a mypy override needs a human's answer under hard rule 4.
+
+**wrench now ships `py.typed`**, added 2026-08-28 at wrench `0859f00` by this
+session at our user's instruction, and skid's count did not move. Two reasons,
+both measured rather than reasoned:
+
+A setuptools editable install exposes the package through a PEP 660 import hook,
+`__editable___wrench_0_1_0_finder`, and mypy resolves statically so it cannot
+follow one. `MYPYPATH=~/.projects/wrench/python` is the only way it becomes
+visible. wrench's own `PROJECT.md` requires the editable install, because its
+schemas resolve from its repository root, so this is not a choice skid made.
+
+And when it does resolve, wrench's public API is unannotated:
+`load_yaml_file`, `save_yaml_file`, `load_json_file` and `save_json_file` all
+report `Function is missing a type annotation`, so skid's calls become
+`Call to untyped function in typed context`. **skid goes from 5 errors to 31
+with the pack visible**, which is why nothing here points `MYPYPATH` at it yet.
+
+The wrench session measured 22 errors from its own end and has taken the
+annotation work along with a `--strict` task in its gate.
+`clank/inbox/wrench/python-pack-ships-no-py-typed` carries all of it.
 
 **bandit reports five Low issues and zero High**, all of them `B404` and `B603`
 in the installer and the player, which are what running commands looks like to a
