@@ -79,12 +79,12 @@ reports as a pass is the failure this plan is trying not to build.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-1.1 | `test_generation_uses_kokoro` | integration |
-| FR-1.2 | `test_generation_writes_a_readable_wav` | integration |
+| FR-1.1 | `test_generation_uses_kokoro` | positive |
+| FR-1.2 | `test_generation_writes_a_readable_wav` | positive |
 | FR-1.3 | `test_the_player_runs_as_a_subprocess` | positive |
-| FR-1.4 | `test_no_device_is_named_on_the_player_command` | negative |
+| FR-1.4 | `test_no_device_is_named_on_the_command` | negative |
 | FR-1.5 | `test_skid_imports_no_audio_library` | property |
-| FR-1.6 | `test_linux_is_declared_rather_than_intended` | property |
+| FR-1.6 | `test_the_licence_is_declared_and_matches_the_file_beside_it`, `test_linux_is_declared_rather_than_intended` | property |
 | FR-1.7 | `test_skid_runs_only_where_kokoro_does` | property |
 | FR-1.8 | `test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it` | negative |
 | FR-1.9 | `test_a_player_that_never_exits_is_killed` | edge |
@@ -117,7 +117,7 @@ asserting something skid does not provide.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-2.1 | `test_two_submissions_never_overlap` | property |
+| FR-2.1 | `test_two_clips_never_overlap` | property |
 
 **FR-2.1 is about simultaneity, which no suite can hear.** The player script
 appends a start and an end timestamp to a file. The test submits from two
@@ -134,13 +134,13 @@ reason. Its guidance is prose in FR-2.1 now.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-3.1 | `test_a_submission_carries_a_name`, `test_a_submission_without_a_name_is_refused` | positive, negative |
-| FR-3.2 | `test_a_first_submission_is_prefixed` | positive |
-| FR-3.3 | `test_later_messages_in_one_array_are_not_prefixed` | positive |
-| FR-3.4 | `test_the_window_is_read_from_the_config` | positive |
-| FR-3.5 | `test_a_submission_queued_behind_a_long_array_is_not_greeted` | regression |
-| FR-3.6 | `test_a_restart_costs_one_extra_greeting` | positive |
-| FR-7.4 | `test_the_window_defaults_to_thirty_seconds`, `test_the_window_is_measured_from_the_end_of_playback` | positive, edge |
+| FR-3.1 | `test_an_empty_name_is_refused`, `test_a_submission_without_a_name_is_refused`, `test_the_submission_carries_the_name_from_the_command_line`, `test_no_arguments_at_all_is_refused_and_nothing_is_sent` | negative, positive |
+| FR-3.2 | `test_a_name_not_heard_recently_is_greeted`, `test_the_greeting_names_the_speaker`, `test_the_window_is_per_name`, `test_each_new_name_is_announced_in_its_own_right` | positive, property |
+| FR-3.3 | `test_a_name_heard_moments_ago_is_not_greeted` | positive |
+| FR-3.4 | `test_the_window_is_read_from_the_config`, `test_a_shorter_window_greets_sooner` | positive |
+| FR-3.5 | `test_a_submission_queued_behind_another_is_not_greeted` | regression |
+| FR-3.6 | `test_a_fresh_table_greets_everyone` | positive |
+| FR-7.4 | `test_the_window_defaults_to_thirty_seconds`, `test_the_window_boundary_is_the_window_itself`, `test_the_clock_is_the_end_of_speech_not_the_submission` | positive, edge, regression |
 
 **FR-3.5 is the test the spec review was for.** Submit a long array, then a
 second submission immediately. Assert the second is not prefixed. It passes
@@ -152,14 +152,16 @@ shipped.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-4.1 | `test_an_array_is_submitted_whole`, `test_an_array_of_one` | positive, edge |
+| FR-4.1 | `test_text_arrives_as_an_array`, `test_an_array_of_one_is_not_a_special_case`, `test_a_submission_saying_nothing_is_refused`, `test_the_messages_arrive_as_one_array_in_order`, `test_a_name_with_no_messages_is_refused_and_nothing_is_sent`, `test_a_spool_refuses_what_the_queue_refuses` | positive, edge, negative |
 | FR-4.2 | `test_the_rest_are_prepared_while_one_is_being_spoken` | property |
-| FR-4.3 | `test_an_array_is_spoken_in_order` | positive |
-| FR-4.4 | `test_two_submissions_do_not_interleave` | property |
-| FR-4.5 | `test_speak_returns_before_the_clip_is_heard` | positive |
-| FR-4.6 | `test_one_failed_message_does_not_cancel_its_array` | negative |
-| FR-4.7 | `test_a_failure_reaches_the_log`, `test_a_failure_reaches_status` | positive |
-| FR-7.2 | `test_an_arrival_queues_rather_than_being_rejected` | positive |
+| FR-4.3 | `test_the_messages_of_a_submission_keep_their_order`, `test_an_array_is_spoken_in_order`, `test_entries_are_taken_in_submission_order_not_file_time` | positive, property |
+| FR-4.4 | `test_a_call_is_executed_once`, `test_two_submissions_do_not_interleave` | property |
+| FR-4.5 | `test_speak_returns_when_the_work_is_queued`, `test_submitting_returns_before_the_clip_is_heard` | positive |
+| FR-4.6 | `test_one_failing_clip_does_not_stop_the_rest` | negative |
+| FR-4.7 | `test_status_reports_what_a_caller_cannot_log`, `test_status_reports_what_a_caller_cannot_log`, `test_status_reports_the_queue_a_caller_cannot_log`, `test_status_is_answered_even_with_a_stray_positional`, `test_a_failure_reaches_the_log_and_status` | positive, edge |
+| FR-4.8 | `test_a_submission_survives_the_service_going_away`, `test_an_accepted_submission_is_on_disk_before_submit_returns`, `test_a_submission_is_on_disk_before_put_returns`, `test_a_spool_is_read_back_after_a_restart`, `test_a_half_written_entry_is_never_taken`, `test_a_submission_interrupted_mid_speech_is_dropped_not_replayed`, `test_a_sequence_continues_across_a_restart`, `test_an_entry_that_is_not_readable_is_discarded_not_retried`, `test_recovery_keeps_what_is_still_current` | property, positive, edge, negative |
+| FR-4.9 | `test_a_submission_older_than_the_window_is_discarded`, `test_the_expiry_boundary_is_the_window_itself`, `test_expiry_does_not_block_what_is_behind_it`, `test_what_expired_is_recorded_rather_than_vanishing`, `test_downtime_counts_toward_the_window` | positive, edge, property |
+| FR-7.2 | `test_nothing_is_rejected_at_the_door` | property |
 | FR-7.3 | `test_generation_runs_ahead_of_the_speaker_without_a_bound` | property |
 
 **FR-4.2 and FR-7.3 are the same observation from two sides**, and both are the
@@ -188,19 +190,21 @@ named clip, and the test asserts the rest of the array is still spoken.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-5.1 | `test_the_model_is_loaded_once_across_submissions` | integration |
-| FR-5.2 | `test_the_server_exposes_its_tools` | positive |
+| FR-5.1 | `test_the_model_is_loaded_once_across_submissions` | property |
+| FR-5.2 | `test_the_script_is_the_mcp_server_and_offers_every_tool`, `test_a_tool_call_reaches_the_service_and_returns_its_answer`, `test_the_declared_schemas_match_the_ones_a_client_is_given`, `test_every_declared_tool_has_a_route_and_nothing_else_does`, `test_a_call_that_does_not_match_its_schema_is_refused_by_field`, `test_the_published_schema_is_the_enforced_one`, `test_the_legacy_tool_list_matches_the_declared_set` | positive, property, negative |
+| FR-5.3 | `test_an_unreachable_service_fails_the_call_rather_than_hanging`, `test_a_refusal_carries_the_services_own_reason`, `test_the_service_is_notify_so_active_means_answerable`, `test_the_service_declares_a_watchdog`, `test_the_start_limit_is_chosen_and_in_the_section_systemd_reads`, `test_an_old_shim_can_still_speak`, `test_the_legacy_endpoint_holds_no_session`, `test_an_old_shims_notification_gets_no_reply`, `test_an_unreachable_socket_exits_one_and_names_where_it_looked`, `test_the_command_works_end_to_end_over_a_real_socket`, `test_an_idle_service_is_progressing`, `test_a_long_clip_on_the_speaker_is_progressing_not_stuck`, `test_a_stalled_loop_stops_looking_like_progress`, `test_taking_from_an_empty_spool_is_not_an_error` | negative, property, regression, edge, positive |
+| FR-5.4 | `test_the_socket_is_owner_only`, `test_a_path_with_nothing_there_is_free`, `test_a_socket_someone_is_listening_on_is_not_free`, `test_a_socket_file_nobody_is_listening_on_is_stale`, `test_an_ordinary_file_at_the_path_is_not_a_listener`, `test_the_directories_it_creates_are_owner_only`, `test_the_directory_is_owner_only` | property, negative, edge |
 
 ### Voice and the config
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-6.1 | `test_the_voice_is_set_through_the_tool` | positive |
-| FR-6.2 | `test_the_voice_is_read_from_the_config` | positive |
-| FR-6.3 | `test_both_routes_reach_one_voice` | property |
-| FR-6.4 | `test_a_missing_config_uses_defaults`, `test_the_first_write_creates_it` | edge, positive |
-| FR-6.5 | `test_an_unknown_voice_is_refused_and_not_written` | negative |
-| FR-7.1 | `test_a_tool_set_voice_survives_a_restart` | positive |
+| FR-6.1 | `test_setting_the_voice_through_the_tool_reaches_the_config`, `test_the_voice_is_set_over_http` | positive |
+| FR-6.2 | `test_the_voice_is_read_from_the_config`, `test_the_sample_config_is_a_config_skid_can_read` | positive, property |
+| FR-6.3 | `test_setting_the_voice_reaches_the_setting_the_service_reads`, `test_both_routes_reach_one_voice` | positive, property |
+| FR-6.4 | `test_a_missing_config_uses_defaults`, `test_the_first_write_creates_the_file`, `test_a_malformed_config_is_an_error_and_is_not_replaced`, `test_a_config_of_the_wrong_shape_says_which_key_is_wrong`, `test_a_misspelt_key_is_refused_rather_than_ignored`, `test_a_missing_config_is_not_an_error` | edge, positive, negative |
+| FR-6.5 | `test_an_unknown_voice_fails_the_call`, `test_an_unknown_voice_is_refused`, `test_an_unknown_voice_is_refused_and_nothing_is_written`, `test_a_refusal_reaches_an_old_shim_as_a_tool_error`, `test_a_voice_that_would_silence_skid_is_refused_and_not_written` | negative |
+| FR-7.1 | `test_a_written_config_reads_back_as_what_was_written`, `test_a_config_skid_could_not_read_back_is_refused_on_write` | property, negative |
 
 **FR-6.3's own body names the observable**: setting the voice by either route
 changes what the next clip is spoken in. Both routes run against one started
@@ -223,13 +227,39 @@ refused, and assert the config on disk is unchanged.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-8.1 | `test_a_substitution_is_declared_through_the_tool` | positive |
-| FR-8.2 | `test_a_replacement_need_not_be_a_word` | positive |
+| FR-8.1 | `test_a_substitution_is_declared_through_the_tool`, `test_a_substitution_is_declared_over_http` | positive |
+| FR-7.8 | `test_substitutions_persist_to_the_config` | positive |
+| FR-8.2 | `test_a_replacement_need_not_be_a_word`, `test_a_literal_matches_on_word_boundaries`, `test_a_literal_is_case_insensitive` | positive, edge |
 | FR-8.3 | `test_a_substitution_does_not_change_what_a_caller_is_told`, `test_a_substitution_does_not_reach_the_log` | property |
-| FR-8.4 | `test_entries_apply_in_file_order`, `test_reordering_the_file_changes_the_result` | positive, regression |
-| FR-8.5 | `test_a_replacement_is_not_re_examined`, `test_overlapping_entries_take_the_earlier_position` | property, regression |
-| FR-7.7 | `test_both_kinds_are_supported`, `test_an_invalid_regex_is_refused` | positive, negative |
-| FR-7.9 | `test_two_names_share_one_substitution_set` | positive |
+| FR-8.4 | `test_writing_preserves_the_order_of_substitutions`, `test_entries_keep_the_order_they_were_added`, `test_entries_apply_in_file_order`, `test_reordering_the_file_changes_the_result` | property, positive, regression |
+| FR-8.5 | `test_a_replacement_is_not_re_examined`, `test_overlapping_entries_take_the_earlier_position`, `test_an_empty_set_leaves_the_text_alone` | property, regression, edge |
+
+### Putting it on a machine
+
+The plan is asserted as data. `Paths` takes every destination as a parameter, so
+these build the plan against `tmp_path` and read the commands rather than
+running them, and the suite cannot write into a real
+`~/.config/systemd/user`. `tests/test_install.py` says what the one exception
+is and why.
+
+| Requirement | Test | Kind |
+|---|---|---|
+| FR-9.1 | `test_the_install_plan_is_the_sequence_it_owes` | positive |
+| FR-9.2 | `test_a_dry_run_shows_every_step_and_performs_none` | property |
+| FR-9.3 | `test_the_plan_copies_both_units_into_the_given_directory` | positive |
+| FR-9.4 | `test_every_path_an_install_changed_is_named` | positive |
+| FR-9.5 | `test_a_machine_without_the_tools_is_told_before_anything_is_written` | negative |
+| FR-9.6 | `test_the_installer_checks_each_unit_before_writing_it`, `test_the_units_are_checked_before_the_first_thing_is_written` | positive, property |
+| FR-9.7 | `test_the_plan_starts_the_socket_and_not_the_service` | positive |
+| FR-9.8 | `test_verification_never_connects`, `test_an_existing_install_is_found_from_the_filesystem_alone` | property |
+| FR-9.9 | `test_an_environment_without_the_model_cannot_start` | negative |
+| FR-9.10 | `test_registering_tolerates_a_name_that_is_already_taken`, `test_both_registration_steps_tolerate_the_state_they_wanted` | positive, property |
+| FR-9.11 | `test_a_reinstall_unregisters_before_it_registers`, `test_a_first_install_does_not_remove_a_registration_it_never_made` | positive, negative |
+| FR-9.12 | `test_no_terminal_to_ask_on_is_taken_as_no` | edge |
+| FR-9.13 | `test_uninstalling_disables_before_it_removes_the_files`, `test_uninstalling_reverses_everything_the_install_created` | property, positive |
+| FR-9.14 | `test_the_installer_imports_nothing_it_installs` | property |
+| FR-7.7 | `test_a_regex_that_will_not_compile_is_refused`, `test_a_literal_and_a_regex_of_the_same_pattern_are_different_entries`, `test_both_kinds_are_supported`, `test_an_invalid_regex_is_refused` | negative, positive |
+| FR-7.9 | `test_the_substitution_set_is_global`, `test_the_substitution_set_is_global` | property |
 
 **FR-8.3 has two clauses and gets a test each**, because the row says a
 substitution changes nothing a caller submitted *or a log records* and those are
@@ -258,7 +288,7 @@ and the spec disagreed on it before 2026-08-27.
 
 | Requirement | Test | Kind |
 |---|---|---|
-| FR-7.5 | `test_paplay_is_the_default_player`, `test_a_configured_command_is_used` | positive |
+| FR-7.5 | `test_paplay_is_the_default_player` | positive |
 | FR-7.6 | `test_kokoro_is_still_a_python_project` | property |
 
 **FR-7.6 is a decision row, and a decision row is tested by asserting its

@@ -496,13 +496,18 @@ Dependencies: `kokoro`, `flask` and `waitress` for the service, the Anthropic
 MCP SDK for Python for the script alone, `httpx` between them, `wrench` for the
 config and the spool, and numpy, which arrives with kokoro.
 
-**wrench is a path dependency and that is a real constraint.** It is not
-published and must be installed editable, because it reads its schemas from its
-own repository root. `[tool.uv.sources]` points at `../wrench/python`, which
-holds on any machine set up from `dotfiles/repos.live.toml` and **not** on a
-standalone clone. Publishing wrench, or fetching it in the bootstrap, is a
-prerequisite for skid going public. Measured 2026-08-27: kokoro 0.9.4 and its torch stack install and
-run under 3.12.14, and the WAV writer is the stdlib's.
+wrench is a path dependency and that is a real constraint. It is unpublished, so
+`[tool.uv.sources]` points at `../wrench/python`, which holds on any machine set
+up from `dotfiles/repos.live.toml` and **not** on a standalone clone. Publishing
+wrench, or fetching it in the bootstrap, is a prerequisite for skid going
+public.
+
+It is installed as an ordinary copy. An editable install was once required, and
+a PEP 660 import hook is something mypy cannot follow, so wrench's `py.typed`
+was invisible and every import of it was an error.
+
+kokoro 0.9.4 and its torch stack install and run under 3.12.14, and the WAV
+writer is the stdlib's.
 
 **The MCP SDK under 3.12 was the open risk in the pin and is now settled.**
 Measured 2026-08-28 on skid's own interpreter: `mcp` 2.1.1 under 3.12.14. The

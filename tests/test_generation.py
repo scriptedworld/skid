@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("kokoro", reason="FR-1.1 has no seam; it needs the real engine")
-
 from skid.generation import Generator
+
+pytest.importorskip("kokoro", reason="FR-1.1 has no seam; it needs the real engine")
 
 
 # COVERS: FR-1.2 | positive

@@ -145,7 +145,15 @@ exclude_also = ["if __name__ == .__main__.:"]
 [tool.mypy]
 strict = true
 warn_unreachable = true
-exclude = ['^bin/']
+exclude = ['^bin/', '^adapters/']
+
+# skid's dependencies live in .venv because kokoro's metadata declares <3.13 and
+# this machine's python3 is 3.14.7. mypy run from PATH therefore cannot import
+# flask, waitress, wrench or kokoro, and reports every one of them as a missing
+# import rather than checking the code. Naming the interpreter is mypy's own
+# answer to that, and it is what makes the gate's `types` task check skid rather
+# than report on which python invoked it.
+python_executable = ".venv/bin/python"
 
 # WHY bin/ IS EXCLUDED EVERYWHERE BELOW, and why it is scoping rather than
 # silencing. bin/ holds nothing skid wrote. It is two symlinks into
@@ -182,7 +190,14 @@ known-first-party = ["skid"]
 # and tests takes 1.8s, and over `.` it had not finished after 900s and was
 # emitting a RecursionError traceback. So this is not tidiness, it is the
 # difference between a gate that runs and one that never returns.
-ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*']
+ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*', '^adapters/.*', '^\.ephemera/.*']
+
+# The same split mypy's `python_executable` answers. pylint run from PATH is a
+# 3.14.7 interpreter and skid's dependencies are in a 3.12 virtualenv, so
+# without this every import of flask, waitress, wrench or kokoro is an
+# `import-error` and the findings are about which python ran rather than about
+# skid. Globbed rather than pinned to 3.12, so it survives the pin moving.
+init-hook = 'import glob, sys; sys.path[:0] = glob.glob(".venv/lib/python*/site-packages")'
 
 [tool.bandit]
 exclude_dirs = ["bin", ".ephemera"]

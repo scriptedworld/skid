@@ -78,8 +78,12 @@ def _kokoro() -> Any:
     """
     try:
         return metadata("kokoro")
-    except PackageNotFoundError:
-        pytest.skip("kokoro is not installed, so its declarations cannot be read")
+    except PackageNotFoundError as absent:
+        # `pytest.skip()` raises this, and raising it directly is what makes
+        # every path here either return or raise.
+        raise pytest.skip.Exception(
+            "kokoro is not installed, so its declarations cannot be read"
+        ) from absent
 
 
 def _imported_roots() -> set[str]:

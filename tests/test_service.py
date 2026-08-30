@@ -22,16 +22,18 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip(
-    "kokoro", reason="the service generates, and generation has no seam"
-)
-
 from skid.config import Config, load_config
 from skid.generation import Generator
 from skid.routes import build_app
-from skid.service import PROGRESS_GRACE, Service
+from skid.service import PROGRESS_GRACE, Service, Workspace
 from skid.substitution import Substitution, apply_substitutions
 from skid.tools import ROUTES
+
+# Below the imports rather than above them, because skid imports kokoro lazily,
+# so these resolve without it and the skip still fires at collection.
+pytest.importorskip(
+    "kokoro", reason="the service generates, and generation has no seam"
+)
 
 
 @pytest.fixture(scope="module", name="generator")
@@ -145,9 +147,8 @@ def service_for_fixture(
                 player=_player_that(behaviour, tmp_path),
                 substitutions=list(substitutions or []),
             ),
-            work_dir=tmp_path / "work",
-            log_path=tmp_path / "log",
             generator=generator,
+            workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
         )
         service.start()
         built.append(service)
@@ -174,18 +175,16 @@ def test_a_submission_survives_the_service_going_away(
     made = Config(player=_player_that("true", tmp_path))
     first = Service(
         config=made,
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
         generator=generator,
+        workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
     )
     first.submit("silo", ["survives"])
     first.stop()
 
     second = Service(
         config=made,
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
         generator=generator,
+        workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
     )
     second.start()
     second.wait_idle(timeout=300)
@@ -205,9 +204,8 @@ def test_an_accepted_submission_is_on_disk_before_submit_returns(
     """
     service = Service(
         config=Config(player=_player_that("true", tmp_path)),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
         generator=generator,
+        workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
     )
 
     service.submit("silo", ["written"])
@@ -338,9 +336,8 @@ def test_the_directories_it_creates_are_owner_only(
 
     service = Service(
         config=Config(player="true {file}"),
-        work_dir=work,
-        log_path=state / "skid.log",
         generator=generator,
+        workspace=Workspace(work_dir=work, log_path=state / "skid.log"),
     )
     service.start()
     service.stop()
@@ -385,7 +382,7 @@ def test_the_rest_are_prepared_while_one_is_being_spoken(
     service.wait_idle(timeout=300)
 
     assert arrived, f"nothing was generated while a clip was playing; had {already}"
-    assert spoken_while_held == []
+    assert not spoken_while_held
 
 
 # COVERS: FR-7.3 | property
@@ -416,7 +413,7 @@ def test_generation_runs_ahead_of_the_speaker_without_a_bound(
     service.wait_idle(timeout=300)
 
     assert generated == [f"000{index}.wav" for index in range(5)]
-    assert spoken_while_held == []
+    assert not spoken_while_held
 
 
 # COVERS: FR-6.3 | property
@@ -444,10 +441,12 @@ def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> No
     config_path.write_text(f'voice: af_heart\nplayer: "{player}"\n', encoding="utf-8")
     service = Service(
         config=load_config(config_path),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
         generator=generator,
-        config_path=config_path,
+        workspace=Workspace(
+            work_dir=tmp_path / "work",
+            log_path=tmp_path / "log",
+            config_path=config_path,
+        ),
     )
     service.start()
     try:
@@ -521,9 +520,8 @@ def test_a_substitution_does_not_reach_the_log(
     work = tmp_path / "work"
     service = Service(
         config=Config(player=_player_that("true", tmp_path), substitutions=entries),
-        work_dir=work,
-        log_path=tmp_path / "log",
         generator=generator,
+        workspace=Workspace(work_dir=work, log_path=tmp_path / "log"),
     )
     service.start()
     work.rmdir()
@@ -594,9 +592,8 @@ def test_a_stalled_loop_stops_looking_like_progress(
     """
     service = Service(
         config=Config(player=_player_that("true", tmp_path)),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
         generator=generator,
+        workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
     )
 
     service.submit("silo", ["never spoken"])

@@ -70,7 +70,8 @@ An id is never reused. `docs/REQUIREMENTS/README.md` lists the retired ones.
 
     systemd   ~/.config/systemd/user/skid.{socket,service}
               socket-activated at $XDG_RUNTIME_DIR/skid/skid.sock, mode 0600
-    tool      uv tool install --editable, giving skid, skid-mcp, skid-install
+    tool      uv tool install --editable, giving skid, skid-mcp, skid-say
+              and skid-install
     client    claude mcp add --scope user skid -- skid-mcp
 
 `skid` is the service: one process, one warm model, six Flask routes served by
@@ -190,6 +191,21 @@ The Rust build prints the result path and nothing else, by its FR-10.3, so there
 is no summary line to misread. `bolt.go` prints one and it counts every
 execution rather than the failures, labelled with the run's verdict, so the same
 gate prints `failed: 23` red and `passed: 23` green.
+
+**The gate is wired by symlinks that are deliberately not tracked**, because
+they point at `../../toolbox/` and would be dangling links in anybody's clone.
+`.gitignore` holds them out and `bolt.skid.definitions.yaml`, which is skid's
+own, is tracked. A fresh checkout makes them:
+
+    ln -s ../../toolbox/bin/test-traceability.py bin/
+    ln -s ../../toolbox/bin/suppression-register.py bin/
+    ln -s ../toolbox/bolt.common-quality.yaml .
+    ln -s ../toolbox/bolt.python-std-quality.yaml .
+    ln -s ../toolbox/bolt.secrets.yaml .
+    mkdir -p adapters/common && ln -s ../../../toolbox/adapters/common/bolt-result.py adapters/common/
+
+The last two are what the common jig started needing when it composed the
+secrets jig rather than copying it.
 
 The common jig needs three things it does not state: `--definitions` before the
 positionals, `bolt.skid.definitions.yaml` pointing `requirements` at

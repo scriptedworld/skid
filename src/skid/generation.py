@@ -171,7 +171,11 @@ class Generator:
             raise GenerationFailed(f"could not render {text!r}: {exc}") from exc
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        with wave.open(str(path), "wb") as out:
+        # `Wave_write` rather than `wave.open(..., "wb")`: both are public, and
+        # naming the class says which of the overload's two return types this
+        # is, which a reader and a checker otherwise have to infer from a mode
+        # string.
+        with wave.Wave_write(str(path)) as out:
             out.setnchannels(1)
             out.setsampwidth(2)
             out.setframerate(SAMPLE_RATE)

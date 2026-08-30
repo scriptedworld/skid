@@ -27,7 +27,7 @@ from flask.testing import FlaskClient
 from skid.client import Backend
 from skid.config import Config
 from skid.routes import build_app
-from skid.service import Service
+from skid.service import Service, Workspace
 
 
 @pytest.fixture(name="config_path")
@@ -45,9 +45,11 @@ def service_fixture(tmp_path: Path, config_path: Path) -> Iterator[Service]:
 
     built = Service(
         config=Config(player=f"{script} {{file}}"),
-        work_dir=tmp_path / "work",
-        log_path=tmp_path / "log",
-        config_path=config_path,
+        workspace=Workspace(
+            work_dir=tmp_path / "work",
+            log_path=tmp_path / "log",
+            config_path=config_path,
+        ),
     )
     yield built
     built.stop()

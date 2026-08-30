@@ -85,14 +85,10 @@ def _kind_of(raw: object) -> Kind:
     return "regex" if raw == "regex" else "literal"
 
 
-def build_operations(
+def _speech_operations(
     service: Service, config_path: Path
 ) -> dict[str, Callable[[dict[str, Any]], Any]]:
-    """The six operations, each taking its arguments and returning its answer.
-
-    Raising `Refused` is how a bad value is reported, so neither surface has to
-    know how the other reports one.
-    """
+    """The operations that make skid talk, or report on talking."""
 
     def speak(body: dict[str, Any]) -> str:
         """Queue an array. Returns once it is on disk, not once it is heard.
@@ -118,6 +114,18 @@ def build_operations(
         config.voice = voice
         save_config(config, config_path)
         return f"voice is now {voice}"
+
+    def status(_: dict[str, Any]) -> dict[str, object]:
+        """Queue depth, recent failures, and the voice in use."""
+        return service.status()
+
+    return {"speak": speak, "set_voice": set_voice, "status": status}
+
+
+def _substitution_operations(
+    config_path: Path,
+) -> dict[str, Callable[[dict[str, Any]], Any]]:
+    """The operations that correct how a word is said."""
 
     def add_substitution(body: dict[str, Any]) -> str:
         """Add an entry at the end of the set, refusing one that will not compile.
@@ -164,51 +172,57 @@ def build_operations(
             for entry in load_config(config_path).substitutions
         ]
 
-    def status(_: dict[str, Any]) -> dict[str, object]:
-        """Queue depth, recent failures, and the voice in use."""
-        return service.status()
-
-    written = {
-        "speak": speak,
-        "set_voice": set_voice,
+    return {
         "add_substitution": add_substitution,
         "remove_substitution": remove_substitution,
         "list_substitutions": list_substitutions,
-        "status": status,
     }
 
-    def validated(tool: str, operation: Callable[[dict[str, Any]], Any]) -> Any:
-        """Wrap one operation so its arguments are checked before it runs.
 
-        Every caller goes through this, so the plain routes and the MCP endpoint
-        are held to the same contract, and it is the contract `tools/list`
-        publishes rather than a second one written for display.
+def _validated(tool: str, operation: Callable[[dict[str, Any]], Any]) -> Any:
+    """Wrap one operation so its arguments are checked before it runs.
 
-        `wrench.ValidationError`, which is what the file loaders raise for the
-        same failure, so one class covers a refused call and a refused file
-        alike. It derives from `wrench.Error` and not from `ValueError`: a
-        schema failure can be a wrong value or a wrong type, and `ValueError`
-        excludes the second by definition, so it is a subclass of neither.
+    Every caller goes through this, so the plain routes and the MCP endpoint are
+    held to the same contract, and it is the contract `tools/list` publishes
+    rather than a second one written for display.
 
-        `wrench.SchemaError` is deliberately not caught. `validate` raises it
-        for a document that will not compile or a reference it cannot resolve,
-        which is a broken schema here rather than a bad argument from a caller,
-        and 500 is the honest answer. That is why only the validate call sits
-        inside the try.
-        """
+    `wrench.ValidationError` is what the file loaders raise for the same
+    failure, so one class covers a refused call and a refused file alike. It
+    derives from `wrench.Error` and not from `ValueError`: a schema failure can
+    be a wrong value or a wrong type, and `ValueError` excludes the second by
+    definition, so it is a subclass of neither.
 
-        def checked(body: dict[str, Any]) -> Any:
-            try:
-                COMPILED[tool].validate(body)
-            except wrench.ValidationError as exc:
-                raise Refused(str(exc)) from exc
-            return operation(body)
+    `wrench.SchemaError` is deliberately not caught. `validate` raises it for a
+    document that will not compile or a reference it cannot resolve, which is a
+    broken schema here rather than a bad argument from a caller, and 500 is the
+    honest answer. That is why only the validate call sits inside the try.
+    """
 
-        checked.__name__ = tool
-        checked.__doc__ = operation.__doc__
-        return checked
+    def checked(body: dict[str, Any]) -> Any:
+        try:
+            COMPILED[tool].validate(body)
+        except wrench.ValidationError as exc:
+            raise Refused(str(exc)) from exc
+        return operation(body)
 
-    return {tool: validated(tool, call) for tool, call in written.items()}
+    checked.__name__ = tool
+    checked.__doc__ = operation.__doc__
+    return checked
+
+
+def build_operations(
+    service: Service, config_path: Path
+) -> dict[str, Callable[[dict[str, Any]], Any]]:
+    """The six operations, each taking its arguments and returning its answer.
+
+    Raising `Refused` is how a bad value is reported, so neither surface has to
+    know how the other reports one.
+    """
+    written = {
+        **_speech_operations(service, config_path),
+        **_substitution_operations(config_path),
+    }
+    return {tool: _validated(tool, call) for tool, call in written.items()}
 
 
 def _body() -> dict[str, Any]:
@@ -272,26 +286,57 @@ def build_app(service: Service, config_path: Path) -> Flask:
     for tool, (method, path) in ROUTES.items():
         app.add_url_rule(path, view_func=route_for(tool), methods=[method])
 
-    def _tool_call(request_id: Any, params: dict[str, Any]) -> dict[str, Any]:
-        """Run one tool for an older shim and answer in MCP's own shape."""
-        name = str(params.get("name", ""))
-        if name not in operations:
-            return _failure(request_id, METHOD_NOT_FOUND, f"no such tool: {name}")
-        arguments = params.get("arguments") or {}
-        try:
-            answer = operations[name](arguments)
-        except Refused as exc:
-            return _reply(
-                request_id,
-                {"content": [{"type": "text", "text": str(exc)}], "isError": True},
-            )
+    _legacy_mcp_route(app, operations)
+    return app
+
+
+def _tool_call(
+    operations: dict[str, Callable[[dict[str, Any]], Any]],
+    request_id: Any,
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    """Run one tool for an older shim and answer in MCP's own shape."""
+    name = str(params.get("name", ""))
+    if name not in operations:
+        return _failure(request_id, METHOD_NOT_FOUND, f"no such tool: {name}")
+    try:
+        answer = operations[name](params.get("arguments") or {})
+    except Refused as exc:
         return _reply(
-            request_id, {"content": [{"type": "text", "text": _as_text(answer)}]}
+            request_id,
+            {"content": [{"type": "text", "text": str(exc)}], "isError": True},
         )
+    return _reply(request_id, {"content": [{"type": "text", "text": _as_text(answer)}]})
+
+
+def _tools_listing(
+    operations: dict[str, Callable[[dict[str, Any]], Any]],
+) -> dict[str, Any]:
+    """The tool surface an older shim asks for, derived from `skid.tools`."""
+    return {
+        "tools": [
+            {
+                "name": tool,
+                "description": (operations[tool].__doc__ or "").strip(),
+                "inputSchema": SCHEMAS[tool],
+            }
+            for tool in ROUTES
+        ]
+    }
+
+
+def _legacy_mcp_route(
+    app: Flask, operations: dict[str, Callable[[dict[str, Any]], Any]]
+) -> None:
+    """Serve MCP to a shim that predates the move, holding no session.
+
+    Retire this once nothing predating the move is running. The drift test in
+    `tests/test_routes.py` names the route, so removing it is noticed.
+    """
 
     @app.post(LEGACY_ENDPOINT)
     def legacy_mcp() -> Response | tuple[Response, int]:
-        """Serve MCP to a shim that predates the move, holding no session.
+        """Answer one JSON-RPC request, or accept a notification.
 
         A notification has no id and gets 202, because JSON-RPC forbids
         answering one and nothing is waiting on it.
@@ -315,25 +360,10 @@ def build_app(service: Service, config_path: Path) -> Flask:
                 )
             )
         if method == "tools/list":
-            return jsonify(
-                _reply(
-                    request_id,
-                    {
-                        "tools": [
-                            {
-                                "name": tool,
-                                "description": (operations[tool].__doc__ or "").strip(),
-                                "inputSchema": SCHEMAS[tool],
-                            }
-                            for tool in ROUTES
-                        ]
-                    },
-                )
-            )
+            return jsonify(_reply(request_id, _tools_listing(operations)))
         if method == "tools/call":
-            return jsonify(_tool_call(request_id, body.get("params") or {}))
+            params = body.get("params") or {}
+            return jsonify(_tool_call(operations, request_id, params))
         if method == "ping":
             return jsonify(_reply(request_id, {}))
         return jsonify(_failure(request_id, METHOD_NOT_FOUND, f"unsupported: {method}"))
-
-    return app

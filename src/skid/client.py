@@ -121,15 +121,8 @@ class Backend:
         return found if isinstance(found, dict) else {}
 
 
-def build_server(backend: Backend) -> MCPServer:
-    """Build the MCP server over a backend, declaring the six tools.
-
-    The schemas are derived from these signatures, so the arguments a client
-    sees and the arguments sent to the service are one declaration. What each
-    route is, is `skid.tools`; what each tool means is here; what it does is the
-    service's.
-    """
-    server = MCPServer("skid")
+def _speech_tools(server: MCPServer, backend: Backend) -> None:
+    """Register the tools that make skid talk or report on talking."""
 
     @server.tool()
     def speak(name: str, messages: list[str]) -> str:
@@ -148,6 +141,20 @@ def build_server(backend: Backend) -> MCPServer:
         stored bad voice fails every later submission and survives a restart.
         """
         return str(backend.call("set_voice", voice=voice))
+
+    @server.tool()
+    def status() -> dict[str, Any]:
+        """Queue depth, recent failures, and the voice in use.
+
+        `speak` returns at queue time, so a caller that wants to know whether
+        anything was actually heard asks here. A person reads the log instead.
+        """
+        reported = backend.call("status")
+        return dict(reported) if reported else {}
+
+
+def _substitution_tools(server: MCPServer, backend: Backend) -> None:
+    """Register the tools that correct how a word is said."""
 
     @server.tool()
     def add_substitution(pattern: str, replacement: str, kind: str = "literal") -> str:
@@ -181,16 +188,18 @@ def build_server(backend: Backend) -> MCPServer:
         listed = backend.call("list_substitutions")
         return list(listed) if listed else []
 
-    @server.tool()
-    def status() -> dict[str, Any]:
-        """Queue depth, recent failures, and the voice in use.
 
-        `speak` returns at queue time, so a caller that wants to know whether
-        anything was actually heard asks here. A person reads the log instead.
-        """
-        reported = backend.call("status")
-        return dict(reported) if reported else {}
+def build_server(backend: Backend) -> MCPServer:
+    """Build the MCP server over a backend, declaring the six tools.
 
+    The schemas are derived from the tool signatures, so the arguments a client
+    sees and the arguments sent to the service are one declaration. What each
+    route is, is `skid.tools`; what each tool means is in the two registrars
+    above; what it does is the service's.
+    """
+    server = MCPServer("skid")
+    _speech_tools(server, backend)
+    _substitution_tools(server, backend)
     return server
 
 
