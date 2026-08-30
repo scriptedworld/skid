@@ -1,7 +1,7 @@
 # skid, the test plan
 
-Which test discharges which requirement, and its kind. Stage 3 of
-`silo/docs/PATTERNS/how-a-change-gets-made.md`.
+Which test discharges which requirement, and its kind. Written after the
+requirements and the spec, and before the tests.
 
 Derived from `docs/REQUIREMENTS/`, not from `docs/SPEC.md`. Where a row is
 awkward to test, the awkwardness is named rather than the row skipped.
@@ -257,8 +257,8 @@ test sees the other's failure.
 **FR-10.9 has nothing to break, and that is recorded rather than hidden.** A
 table built fresh holds nothing by construction, so no mutation of the source
 can make it hold something. It sits with FR-1.8 and FR-7.9 as a row the suite
-cannot distinguish, which `clank/tasks/skid/traceability/40` tracks. The other
-eight FR-10 rows were probed by mutation on 2026-08-30 and all eight caught it.
+cannot distinguish. The other eight FR-10 rows were probed by mutation and all
+eight caught it.
 
 ### Saying it right
 
@@ -340,7 +340,7 @@ torch, transformers and numpy are still in it.
 It fails on the day kokoro becomes a thin wrapper over a compiled runtime, which
 is the day the choice of language is worth re-examining rather than inheriting.
 Same file and same shape as FR-1.7's test; both are tripwires on an external
-premise. Ruled at `clank/tasks/skid/traceability/20`.
+premise.
 
 ## What this plan does not cover, and why
 

@@ -1,14 +1,11 @@
 # What a requirement file carries
 
-**The decision lives in `silo/docs/DECISIONS/what-a-requirement-file-carries.md`,
-where it binds every repository.** Read it there. A full copy here would be a
-second statement free to drift from it.
+The general shape of a requirement file is not skid's to state: it was settled
+here first, because skid migrated first and the shape had to be something, and
+then promoted to where it binds every project. A full copy would be a second
+statement free to drift from that one.
 
-It was decided in skid on 2026-08-27, because skid migrated first and the shape
-had to be something. silo verified it and promoted it at `92e93df`, against
-skid `f8c5660`.
-
-What is skid's own rather than the estate's:
+What follows is skid's own part rather than the general rule:
 
 - `docs/REQUIREMENTS/README.md` carries the preamble the retired
   `REQUIREMENTS.md` held, the status markers and what each category covers. The
@@ -37,5 +34,5 @@ in the README rather than in the category directory it left means the directory
 holds only live rows, so concatenating the tree reproduces exactly what the
 checker parses.
 
-Filed to silo at `clank/inbox/silo/where-the-retired-requirement-record-lives`,
-because the open question is theirs to close.
+Where the retired record belongs is an open question for the general rule rather
+than for skid, and it is filed as one.
