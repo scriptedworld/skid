@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.3 | The lock covers **playback alone**. Generation runs ahead of the speaker without taking it, and without a bound on how far ahead it runs. | [A] |
 
-Settled 2026-08-27. The id is the one the open question carried, because closing
+Settled at the id the open question carried, because closing
 a question is a decision against a row that already exists.
 
 Covering generation as well would satisfy FR-2.1 and destroy FR-4.2, and it

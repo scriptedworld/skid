@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.9 | Substitutions are **global**. One set applies whatever name submitted the text. | [A] |
 
-Settled 2026-08-27, at the id the open question carried.
+Settled at the id the open question carried.
 
 A word kokoro says wrongly is a property of kokoro rather than of who sent the
 word, so a correction any caller makes helps every caller.

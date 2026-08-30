@@ -7,6 +7,5 @@
 FR-7.5 names the player: `paplay` by default, and a user-defined one declared as
 a command line.
 
-FACT 2026-08-27, `command -v`: `paplay` (`/usr/bin/pacat`), `aplay` and
-`pw-play` (`/usr/bin/pw-cat`) are present. `ffplay`, `mpv` and `espeak-ng` are
-not.
+On this machine `command -v` finds `paplay` (`/usr/bin/pacat`), `aplay` and
+`pw-play` (`/usr/bin/pw-cat`), and does not find `ffplay`, `mpv` or `espeak-ng`.

@@ -13,11 +13,11 @@ Hearing which agent is saying what, without reading. Every submission carries
 the name of the engine that sent it, and a name quiet for a while announces
 itself once before its next message.
 
-**Generate a file, run a player.** skid never opens an audio device, selects
-one, mixes or sets a volume. The operating system does all four better, and the
-failure surface this buys is a missing player and a bad file.
+It generates a file and runs a player. skid never opens an audio device,
+selects one, mixes or sets a volume, because the operating system does all four
+better, and the failure surface this buys is a missing player and a bad file.
 
-**No overlap, ever.** Two agents speaking over each other is worse than either
+Nothing ever overlaps. Two agents speaking over each other is worse than either
 waiting.
 
 ## Layout
@@ -99,9 +99,9 @@ went into a restart loop on `ModuleNotFoundError: No module named 'waitress'`.
 That is the deploy step whenever a dependency changed. `.venv` passing says
 nothing about it, because they are two environments.
 
-**Say you are deploying before you restart.** It is a courtesy rather than a
-rescue now: a restart costs a connection refused for as long as the service
-takes to come back, and every client reconnects on its next call.
+Say you are deploying before you restart. It is a courtesy rather than a rescue
+now: a restart costs a connection refused for as long as the service takes to
+come back, and every client reconnects on its next call.
 
 **The wedge is gone rather than handled**, as of 2026-08-28. It existed because
 MCP over HTTP kept a session id in the service's memory: a restart forgot it,
@@ -110,19 +110,19 @@ id to its request waited until its harness gave up at 1800 seconds with no
 diagnosis. No session id exists on either side now, so nothing can go stale.
 FR-5.3 and `clank/tasks/skid/resilience/40` carry the detail.
 
-**`/mcp` is still served, and it is a compatibility route rather than a tool.**
-Deleting it reintroduced the wedge by a new road: a `skid-mcp` from before the
-move posts there, Flask answered 404 with an HTML page, and an HTML page is not
-a JSON-RPC message either, so the client waited exactly as before. Measured on
-the live socket after the first deploy: a `status()` call still outstanding at
-120 seconds.
+`/mcp` serves the protocol to a `skid-mcp` that predates the move, and holds no
+session. It answers `initialize`, `tools/list`, `tools/call` and `ping`, returns
+a JSON-RPC method-not-found for anything else, and returns 202 to a
+notification, which has no id and which JSON-RPC forbids answering. The tools it
+publishes come from `skid.tools`, so it cannot drift from the plain routes.
 
-It now answers 200 with a JSON-RPC error carrying the request's own id and a
-message saying to clear the session. 200 rather than 404 deliberately, so a shim
-that reads 404 as a lost session does not reconnect into the same wall.
+Deleting it once reintroduced the wedge by a new road. An old shim posted there,
+Flask answered 404 with an HTML page, and an HTML page is not a JSON-RPC message
+either, so the client waited exactly as before: a `status()` call was still
+outstanding at 120 seconds on the live socket.
 
-**Retire it once no pre-move `skid-mcp` is running**, which happens on its own
-as sessions clear. `pgrep -af skid-mcp` counts them; the drift test in
+Retire it once no pre-move `skid-mcp` is running, which happens on its own as
+sessions clear. `pgrep -af skid-mcp` counts them, and the drift test in
 `tests/test_routes.py` names the route, so removing it is a change something
 notices.
 
@@ -236,12 +236,11 @@ answer. No test imports `subprocess`.
 
 ## What is decided
 
-**The output path**, in full: file, subprocess, default device, no direct
-access. The part least worth reopening.
+The output path, in full: file, subprocess, default device, no direct access.
+The part least worth reopening.
 
-**The concurrency shape.** The lock covers playback alone, so generation runs
-ahead of the speaker, unbounded. A submission arriving while another plays
-queues.
+The lock covers playback alone, so generation runs ahead of the speaker,
+unbounded, and a submission arriving while another plays queues.
 
 **The watchdog measures progress, not liveness**, `WatchdogSec=120`. skid pings
 only while the serve loop is getting somewhere, and withholding the ping is the

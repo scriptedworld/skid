@@ -19,7 +19,7 @@ was right and the change was right.
 With nothing at `/mcp`, Flask answered a 404 with an **HTML error page**.
 
 An HTML page is no more matchable to a pending JSON-RPC request than a null id
-is. Every already-running client waited exactly as before. FACT: a `status()`
+is. Every already-running client waited exactly as before. A `status()`
 call was still outstanding at 120 seconds when I killed it.
 
 **The defect was never "a session id goes stale".** It was "answer a waiting
@@ -33,7 +33,7 @@ unblocked every caller, and I recorded it as fixed.
 
 It was half a fix. The callers were unblocked **and still could not speak**,
 because an MCP stdio server is spawned once at session start and lives as long
-as the session. FACT: shims running from 02:06 through 10:48, up to eleven hours
+as the session. Shims were running from 02:06 through 10:48, up to eleven hours
 old. Only the person holding a session can restart it, so "fail cleanly" left
 every agent mute until a human intervened.
 
@@ -60,7 +60,7 @@ error is the right outcome for a caller that can retry or a person who can act.
 For a long-lived process nobody can respawn, it is a better-labelled outage.
 
 **I predicted the clean failure out loud and deployed on it.** I traced the old
-recovery path, concluded old shims would report an error, said so to our user,
+recovery path, concluded old shims would report an error, said so out loud,
 and was wrong within a minute of the restart. The trace was of the code I had
 just deleted; the path that actually ran was Flask's default 404 handler, which
 I had not looked at because it was not code anybody wrote.

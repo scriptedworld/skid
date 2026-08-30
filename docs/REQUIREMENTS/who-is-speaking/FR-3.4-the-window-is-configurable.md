@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-3.4 | `x` is configurable. Its default is 30 seconds. | [A] |
 
-The default is FR-7.4, settled 2026-08-27, which also fixes what the window is
+The default is FR-7.4, which also fixes what the window is
 measured from.
 
 Configurable by which route is not stated. FR-6.1 and FR-6.2 give the voice both
