@@ -83,9 +83,10 @@ There has been no release and no tag. skid runs as a service and is used daily,
 and these are the things a stranger would otherwise find out by running it:
 
 - it cannot be installed from a standalone clone, which is the blocker below;
-- `set_voice` accepts a voice kokoro names but cannot render on your machine,
-  writes it to the config, and then everything fails quietly until you edit the
-  file back by hand;
+- `set_voice` accepts any of kokoro's 54 voice names, including the thirteen
+  Japanese and Chinese ones a standard install cannot render, writes it to the
+  config, and then everything fails quietly until you edit the file back by
+  hand;
 - Linux only, and the pronunciation substitutions have been designed rather
   than worn in;
 - the MCP path is going to change: a forwarder that holds no connection to the
