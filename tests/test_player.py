@@ -8,6 +8,7 @@ Nothing here is a double: FR-7.5 makes the player a command line on purpose, and
 that is the seam.
 """
 
+import threading
 import time
 from pathlib import Path
 
@@ -70,13 +71,23 @@ def test_two_clips_never_overlap(tmp_path: Path) -> None:
     Simultaneity cannot be heard by a suite. What is observable is that the
     player process is never running twice at once, which the recording script
     reports by timestamping its start and its end.
+
+    **Three threads rather than `play_all`, and that is the whole test.**
+    `play_all` is a loop in one thread, so the alternation it produces holds
+    whether or not a lock exists: this test asserted it that way and passed
+    against a `Player` with `self._lock` removed entirely. Concurrent callers
+    are what make the lock load-bearing.
     """
     log = tmp_path / "log"
     player = Player(command=_recording_player(tmp_path / "player.sh", log))
     clip = tmp_path / "clip.wav"
     clip.write_bytes(b"x")
 
-    player.play_all([clip, clip, clip])
+    callers = [threading.Thread(target=player.play, args=(clip,)) for _ in range(3)]
+    for caller in callers:
+        caller.start()
+    for caller in callers:
+        caller.join(timeout=30)
 
     events = [
         line.split() for line in log.read_text(encoding="utf-8").split("\n") if line
