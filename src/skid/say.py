@@ -31,9 +31,7 @@ import argparse
 import json
 import sys
 
-import httpx
-
-from skid.client import HOST, TIMEOUT, Backend, Unreachable, socket_path
+from skid.client import Backend, Unreachable, socket_path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -73,11 +71,9 @@ def main(argv: list[str] | None = None) -> int:
     process's, which is the whole seam and it costs nothing.
     """
     arguments = build_parser().parse_args(argv)
-    path = socket_path()
-    transport = httpx.HTTPTransport(uds=str(path))
-    with httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT) as http:
+    with Backend.over_socket(socket_path()) as backend:
         try:
-            print(run(Backend(http, path), arguments))
+            print(run(backend, arguments))
         except Unreachable as exc:
             print(f"skid-say: {exc}", file=sys.stderr)
             return 1

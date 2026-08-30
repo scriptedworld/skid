@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import httpx
 from mcp.server.mcpserver import MCPServer
@@ -83,6 +83,30 @@ class Backend:
         """Take the client and the socket path, which is only used in messages."""
         self._http = http
         self._path = path
+
+    @classmethod
+    def over_socket(cls, path: Path) -> Backend:
+        """A backend over the unix socket skid listens on.
+
+        Both entry points spelled this out, and the four lines were the same in
+        each. A test builds one directly instead, over a WSGI transport, which
+        is why the plain constructor stays.
+        """
+        transport = httpx.HTTPTransport(uds=str(path))
+        client = httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT)
+        return cls(client, path)
+
+    def close(self) -> None:
+        """Close the client, where this backend was the one that opened it."""
+        self._http.close()
+
+    def __enter__(self) -> Self:
+        """Usable as a context manager, so a caller need not track the client."""
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Close on the way out, whatever happened inside."""
+        self.close()
 
     def call(self, tool: str, **arguments: Any) -> Any:
         """Make one request for `tool` and return what the service answered.
@@ -205,10 +229,8 @@ def build_server(backend: Backend) -> MCPServer:
 
 def main() -> int:
     """Serve MCP on this process's stdio, reaching the service over the socket."""
-    path = socket_path()
-    transport = httpx.HTTPTransport(uds=str(path))
-    with httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT) as http:
-        build_server(Backend(http, path)).run("stdio")
+    with Backend.over_socket(socket_path()) as backend:
+        build_server(backend).run("stdio")
     return 0
 
 
