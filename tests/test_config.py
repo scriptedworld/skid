@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 import wrench
 
+from skid.assignment import VoiceChoice
 from skid.config import Config, load_config, save_config
 from skid.substitution import Substitution
 
@@ -182,7 +183,9 @@ def test_the_sample_config_is_a_config_skid_can_read() -> None:
     means a key renamed in the schema and not in the sample fails the suite.
 
     Every value in it is a default, so the loaded config equals a default one
-    apart from the substitutions it demonstrates.
+    apart from the two lists it demonstrates. The voice entries show both forms
+    FR-10.7 allows, because a sample that only showed the common one would leave
+    the interesting field undocumented.
     """
     sample = CHECKOUT / "docs" / "config.sample.yaml"
 
@@ -196,7 +199,12 @@ def test_the_sample_config_is_a_config_skid_can_read() -> None:
                 pattern=r"\bFR-([0-9]+)\.([0-9]+)\b",
                 replacement=r"requirement \1 point \2",
             ),
-        ]
+        ],
+        voices=[
+            VoiceChoice(alias="Denise", voice="af_heart"),
+            VoiceChoice(alias="Marcus", voice="bm_daniel"),
+            VoiceChoice(alias="Wendy", voice="if_sara", pipeline="a"),
+        ],
     )
 
 
@@ -216,3 +224,84 @@ def test_a_config_skid_could_not_read_back_is_refused_on_write(
         save_config(Config(expiry_seconds=0), path)
 
     assert not path.exists()
+
+
+# COVERS: FR-10.1 | positive
+def test_the_voice_shortlist_loads_in_file_order(tmp_path: Path) -> None:
+    """File order is the order voices are handed out, so it is not ours to sort.
+
+    The same obligation FR-8.4 puts on substitutions, for the same reason: a
+    list a person wrote means what its order says.
+    """
+    path = _write(
+        tmp_path / "config.yaml",
+        "voices:\n"
+        "  - alias: Brian\n"
+        "    voice: am_echo\n"
+        "  - alias: Ashley\n"
+        "    voice: af_alloy\n",
+    )
+
+    config = load_config(path)
+
+    assert [choice.alias for choice in config.voices] == ["Brian", "Ashley"]
+
+
+# COVERS: FR-10.7 | positive
+def test_a_declared_pipeline_survives_a_read_and_a_write(tmp_path: Path) -> None:
+    """The field says which phonemiser was asked for, so it round-trips as written.
+
+    An entry that named one keeps it and an entry that did not still has none.
+    Defaulting it on the way out would turn a deliberate choice into an accident
+    of the voice id, and the two are the whole difference FR-10.7 exists for.
+    """
+    path = tmp_path / "config.yaml"
+    save_config(
+        Config(
+            voices=[
+                VoiceChoice(alias="Wendy", voice="if_sara", pipeline="a"),
+                VoiceChoice(alias="Ashley", voice="af_alloy"),
+            ]
+        ),
+        path,
+    )
+
+    config = load_config(path)
+
+    assert config.voices[0].pipeline == "a"
+    assert config.voices[1].pipeline is None
+
+
+# COVERS: FR-10.8 | negative
+def test_two_voices_sharing_an_alias_are_refused(tmp_path: Path) -> None:
+    """An ambiguous alias is one nothing about either row looks wrong for.
+
+    Refused by name rather than by position, because the message is the only
+    thing that tells a person which two rows to look at.
+    """
+    path = _write(
+        tmp_path / "config.yaml",
+        "voices:\n"
+        "  - alias: Ashley\n"
+        "    voice: af_alloy\n"
+        "  - alias: Ashley\n"
+        "    voice: am_echo\n",
+    )
+
+    with pytest.raises(ValueError, match="Ashley"):
+        load_config(path)
+
+
+# COVERS: FR-10.5 | positive
+def test_the_assignment_window_is_configurable(tmp_path: Path) -> None:
+    """Six hours is a default rather than a constant, so a file can argue with it.
+
+    Asserted against a value that is not the default in either direction, so a
+    read that ignored the file would fail rather than coincide with it.
+    """
+    path = _write(tmp_path / "config.yaml", "assignment_window_seconds: 900\n")
+
+    assert load_config(path).assignment_window_seconds == 900
+    assert (
+        load_config(tmp_path / "absent.yaml").assignment_window_seconds == 6 * 60 * 60
+    )

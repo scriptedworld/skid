@@ -204,6 +204,57 @@ name that then says nothing.
 
 *Discharges FR-3.2, FR-3.3, FR-3.4, FR-3.5, FR-3.6, FR-7.4.*
 
+### Assignment
+
+The backend holds, per name, which voice it speaks in and when its last clip
+finished. In memory only, like the greeting table and for the same reason: a
+restart costs one reassignment, and every voice on the shortlist was chosen by
+ear, so no entry is a worse outcome than another.
+
+**The pool is the config's `voices` list and nothing else.** An empty list means
+assignment is off and the single `voice` setting speaks for everybody, which is
+how skid behaved before this existed and is what an unconfigured machine gets.
+
+**A name is given a voice the first time it speaks and keeps it.** Expired
+assignments are released first, so a name arriving after a long quiet spell can
+be handed something that has just come free rather than doubling up on a voice
+still in use. Unheld voices go out in file order.
+
+**When every voice is held, the one whose last clip is oldest goes out again.**
+Assignment never refuses and never falls back to a single default, because
+overflow names all sounding like the default is a larger collision than two
+names sharing one voice. Two sessions using one name already share a voice, so
+this reaches an accepted outcome by another road.
+
+**The window is six hours, refreshed at the end of every clip.** Measured from
+speech rather than from submission for the reason the greeting is: what a
+listener experienced is when the clip finished. Until a name has spoken it runs
+from when the voice was assigned, which is seconds earlier.
+
+**A voice may name the pipeline it is generated through.** A kokoro voice is a
+speaker and a pipeline is a phonemiser, and the two are separable; omitting it
+means the code the voice id's first letter implies. That is what puts `if_sara`
+on the list as an English speaker with an Italian accent rather than as an
+Italian phonemiser reading English badly.
+
+**Pipelines are cached rather than dropped on a change, and share one model.**
+Assignment moves between voices on most submissions, so rebuilding each time
+would pay model start-up constantly. The first pipeline built creates the model
+and every later one is handed the same instance, so the cache costs a front end
+rather than a second 1.6 GB.
+
+**The assignment is applied at the top of the generation thread**, before any
+clip is made, so a whole submission including its greeting is one voice. That
+code cannot be allowed to raise: the thread signals completion by putting a
+sentinel on the queue playback is blocked reading, so an exception before the
+loop would leave playback waiting forever. A voice the config names and kokoro
+does not know is recorded as a failure and stepped over.
+
+`status` reports the current map as `assigned`, name to alias, which is how a
+person asks who sounds like whom rather than working it out by listening.
+
+*Discharges FR-10.1 through FR-10.9.*
+
 ### Substitution
 
 **One left-to-right scan.** At each position the entries are tried in file

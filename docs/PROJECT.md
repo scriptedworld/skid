@@ -22,8 +22,8 @@ waiting.
 
 ## Layout
 
-    src/skid/           config, generation, greeting, player, spool,
-                        substitution, then service, routes and client.
+    src/skid/           config, generation, greeting, assignment, player,
+                        spool, substitution, then service, routes and client.
                         tools.py is the route declaration both processes
                         derive from, and imports neither of them.
                         install.py stands apart: stdlib only, so it can run
@@ -44,7 +44,7 @@ waiting.
 `silo/docs/DECISIONS/requirements-are-a-directory.md`. Each row is kept
 verbatim, so concatenating the tree reproduces the document the checker parses.
 
-**62 rows, none open, 62 with a test citing them, and every test citing a row.**
+**71 rows, none open, 71 with a test citing them, and every test citing a row.**
 Both directions, and the `traceability` task exits 0:
 
     python3 bin/test-traceability.py --requirements docs/REQUIREMENTS .
@@ -215,31 +215,35 @@ The two jigs fail differently.
 
 `bolt python-std-quality .`:
 
-    analyse    pylint rates skid 9.59/10, and the findings are skid's own,
-               mostly redefined-outer-name from pytest fixtures
-    cognitive  complexipy, over the tree rather than the files skid checks
+    analyse    pylint rates skid 10.00/10 and still exits non-zero, on one
+               finding: the lazy kokoro import in generation.py
     tests      coverage runs from PATH's python 3.14.7, which cannot import
                skid's dependencies
     types      mypy, the same
+
+`analyse` is the one that is skid's rather than toolbox's, and clearing it needs
+a registered suppression, which `CLAUDE.md` rule 4 puts in a person's hands. The
+import cannot move to the top without loading torch at module import, which
+breaks FR-5.1 and the stdlib-only chain `install.py` depends on.
 
 The last two are one defect and it is toolbox's: the jig runs Python tools from
 PATH, and skid's dependencies live in a 3.12 virtualenv because kokoro's
 metadata declares `<3.13`. Filed at `clank/tasks/toolbox/jig-validation/30`.
 
-`bolt --definitions skid common-quality .`:
+**`bolt --definitions skid common-quality .` is green.** All four tasks pass:
+`complexity`, `secrets`, `suppressions` and `traceability`. Measured 2026-08-30
+at `success: true`, which is the verdict in `result.yaml` and not the exit
+status.
 
-    complexity     5 functions over lizard's 60-line length bound
-
-`suppressions` and `traceability` pass. The register's index rows have to spell
+The register's index rows have to spell
 the pragma as the source does, because the checker reads them with the same
 patterns it scans the source with; a row naming only the bandit rule is prose to
 it, and the marks behind it read as unregistered. `docs/SUPPRESSIONS.md` carries
 the format.
 
-**`complexity` is five length warnings and no complexity ones**, all `length >
-60` with cyclomatic complexity of 4 or less: `build_operations` and `build_app`
-in `routes.py`, `install_plan`, `build_server`, and `Service.__init__`. Three of
-the five are long because they are declaration blocks rather than logic.
+The length warnings that used to fail `complexity` are gone. `Service.__init__`
+was the last of them and went at `f1673a1`, when sixteen instance attributes
+became six.
 
 Locally, use the project interpreter:
 
@@ -299,6 +303,27 @@ It follows the default output device and works on PulseAudio and PipeWire alike.
 
 **A 30 second quiet window**, measured from the end of the last clip spoken for
 that name.
+
+**A voice per name, drawn from a shortlist in the config.** Decided 2026-08-30,
+every part of it first-hand. The key is the name `speak` already carries, so no
+session id comes back. A name keeps its voice while it keeps talking and loses
+it after six hours of quiet; when every voice is held the one silent longest is
+given out again, rather than refusing or falling back to one shared default. The
+voice sits alongside FR-3.2's spoken greeting rather than replacing it.
+
+The shortlist is 28 voices chosen by ear from samples, English only and both
+Englishes. Five of them are Spanish, French or Italian speakers carrying
+`pipeline: a`, which is the other half of the decision: a kokoro voice is a
+speaker and a pipeline is a phonemiser, they are separable, and skid used to
+weld them together by reading the voice id's first letter. Those five are on the
+list as English speakers with an accent.
+
+Each entry carries an `alias`, an ordinary first name matching the sex in the
+voice id. It is read and never spoken, so it only has to be distinguishable on
+the page. `status` reports the live map as `assigned`.
+
+`.ephemera/sample-every-voice.py` and `.ephemera/sample-english-adjacent.py`
+regenerate the samples the choice was made from.
 
 **The config file is the record**, for the voice and the substitutions alike. A
 setting made through an MCP tool is written through and survives a restart, and

@@ -31,6 +31,7 @@ omission: only `[?]` is exempt from needing a test that cites it.
     submission-shape      an array, prepared ahead, spoken in order
     warm                  the backend, and the MCP server
     voice-selection       two routes to one setting, and which is the record
+    a-voice-per-name      the shortlist, who gets which voice, and for how long
     saying-it-right       pronunciation substitutions
     putting-it-on-a-machine   what an install may write, what it checks first,
                               and what an uninstall takes back

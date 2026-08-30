@@ -14,8 +14,44 @@
 # A key skid does not recognise is REFUSED rather than ignored, so a typo tells
 # you at start-up instead of silently leaving the default in place.
 
-# Any kokoro voice.
+# Any kokoro voice. What everybody speaks in when `voices` below is empty, and
+# what `set_voice` sets.
 voice: af_heart
+
+# The shortlist skid assigns from, one voice per name that speaks.
+#
+# EMPTY MEANS OFF. With no entries here nobody is assigned anything and `voice`
+# above speaks for everybody, which is how skid behaved before this existed.
+#
+# alias is what a person calls the voice. It is never spoken: skid announces the
+# name of the calling agent, not this. It only has to be distinguishable on the
+# page, and no two entries may share one.
+#
+# pipeline is the kokoro phonemiser, and leaving it out means the one the voice
+# id's first letter implies, which is what you want for af_ and bm_ and the
+# rest. Naming it is for a voice you want speaking a language that is not its
+# own: if_sara through the Italian phonemiser reads English as an Italian would
+# read it aloud from a page, where if_sara through `a` speaks correct English in
+# an Italian accent. The second is usually the point.
+#
+# A voice assigned to a name is kept while that name keeps talking, and released
+# once it has been quiet for assignment_window_seconds. When every voice is
+# held, the one whose last clip is oldest is given out a second time.
+voices:
+  - alias: Denise
+    voice: af_heart
+
+  - alias: Marcus
+    voice: bm_daniel
+
+  - alias: Wendy
+    voice: if_sara
+    pipeline: a
+
+# Seconds of quiet after which a name loses its assigned voice and it returns to
+# the pool. Six hours: long, because losing a voice while a session is still
+# working is audible and holding one spare is not.
+assignment_window_seconds: 21600
 
 # The command that plays a clip. {file} is substituted with the path.
 # It must not return before the audio is inaudible, or the next clip overlaps.
