@@ -48,7 +48,7 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
     that removing it, which is expected once no old shim is running, makes this
     test the thing that notices.
     """
-    declared = {(method, path) for method, path in ROUTES.values()}
+    declared = set(ROUTES.values())
     served = {
         (method, str(rule))
         for rule in client.application.url_map.iter_rules()

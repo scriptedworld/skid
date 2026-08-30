@@ -60,29 +60,45 @@ class Clip:
     is_greeting: bool = False
 
 
+@dataclass(frozen=True)
+class Workspace:
+    """Where a service keeps its things.
+
+    Every path is a parameter and none defaults to a real location, so a test
+    points the whole service at a temporary directory. `install.Paths` is the
+    same idea for the installer.
+
+    The spool sits beside `work_dir` rather than inside it, because clips are a
+    cache and the queue is not: clearing one must not clear the other.
+    """
+
+    work_dir: Path
+    log_path: Path
+    config_path: Path | None = None
+
+
 class Service:
     """One long-lived service: takes submissions, speaks them in order."""
 
     def __init__(
         self,
         config: Config,
-        work_dir: Path,
-        log_path: Path,
+        workspace: Workspace,
         generator: Generator | None = None,
-        config_path: Path | None = None,
     ) -> None:
         """Compose the units. The generator is shared so the model stays warm."""
         self._config = config
-        self._work = work_dir
-        self._log_path = log_path
-        self._config_path = config_path
+        self._work = workspace.work_dir
+        self._log_path = workspace.log_path
+        self._config_path = workspace.config_path
         self._config_seen: float | None = None
         self._generator = generator or Generator(config.voice)
         self._player = Player(command=config.player)
 
         self._incoming: queue.Queue[object | None] = queue.Queue()
         self._spool = Spool(
-            work_dir.parent / "spool", ttl_seconds=float(config.expiry_seconds)
+            workspace.work_dir.parent / "spool",
+            ttl_seconds=float(config.expiry_seconds),
         )
         self._table = QuietTable()
         self._failures: list[str] = []

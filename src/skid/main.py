@@ -39,7 +39,7 @@ from flask import Flask
 from skid.config import default_config_path, load_config
 from skid.generation import Generator
 from skid.routes import build_app
-from skid.service import Service
+from skid.service import Service, Workspace
 
 LISTEN_FD = 3
 """The first file descriptor systemd passes, by its own convention."""
@@ -165,10 +165,12 @@ def build() -> tuple[Service, Flask]:
 
     service = Service(
         config=config,
-        work_dir=runtime_dir() / "clips",
-        log_path=state_dir() / "skid.log",
         generator=generator,
-        config_path=config_path,
+        workspace=Workspace(
+            work_dir=runtime_dir() / "clips",
+            log_path=state_dir() / "skid.log",
+            config_path=config_path,
+        ),
     )
     service.start()
     return service, build_app(service, config_path)

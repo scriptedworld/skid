@@ -107,62 +107,73 @@ class Paths:
         )
 
 
-def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
-    """The commands that take a checkout to a running socket, in order.
-
-    The socket is enabled and started; the service is not. Socket activation
-    means the first connection starts it, and starting it here would load the
-    model to prove an install worked, which is a minute of nothing for no
-    reason. `verify_plan` checks the socket instead, which is the property.
-
-    **A reinstall unregisters before it registers.** `claude mcp add` refuses a
-    name that is taken and does not update it, measured 2026-08-28, so an entry
-    pointing at the wrong command survives every re-run that only adds. Removing
-    first is what makes the registration match the checkout being installed
-    rather than whatever was installed first.
-
-    **The units are checked before anything is written**, because installing one
-    systemd will reject leaves a machine that looks installed and cannot start.
-    A unit file is data and a typo in it is not found until the day it is
-    loaded; `systemd-analyze verify` finds it now, and finds it on whichever
-    machine is being installed to rather than only on the one the tests ran on.
-    """
-    units = paths.checkout / "share" / "systemd" / "user"
-    verify_units = [
+def _unit_checks(source: Path) -> list[Step]:
+    """Ask systemd to accept each unit, before anything is written (FR-9.6)."""
+    return [
         Step(
             says=f"check systemd accepts {unit} before installing it",
-            argv=("systemd-analyze", "--user", "verify", str(units / unit)),
+            argv=("systemd-analyze", "--user", "verify", str(source / unit)),
         )
         for unit in UNITS
     ]
-    copies = [
+
+
+def _unit_copies(source: Path, destination: Path) -> list[Step]:
+    """Copy each unit to where `Paths` says, never to a location of its own."""
+    return [
         Step(
-            says=f"install {unit} into {paths.units}",
+            says=f"install {unit} into {destination}",
             argv=(
                 "install",
                 "-D",
                 "-m",
                 "0644",
-                str(units / unit),
-                str(paths.units / unit),
+                str(source / unit),
+                str(destination / unit),
             ),
         )
         for unit in UNITS
     ]
-    unregister = [
-        Step(
-            says=f"unregister {SERVER_NAME} first, because add will not replace it",
-            argv=("claude", "mcp", "remove", SERVER_NAME, "--scope", "user"),
-            tolerate=NO_SUCH_SERVER,
-        )
-    ]
+
+
+def _unregister() -> Step:
+    """Remove the registration, tolerating there being none (FR-9.10)."""
+    return Step(
+        says=f"unregister {SERVER_NAME} first, because add will not replace it",
+        argv=("claude", "mcp", "remove", SERVER_NAME, "--scope", "user"),
+        tolerate=NO_SUCH_SERVER,
+    )
+
+
+def _register() -> Step:
+    """Register at user scope, tolerating the name already being taken."""
+    return Step(
+        says=f"register {SERVER_NAME} with the MCP client, at user scope",
+        argv=("claude", "mcp", "add", "--scope", "user", SERVER_NAME, "--", "skid-mcp"),
+        tolerate=ALREADY_EXISTS,
+    )
+
+
+def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
+    """The commands that take a checkout to a running socket, in order.
+
+    The socket is enabled and started and the service is not. Socket activation
+    means the first connection starts it, and starting it here would load the
+    model to prove an install worked, which is a minute of nothing for no
+    reason. `verify_plan` checks the socket instead, which is the property.
+
+    A reinstall unregisters before it registers, because `claude mcp add`
+    refuses a name that is taken and does not update it, so an entry pointing at
+    the wrong command survives every re-run that only adds (FR-9.11).
+    """
+    source = paths.checkout / "share" / "systemd" / "user"
     return [
-        *verify_units,
+        *_unit_checks(source),
         Step(
             says=f"install skid as a uv tool from {paths.checkout}",
             argv=("uv", "tool", "install", "--editable", str(paths.checkout)),
         ),
-        *copies,
+        *_unit_copies(source, paths.units),
         Step(
             says="reload the user unit files",
             argv=("systemctl", "--user", "daemon-reload"),
@@ -171,21 +182,8 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
             says="enable and start the socket, which does not start the service",
             argv=("systemctl", "--user", "enable", "--now", "skid.socket"),
         ),
-        *(unregister if reinstall else []),
-        Step(
-            says=f"register {SERVER_NAME} with the MCP client, at user scope",
-            argv=(
-                "claude",
-                "mcp",
-                "add",
-                "--scope",
-                "user",
-                SERVER_NAME,
-                "--",
-                "skid-mcp",
-            ),
-            tolerate=ALREADY_EXISTS,
-        ),
+        *([_unregister()] if reinstall else []),
+        _register(),
     ]
 
 
