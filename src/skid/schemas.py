@@ -40,12 +40,40 @@ SUBSTITUTION: dict[str, Any] = {
 but a pattern that matches everywhere is not, so `pattern` has a floor.
 """
 
+VOICE_CHOICE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "alias": {"type": "string", "minLength": 1},
+        "voice": {"type": "string", "minLength": 1},
+        "pipeline": {"type": "string", "minLength": 1},
+    },
+    "required": ["alias", "voice"],
+    "additionalProperties": False,
+}
+"""One entry on the voice shortlist, FR-10.1.
+
+The shape follows `SUBSTITUTION`, which is the other list a person writes by
+hand: objects with an optional field carrying a documented default. A second
+style for the same idea would cost more than the words it saves.
+
+`pipeline` is optional because omitting it means the code the voice id implies,
+which is how every voice behaved before FR-10.7. It is not enumerated here for
+the reason `voice` is not: which codes exist is kokoro's to say, and a wrong one
+is caught where the caller is present to be told.
+
+Aliases must not repeat, FR-10.8. JSON Schema's `uniqueItems` compares whole
+entries and would pass two rows sharing an alias, so that check lives in
+`config.load_config` where it can name the offender.
+"""
+
 CONFIG: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "skid config",
     "type": "object",
     "properties": {
         "voice": {"type": "string", "minLength": 1},
+        "voices": {"type": "array", "items": VOICE_CHOICE},
+        "assignment_window_seconds": {"type": "integer", "minimum": 1},
         "player": {"type": "string", "minLength": 1},
         "greeting_window_seconds": {"type": "integer", "minimum": 0},
         "expiry_seconds": {"type": "integer", "minimum": 1},
@@ -64,6 +92,17 @@ spoken, which looks exactly like skid being broken.
 `voice` is only checked for being a non-empty string here. Which voices exist is
 kokoro's to say, `generation.VOICES` holds them, and the tool refuses an unknown
 one where the caller is still present to be told (FR-6.5).
+
+**`voice` and `voices` are different settings and both stand.** `voice` is the
+one setting FR-6.1 to FR-6.3 reach and is what a caller gets when no shortlist
+is configured. `voices` is the pool assignment draws from under FR-10.1, and an
+absent or empty one means nobody is assigned anything and `voice` speaks for
+everybody, which is exactly how skid behaved before.
+
+`assignment_window_seconds` has a floor of 1 rather than 0. Zero would expire
+every assignment before the next submission arrived, so a name would be given a
+different voice each time it spoke, which reads as skid being broken rather than
+as a setting.
 """
 
 SPOOL_ENTRY: dict[str, Any] = {

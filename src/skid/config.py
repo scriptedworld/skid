@@ -35,6 +35,8 @@ from typing import Any
 import wrench
 
 from skid import schemas
+from skid.assignment import DEFAULT_WINDOW_SECONDS as DEFAULT_ASSIGNMENT_WINDOW_SECONDS
+from skid.assignment import VoiceChoice
 from skid.substitution import Kind, Substitution
 
 DEFAULT_VOICE = "af_heart"
@@ -70,6 +72,8 @@ class Config:
     greeting_window_seconds: int = DEFAULT_WINDOW_SECONDS
     expiry_seconds: int = DEFAULT_EXPIRY_SECONDS
     substitutions: list[Substitution] = field(default_factory=list)
+    voices: list[VoiceChoice] = field(default_factory=list)
+    assignment_window_seconds: int = DEFAULT_ASSIGNMENT_WINDOW_SECONDS
 
 
 def _substitutions_from(document: dict[str, Any]) -> list[Substitution]:
@@ -87,6 +91,36 @@ def _substitutions_from(document: dict[str, Any]) -> list[Substitution]:
                 kind=kind,
                 pattern=str(raw["pattern"]),
                 replacement=str(raw["replacement"]),
+            )
+        )
+    return entries
+
+
+def _voices_from(document: dict[str, Any]) -> list[VoiceChoice]:
+    """Read the voice shortlist in file order, refusing a repeated alias.
+
+    File order is the order voices are handed out, so it is kept for the reason
+    FR-8.4 keeps the substitution order: a list a person wrote means what its
+    order says.
+
+    **The alias check is here rather than in the schema**, FR-10.8. JSON Schema
+    compares whole entries for uniqueness, so two rows sharing an alias and
+    differing in voice pass it. Naming the offender is the point: an ambiguous
+    alias is one nothing about either row looks wrong for.
+    """
+    entries: list[VoiceChoice] = []
+    seen: set[str] = set()
+    for raw in document.get("voices") or []:
+        alias = str(raw["alias"])
+        if alias in seen:
+            raise ValueError(f"two voices share the alias {alias!r}")
+        seen.add(alias)
+        pipeline = raw.get("pipeline")
+        entries.append(
+            VoiceChoice(
+                alias=alias,
+                voice=str(raw["voice"]),
+                pipeline=str(pipeline) if pipeline is not None else None,
             )
         )
     return entries
@@ -120,6 +154,10 @@ def load_config(path: Path | None = None) -> Config:
         ),
         expiry_seconds=int(document.get("expiry_seconds", DEFAULT_EXPIRY_SECONDS)),
         substitutions=_substitutions_from(document),
+        voices=_voices_from(document),
+        assignment_window_seconds=int(
+            document.get("assignment_window_seconds", DEFAULT_ASSIGNMENT_WINDOW_SECONDS)
+        ),
     )
 
 
@@ -128,15 +166,32 @@ def _as_document(config: Config) -> dict[str, object]:
 
     Every value is written, including one that equals its default. The file is
     the record, so a reader should see what is in use rather than having to know
-    which defaults applied. `substitution` is omitted when empty, because an
-    empty list in the file says less than its absence.
+    which defaults applied. `substitution` and `voices` are omitted when empty,
+    because an empty list in the file says less than its absence.
+
+    A `pipeline` equal to the voice id's own letter is still written when it was
+    written, and an entry that never named one still does not. The field says
+    which phonemiser was *asked for*, and defaulting it on the way out would
+    turn a deliberate choice into an accident of the id.
     """
     document: dict[str, object] = {
         "voice": config.voice,
         "player": config.player,
         "greeting_window_seconds": config.greeting_window_seconds,
         "expiry_seconds": config.expiry_seconds,
+        "assignment_window_seconds": config.assignment_window_seconds,
     }
+    if config.voices:
+        document["voices"] = [
+            {"alias": choice.alias, "voice": choice.voice}
+            if choice.pipeline is None
+            else {
+                "alias": choice.alias,
+                "voice": choice.voice,
+                "pipeline": choice.pipeline,
+            }
+            for choice in config.voices
+        ]
     if config.substitutions:
         document["substitution"] = [
             {

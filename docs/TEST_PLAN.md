@@ -223,6 +223,43 @@ hands playback back to the default `paplay` and the suite makes the machine talk
 **FR-6.5 is the one-call-bricks-it case.** Set an invalid voice, assert it is
 refused, and assert the config on disk is unchanged.
 
+### A voice per name
+
+| Requirement | Test | Kind |
+|---|---|---|
+| FR-10.1 | `test_only_a_configured_voice_is_ever_assigned`, `test_an_empty_shortlist_assigns_nobody`, `test_the_voice_shortlist_loads_in_file_order` | property, edge, positive |
+| FR-10.2 | `test_a_name_keeps_the_same_voice_across_submissions`, `test_two_names_speaking_together_get_different_voices`, `test_two_names_are_spoken_in_different_voices` | positive, property |
+| FR-10.3 | `test_an_assignment_is_released_once_its_name_goes_quiet`, `test_a_name_inside_the_window_keeps_its_voice` | positive, edge |
+| FR-10.4 | `test_speaking_refreshes_the_window` | positive |
+| FR-10.5 | `test_the_assignment_window_is_six_hours`, `test_the_assignment_window_is_configurable` | positive |
+| FR-10.6 | `test_an_exhausted_shortlist_reuses_the_quietest_voice`, `test_assignment_never_returns_nothing_while_the_list_has_entries` | positive, property |
+| FR-10.7 | `test_a_choice_carries_the_pipeline_it_declared`, `test_a_declared_pipeline_survives_a_read_and_a_write`, `test_a_declared_pipeline_overrides_the_one_the_id_implies`, `test_switching_voices_keeps_one_model_across_pipelines` | positive, property |
+| FR-10.8 | `test_two_voices_sharing_an_alias_are_refused` | negative |
+| FR-10.9 | `test_a_fresh_table_holds_nothing` | property |
+
+**The clock is a parameter, exactly as it is for the greeting.** Six hours is a
+number passed in, so `test_speaking_refreshes_the_window` drives past the window
+in three lines and the suite stays fast. A test that slept would be testing the
+machine.
+
+**FR-10.2 is asserted twice on purpose, and the second one is the real check.**
+`test_two_names_speaking_together_get_different_voices` proves the table hands
+out two voices. A service that computed an assignment and then generated with
+the single `voice` setting would pass it and be silently wrong, which is why
+`test_two_names_are_spoken_in_different_voices` runs a real service, really
+speaks, and reads the assignment back out of `status`.
+
+**FR-10.7 needs both a config test and a generation test**, because there are
+two distinct failures. The config can drop the declared pipeline on the way
+through, and the generator can record one code and hand kokoro another. Neither
+test sees the other's failure.
+
+**FR-10.9 has nothing to break, and that is recorded rather than hidden.** A
+table built fresh holds nothing by construction, so no mutation of the source
+can make it hold something. It sits with FR-1.8 and FR-7.9 as a row the suite
+cannot distinguish, which `clank/tasks/skid/traceability/40` tracks. The other
+eight FR-10 rows were probed by mutation on 2026-08-30 and all eight caught it.
+
 ### Saying it right
 
 | Requirement | Test | Kind |

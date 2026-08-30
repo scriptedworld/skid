@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from skid.assignment import Assignments
 from skid.config import Config, load_config
 from skid.generation import GenerationFailed, Generator
 from skid.greeting import QuietTable, greeting_for, should_greet
@@ -95,6 +96,7 @@ class Parts:
     player: Player
     spool: Spool
     table: QuietTable
+    assignments: Assignments
 
 
 @dataclass
@@ -145,6 +147,7 @@ class Service:
                 ttl_seconds=float(config.expiry_seconds),
             ),
             table=QuietTable(),
+            assignments=Assignments(config.voices),
         )
         self._loop = Loop(
             incoming=queue.Queue(),
@@ -269,6 +272,10 @@ class Service:
             "pending": self._parts.spool.pending(),
             "recent_failures": list(self._record.failures[-20:]),
             "voice": self._config.voice,
+            "assigned": {
+                name: choice.alias
+                for name, choice in self._parts.assignments.held().items()
+            },
         }
 
     def _refresh_config(self) -> None:
@@ -278,6 +285,12 @@ class Service:
         either route changes what the next clip is spoken in. Reading once at
         start would give the tool route effect and the file route none, which is
         two routes that do not agree.
+
+        **Assignments are rebuilt only when the shortlist itself changed.** Every
+        `set_voice` call rewrites the config and lands here, and rebuilding
+        unconditionally would take every name's voice away whenever anybody
+        touched an unrelated setting. Comparing the lists is enough because
+        `VoiceChoice` is frozen, so equality is by value.
         """
         if (
             self._workspace.config_path is None
@@ -295,6 +308,8 @@ class Service:
             return
         self._parts.player = Player(command=self._config.player)
         self._parts.generator.set_voice(self._config.voice)
+        if self._parts.assignments.choices != self._config.voices:
+            self._parts.assignments = Assignments(self._config.voices)
 
     def _log(self, line: str) -> None:
         """Append one line to the log a person reads when the machine goes quiet."""
@@ -306,10 +321,38 @@ class Service:
         self._record.failures.append(line)
         self._log(line)
 
+    def _apply_voice(self, name: str) -> None:
+        """Point the generator at the voice `name` speaks in, FR-10.2.
+
+        **This cannot be allowed to raise.** It runs at the top of the generation
+        thread, and that thread signals the end of its work by putting STOP on
+        the queue the player is blocked reading. An exception here would skip the
+        STOP and leave playback waiting on a queue nothing will ever fill, which
+        is a wedged service rather than a failed submission.
+
+        So a voice the config names and kokoro does not know is recorded and
+        stepped over, leaving whatever the generator already had. That is the
+        FR-6.5 shape reaching us from the file rather than from a tool: the tool
+        route refuses it where the caller is present, and a hand-edited file has
+        nobody standing there to be told.
+        """
+        choice = self._parts.assignments.voice_for(
+            name,
+            now=time.monotonic(),
+            window=float(self._config.assignment_window_seconds),
+        )
+        wanted = self._config.voice if choice is None else choice.voice
+        pipeline = None if choice is None else choice.pipeline
+        try:
+            self._parts.generator.set_voice(wanted, pipeline)
+        except ValueError as exc:
+            self._record_failure(f"voice not applied for {name}: {exc}")
+
     def _generate_into(
         self, submission: Submission, clips: queue.Queue[Clip | None], index_base: int
     ) -> None:
         """Generate the greeting and every message, ahead of playback, in order."""
+        self._apply_voice(submission.name)
         texts = [(greeting_for(submission.name), True)]
         texts += [(message, False) for message in submission.messages]
 
@@ -367,7 +410,9 @@ class Service:
                 self._progress()
 
         worker.join(timeout=5)
-        self._parts.table.record_finished(submission.name, when=time.monotonic())
+        finished = time.monotonic()
+        self._parts.table.record_finished(submission.name, when=finished)
+        self._parts.assignments.record_spoken(submission.name, when=finished)
 
     def _serve(self) -> None:
         """Take submissions in turn, each spoken to completion before the next.

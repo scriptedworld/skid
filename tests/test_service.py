@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from skid.assignment import VoiceChoice
 from skid.config import Config, load_config
 from skid.generation import Generator
 from skid.routes import build_app
@@ -140,12 +141,15 @@ def service_for_fixture(
     built: list[Service] = []
 
     def make(
-        behaviour: str = "true", substitutions: list[Substitution] | None = None
+        behaviour: str = "true",
+        substitutions: list[Substitution] | None = None,
+        voices: list[VoiceChoice] | None = None,
     ) -> Service:
         service = Service(
             config=Config(
                 player=_player_that(behaviour, tmp_path),
                 substitutions=list(substitutions or []),
+                voices=list(voices or []),
             ),
             generator=generator,
             workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
@@ -599,3 +603,32 @@ def test_a_stalled_loop_stops_looking_like_progress(
     service.submit("silo", ["never spoken"])
 
     assert not service.is_progressing(time.monotonic() + PROGRESS_GRACE + 1)
+
+
+# COVERS: FR-10.2 | property
+@pytest.mark.usefixtures("restored_voice")
+def test_two_names_are_spoken_in_different_voices(
+    service_for: Callable[..., Service],
+) -> None:
+    """The wiring rather than the table, through a real service that really spoke.
+
+    `test_assignment` proves the table hands out two voices. This proves the
+    service asks it: a generation path that ignored the assignment and used the
+    single `voice` setting would pass every unit test in that file and be
+    silently wrong here.
+
+    Both voices are `af_*`, so the pipeline is not rebuilt and the shared warm
+    generator is cheap to put back.
+    """
+    service = service_for(
+        voices=[
+            VoiceChoice(alias="Ashley", voice="af_alloy"),
+            VoiceChoice(alias="Carol", voice="af_bella"),
+        ]
+    )
+
+    service.submit("silo", ["one"])
+    service.submit("wrench", ["two"])
+    service.wait_idle(timeout=300)
+
+    assert service.status()["assigned"] == {"silo": "Ashley", "wrench": "Carol"}

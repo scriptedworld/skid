@@ -118,13 +118,18 @@ def test_status_reports_the_queue_a_caller_cannot_log(backend: Backend) -> None:
     """`speak` returned at queue time, so `--status` is how a person looks.
 
     Parsed back rather than matched as text, because what is being asserted is
-    that the report crossed intact and carries the three fields, not how it was
+    that the report crossed intact and carries every field, not how it was
     formatted.
+
+    `assigned` joined the set with FR-10.2. It answers the question a listener
+    actually has once names sound different, which is which name is which voice,
+    and it is empty until a shortlist is configured.
     """
     reported = json.loads(_said(backend, "--status"))
 
-    assert set(reported) == {"pending", "recent_failures", "voice"}
+    assert set(reported) == {"pending", "recent_failures", "voice", "assigned"}
     assert reported["pending"] == 0
+    assert reported["assigned"] == {}
 
 
 # COVERS: FR-4.7 | edge

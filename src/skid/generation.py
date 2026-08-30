@@ -104,24 +104,51 @@ class GenerationFailed(Exception):
     """
 
 
+REPO_ID = "hexgrad/Kokoro-82M"
+"""Named rather than defaulted, which is also what silences kokoro's own warning.
+
+kokoro prints a line on every pipeline it builds if this is not passed, and skid
+now builds more than one.
+"""
+
+
 def _lang_code(voice: str) -> str:
-    """The pipeline language for a voice, which is the first letter of its name."""
+    """The pipeline a voice id implies, which is its first letter.
+
+    The default under FR-10.7 rather than the rule. A voice is a speaker and a
+    pipeline is a phonemiser, and a configured voice may name a different one:
+    `if_sara` implies the Italian phonemiser and is on the shortlist as an
+    English speaker with an Italian accent.
+    """
     return voice[0]
 
 
 class Generator:
-    """Holds one warm pipeline and renders text through it.
+    """Holds the warm pipelines and renders text through the current one.
 
-    The pipeline is built on first use and kept, so a second message does not
-    pay model start-up. That is what the backend exists for.
+    A pipeline is built on first use and kept, so a second message does not pay
+    model start-up. That is what the backend exists for.
+
+    **One model, several phonemisers.** Pipelines are cached per code rather
+    than dropped on a change, because assignment under FR-10.2 moves between
+    voices constantly and rebuilding on every switch would pay start-up on most
+    submissions. The model is the expensive part and is built once: the first
+    pipeline creates it and every later one is handed the same instance, so the
+    cache costs a front end rather than another 1.6 GB.
     """
 
-    def __init__(self, voice: str = "af_heart") -> None:
-        """Take the voice, refusing one kokoro does not have."""
+    def __init__(self, voice: str = "af_heart", pipeline: str | None = None) -> None:
+        """Take the voice and optionally the pipeline, refusing an unknown voice.
+
+        `pipeline` omitted means the one the voice id implies, which is what
+        every caller wanted before FR-10.7 existed.
+        """
         if voice not in VOICES:
             raise ValueError(f"unknown voice: {voice!r}")
         self.voice = voice
-        self._pipeline: Any | None = None
+        self.pipeline_code = pipeline or _lang_code(voice)
+        self._pipelines: dict[str, Any] = {}
+        self._model: Any | None = None
 
     def warm(self) -> None:
         """Load the model now, rather than on the first message that needs it.
@@ -129,34 +156,47 @@ class Generator:
         What FR-5.1 asks for, made explicit so a caller can decide when to pay
         it. The service pays it at start-up, so that being active and being able
         to answer are the same thing.
-        """
-        if self._pipeline is None:
-            self._pipeline = self._build()
 
-    def _build(self) -> Any:
-        """Construct the kokoro pipeline for this voice's language."""
+        Warming the second pipeline is cheap, because by then the model exists.
+        """
+        if self.pipeline_code not in self._pipelines:
+            self._pipelines[self.pipeline_code] = self._build(self.pipeline_code)
+
+    def _build(self, code: str) -> Any:
+        """Construct the kokoro pipeline for `code`, sharing the one model.
+
+        The first build lets kokoro create the model, so its device selection is
+        not reimplemented here; the instance is then kept and handed to every
+        later pipeline. `model=True` is kokoro's own default and means build one.
+        """
         from kokoro import KPipeline
 
-        return KPipeline(lang_code=_lang_code(self.voice))
+        built = KPipeline(
+            lang_code=code,
+            repo_id=REPO_ID,
+            model=self._model if self._model is not None else True,
+        )
+        if self._model is None:
+            self._model = built.model
+        return built
 
-    def set_voice(self, voice: str) -> None:
+    def set_voice(self, voice: str, pipeline: str | None = None) -> None:
         """Change the voice, refusing one kokoro does not have.
 
-        A voice in another language needs a different pipeline, so the warm one
-        is dropped only when the language actually changes. Switching between
-        two American voices keeps the model loaded.
+        Nothing is dropped. A pipeline already built stays built, so moving
+        between two voices costs a dictionary lookup whether or not they share a
+        phonemiser.
         """
         if voice not in VOICES:
             raise ValueError(f"unknown voice: {voice!r}")
-        if _lang_code(voice) != _lang_code(self.voice):
-            self._pipeline = None
         self.voice = voice
+        self.pipeline_code = pipeline or _lang_code(voice)
 
     @property
     def pipeline(self) -> Any:
-        """The warm pipeline, built once on first use."""
+        """The warm pipeline for the current code, built once on first use."""
         self.warm()
-        return self._pipeline
+        return self._pipelines[self.pipeline_code]
 
     def generate(self, text: str, path: Path) -> Path:
         """Render `text` to a WAV at `path`, and return it.

@@ -65,6 +65,37 @@ def test_the_model_is_loaded_once_across_submissions(tmp_path: Path) -> None:
     assert generator.pipeline is loaded
 
 
+# COVERS: FR-10.7 | positive
+def test_a_declared_pipeline_overrides_the_one_the_id_implies() -> None:
+    """An Italian speaker reading English, which is what was chosen by ear.
+
+    Asserted against the pipeline kokoro actually built rather than against what
+    skid stored, because the failure this guards is skid recording a code and
+    then handing kokoro the other one.
+    """
+    assert Generator(voice="if_sara", pipeline="a").pipeline.lang_code == "a"
+    assert Generator(voice="if_sara").pipeline_code == "i"
+
+
+# COVERS: FR-10.7 | property
+def test_switching_voices_keeps_one_model_across_pipelines() -> None:
+    """Assignment moves between voices constantly, so a switch must stay cheap.
+
+    Two phonemisers, one model. Dropping the pipeline on every change would pay
+    model start-up on most submissions, and caching without sharing the model
+    would hold a second copy of 1.6 GB.
+    """
+    generator = Generator(voice="af_bella")
+    american = generator.pipeline
+
+    generator.set_voice("bf_alice")
+    british = generator.pipeline
+
+    assert american is not british
+    assert american.model is british.model
+    assert generator.pipeline is british
+
+
 # COVERS: FR-6.5 | negative
 def test_an_unknown_voice_is_refused() -> None:
     """A voice kokoro does not have must not reach the record.
