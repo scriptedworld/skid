@@ -20,7 +20,7 @@
 
 # everything: quality, tests, coverage, secrets
 checks:
-    @just _verdict common-quality
+    @just _verdict common-quality --definitions skid
     @just _verdict python-std-quality
     @just leak-scan
 
@@ -73,6 +73,7 @@ install:
 
 # remove run directories and build output
 clean:
-    rm -rf .bolt-* dist coverage.xml .coverage
+    rm -rf .bolt-* dist build coverage.xml .coverage
     rm -rf .ruff_cache .mypy_cache .pytest_cache .complexipy_cache
+    find . -name '*.egg-info' -type d -prune -exec rm -rf {} +
     find . -name __pycache__ -type d -prune -exec rm -rf {} +

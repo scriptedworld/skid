@@ -97,6 +97,10 @@ def test_a_shorter_window_greets_sooner() -> None:
     table.record_finished("silo", when=1000.0)
 
     assert should_greet(table, "silo", now=1005.0, window=2.0) is True
+    # Both directions, because the True one alone holds whatever the window is:
+    # asserted that way, this passed against a `should_greet` that ignored the
+    # window entirely and greeted every time.
+    assert should_greet(table, "silo", now=1005.0, window=10.0) is False
 
 
 # COVERS: FR-3.1 | negative
