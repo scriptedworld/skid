@@ -6,16 +6,20 @@ open decisions, and the things recent enough to be worth restating.
 ## The work that is agreed
 
 **Nothing is `.ready`.** Every row a requirement names is built and the
-resilience tasks are complete and deployed. Four tasks stand in
+resilience tasks are complete and deployed. Five tasks stand in
 `clank/tasks/skid/`, and none of them is waiting on somebody to pick it up:
 
     interfaces/20    .questions   a forwarder shim in Go or Rust
     playback/20      .questions   how long a stuck player is given
-    resilience/50    .blocked     retire /mcp, gated on a process check
+    traceability/40  .planning    a cited row is not an implemented row
     interfaces/30    .planning    the entry points are barely covered
+    resilience/50    .blocked     retire /mcp, gated on a process check
 
-**Two of the four are open questions**, which is where the work actually
-is right now.
+**`traceability/40` is the one that changes what the others are worth.** The
+gate reads 62 of 62 in both directions, which proves every row has a citing test
+and not that the code satisfies it. bolt found three settled requirements its own
+code did not satisfy, each with a citing test, and skid has met the shape once:
+FR-4.2's first test passed against the mutation it was written to catch.
 
 `traceability/30` closed 2026-08-28. It asked whether the installer was inside
 the requirement set or outside it, and the answer was inside: **otherwise there
