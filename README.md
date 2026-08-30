@@ -1,123 +1,122 @@
 # skid
 
-Voice output for the agents. An MCP server that takes text and speaks it.
+skid gives a program a voice. It takes a line of text over a socket and speaks
+it aloud on the machine's own speakers, so you can hear what something is doing
+instead of watching a log for it.
+
+It was built for coding agents that run for hours without being watched. Several
+of them share one skid, each with a name, and it keeps them from talking over
+each other.
 
 Named for Skidd McMarx, who is loud, has a voice everyone recognises, and does
 not do anything else.
 
-## What it is
+## How it works
 
-Text arrives as an array. kokoro turns it into audio files. A subprocess plays
-them through the operating system's own player on the default output device,
-one at a time, and skid never touches an audio device itself.
+Text arrives as an array of messages. kokoro turns each into an audio file, and
+a subprocess plays them through the operating system's own player on the default
+output device, one at a time. skid never opens an audio device itself.
 
-Each caller gives a name. The first thing heard from a name in a while is
-prefixed `Hi, [name] here.`, so a listener knows who is talking without every
-message in a chain announcing itself.
+Every caller gives a name. The first thing heard from a name in a while is
+prefixed `Hi, <name> here.`, so you know who is speaking without every message
+in a run announcing itself.
 
-A backend process keeps the model warm, so a message does not wait on start-up
-before it is spoken.
+A long-running process holds the model in memory, so speaking does not wait for
+kokoro to load.
 
 ## The queue
 
-Several agents talk to one skid, so submissions are queued rather than mixed.
-The queue is what makes the output listenable, and it guarantees four things.
+Several callers share one set of speakers, so submissions are queued rather than
+mixed. Four things are guaranteed, and together they are what makes the output
+listenable.
 
-**A submission is spoken to completion before the next one starts.** Two
-sessions cannot interleave into one stream a listener has to untangle. Submit
-three messages and all three are heard, in order, before another name is heard
-at all.
+A submission is spoken to completion before the next one starts, so two callers
+cannot interleave into one stream you have to untangle. Submit three messages
+and all three are heard, in order, before another name is heard at all.
 
-**Order is the order you submitted in**, not the order clips happened to finish
-generating. Generation runs ahead of the speaker while a clip plays, so a long
-array is prepared during playback rather than after it, and the sequence a
-listener hears is still the sequence that was sent.
+Order is the order you submitted in, not the order clips finished generating.
+Generation runs ahead of the speaker while a clip plays, so a long array is
+prepared during playback rather than after it.
 
-**Speaking returns when the work is queued, not when it has been heard.** The
-caller carries on. An agent is never blocked behind its own audio, which is the
-whole reason the queue exists rather than a convenience.
+Speaking returns when the work is queued, not when it has been heard. The caller
+carries on rather than blocking behind its own audio, which is the reason the
+queue exists at all.
 
-**The queue is on disk, so it survives the service restarting.** A submission is
+The queue is on disk, so it survives the service restarting. A submission is
 written to `$XDG_RUNTIME_DIR/skid/spool` before the call returns, and that write
-is the promise. What was accepted and not yet started is still there afterwards.
+is the promise: what was accepted and not yet started is still there afterwards.
 
-Two smaller behaviours fall out of it and are worth knowing:
+Two smaller behaviours fall out of it. A name quiet for thirty seconds is
+announced before its next message, timed from the end of the last clip spoken
+for that name and decided as the clip is about to play, because a queue can put
+minutes between the two. A submission that has waited more than five minutes is
+discarded with a line in the log, since a status worth hearing when it was sent
+is usually not worth hearing later. Downtime counts toward that. Both numbers
+are configurable.
 
-A name that has been quiet for **thirty seconds** is announced before its next
-message, measured from the end of the last clip spoken for that name, and
-decided when the clip is about to play rather than when it was queued. A queue
-can put minutes between the two, and deciding early would announce a name whose
-voice is still in the room.
-
-A submission that has waited more than **five minutes** is discarded rather than
-spoken, with a line in the log. A status that was worth hearing when it was sent
-is usually not worth hearing after the moment has passed. Time the service
-spends stopped counts toward it. Both numbers are configurable.
-
-## Saying things
+## Talking to it
 
 Three ways in, all reaching the same service over the same socket:
 
-    speak(name, messages)                the MCP tool, from an agent
-    skid-say silo "the gate is green"    from a shell, no MCP client needed
-    an HTTP POST to /speak               from anything that can reach a socket
+    speak(name, messages)                 the MCP tool, from an agent
+    skid-say build "the tests passed"     from a shell, no MCP client needed
+    an HTTP POST to /speak                from anything that can reach a socket
 
 The third needs nothing installed:
 
     curl --unix-socket $XDG_RUNTIME_DIR/skid/skid.sock \
          -H 'Content-Type: application/json' \
-         -d '{"name":"silo","messages":["hello"]}' http://localhost/speak
+         -d '{"name":"build","messages":["hello"]}' http://localhost/speak
 
-`skid-say` runs and exits, which makes it the one that always works: it holds no
-state, so it cannot be out of date with the service behind it.
+`skid-say` runs and exits, holding no state, so it cannot fall out of step with
+the service behind it. It also takes `--status` for the queue depth and recent
+failures, and `--voice` to change the voice and keep it.
 
-Pronunciation is correctable. kokoro says some words wrongly, and a substitution
-in the config file fixes it for every caller at once, applied on the way to the
-engine only, so nothing you submitted and nothing the log records is changed.
-`docs/config.sample.yaml` has the whole file with every setting explained.
+kokoro mispronounces some words. A substitution in the config file corrects one
+for every caller at once, applied on the way to the engine only, so neither what
+you submitted nor what the log records is altered. `docs/config.sample.yaml` is
+the whole file with every setting explained.
 
 ## What it deliberately does not do
 
-**No direct device access.** Generating a file and running a player is the whole
-output path. That keeps device selection, mixing and volume where the operating
-system already handles them, and it means the failure modes are a missing player
+It never opens an audio device. Generating a file and running a player is the
+whole output path, which leaves device selection, mixing and volume where the
+operating system already handles them. The failure modes are a missing player
 and a bad file rather than an audio stack.
 
-**No overlap.** One clip is audible at a time, held by a lock. Two agents
-speaking over each other is worse than either waiting.
+It never overlaps clips. One is audible at a time, held by a lock, because two
+callers speaking over each other is worse than either waiting.
 
 ## Installing
 
-One command, from a checkout, on a Linux machine with `uv`, `systemctl` and
-`claude` on PATH:
+Linux, with `uv`, `systemctl`, `systemd-analyze`, `install` and `claude` on
+PATH. From a checkout:
 
     python3 src/skid/install.py
 
-It installs skid as a uv tool, puts the two systemd user units in place, enables
-the socket, and registers skid with the MCP client. Everything it writes is
-inside your home and it names each file when it finishes. `--dry-run` prints the
-commands without running any of them, and `--uninstall` reverses all of it.
+That installs skid as a uv tool, puts the two systemd user units in place,
+enables the socket and registers skid with the MCP client. Everything it writes
+is inside your home, it checks the units and the tools before writing anything,
+and it names each file when it finishes. `--dry-run` prints the commands without
+running them and `--uninstall` reverses all of it.
 
-**Run it where skid is already installed and it shows you what is there and
-asks.** Answering yes reinstalls, which re-points the MCP registration at this
-checkout: `claude mcp add` refuses a name that is taken and will not update it,
-so the registration is removed and added rather than left as it is. `--yes`
-answers for a script, and no terminal to ask on is taken as no.
+Run it where skid is already installed and it shows what is there and asks.
+Answering yes re-points the MCP registration at this checkout, because
+`claude mcp add` refuses a name that is taken and will not update it, so the
+registration is removed and added rather than left as it is. `--yes` answers for
+a script, and no terminal to ask on is taken as no.
 
-It enables the socket but does not start the service, because socket activation
-means the first connection does that, and starting it early loads a model to
-prove that two files were copied.
+It enables the socket without starting the service. Socket activation means the
+first connection does that, and starting it early would load a model to prove
+that two files were copied.
 
-**A session already running cannot call skid.** A Claude Code client picks an
-MCP server up when it starts, so `speak` appears in sessions started after the
-install. That is the session's age rather than anything wrong with the service.
+A session already running cannot call skid. An MCP client picks a server up when
+it starts, so `speak` appears in sessions started after the install.
 
 ## State
 
-It works and it runs as a service. `docs/REQUIREMENTS/` carries what must be
-true, one file per requirement, 48 of them with none left open, and every one
-names the test that discharges it.
+It works and runs as a service. `docs/REQUIREMENTS/` holds what must be true,
+one file per requirement, each naming the test that discharges it.
 
-First pass is Linux only, Python 3.12 exactly, and a standard uv project.
-
+Linux only for now, Python 3.12 exactly, and an ordinary uv project.
 `docs/PROJECT.md` is what to read before changing anything here.
