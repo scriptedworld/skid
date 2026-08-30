@@ -5,21 +5,41 @@ open decisions, and the things recent enough to be worth restating.
 
 ## The work that is agreed
 
-**Nothing is `.ready`.** Every row a requirement names is built and the
-resilience tasks are complete and deployed. Five tasks stand in
-`clank/tasks/skid/`, and none of them is waiting on somebody to pick it up:
+**Nothing is `.ready`.** Every row a requirement names is built. Six tasks stand
+in `clank/tasks/skid/`, and none is waiting on somebody to pick it up:
 
     interfaces/20    .questions   a forwarder shim in Go or Rust
     playback/20      .questions   how long a stuck player is given
+    voices/20        .planning    a voice that cannot render is accepted
     traceability/40  .planning    a cited row is not an implemented row
     interfaces/30    .planning    the entry points are barely covered
     resilience/50    .blocked     retire /mcp, gated on a process check
 
+**`voices/10` completed 2026-08-30 at skid `34793c3`**, which is where the
+multi-voice mode came from: 28 voices in the config, one assigned per name,
+released after six hours of quiet, and the quietest reused when they run out.
+Verified by three names speaking in three different voices through the live
+service, not merely by tests.
+
+**`voices/20` is the defect that work found and did not fix.** `set_voice`
+accepts any of the thirteen voices that cannot render on this machine and
+persists them, which is FR-6.5 unmet on a row that has a citing test. Assignment
+cannot reach one, because the shortlist was chosen from voices that produced a
+sample, so the hazard is real and is on the other route.
+
 **`traceability/40` is the one that changes what the others are worth.** The
-gate reads 62 of 62 in both directions, which proves every row has a citing test
+gate reads 71 of 71 in both directions, which proves every row has a citing test
 and not that the code satisfies it. bolt found three settled requirements its own
-code did not satisfy, each with a citing test, and skid has met the shape once:
-FR-4.2's first test passed against the mutation it was written to catch.
+code did not satisfy, each with a citing test, and skid has met the shape three
+times now: FR-4.2's first test passed against the mutation it was written to
+catch, FR-2.1 and FR-3.4 survived probing on 2026-08-30 and were fixed at
+`bc7a635`, and FR-6.5 turned out to be unmet by measurement rather than by
+probing, which is `voices/20`.
+
+**The FR-10 rows were probed as they were written**, 2026-08-30: eight of the
+nine caught their mutation, and FR-10.9 is recorded as one the suite cannot
+distinguish rather than counted as covered. That leaves the 27 unprobed rows the
+task already names, unchanged.
 
 `traceability/30` closed 2026-08-28. It asked whether the installer was inside
 the requirement set or outside it, and the answer was inside: **otherwise there
