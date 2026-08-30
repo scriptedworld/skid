@@ -7,9 +7,6 @@ Every section names the requirements it discharges. Nothing here restates a
 requirement, and where this document and a requirement disagree, the requirement
 wins and this is the defect.
 
-Revised 2026-08-27 after two independent cold reviews of `fd42bdf`. What changed
-is recorded in `clank/tasks/skid/first-build/`.
-
 ## The shape: one service, and a script that speaks the protocol
 
 **One long-lived process**, `skid`, reached over HTTP by every agent through a
@@ -615,5 +612,5 @@ Recorded so that making one of these later does not look like discovering it.
 **Nothing about task states, commit discipline or the gate.** Those are the
 global `CLAUDE.md` and `docs/PROJECT.md`.
 
-**No test plan.** That is stage 3 of `silo/docs/PATTERNS/how-a-change-gets-made.md`
-and it derives from the requirements, not from this document.
+**No test plan.** `docs/TEST_PLAN.md` is a separate stage and derives from the
+requirements, not from this document.

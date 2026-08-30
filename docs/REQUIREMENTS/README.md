@@ -9,8 +9,7 @@ Requirements are stated as observable properties: what is true of a run, not how
 anything is arranged.
 
 One file per requirement, named for its id and its slug, under a category
-directory named for the section it came from. The layout is ruled in
-`silo/docs/DECISIONS/requirements-are-a-directory.md`; what goes inside a file is
+directory named for the section it came from. What goes inside a file is
 `../DECISIONS/what-a-requirement-file-carries.md`.
 
 ## Status markers

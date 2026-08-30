@@ -68,6 +68,6 @@ I had not looked at because it was not code anybody wrote.
 ## Still true
 
 `/mcp` is a compatibility route with a stated end, `routes.LEGACY_ENDPOINT`.
-`clank/tasks/skid/resilience/50` retires it, and is `.blocked` on the check
-above rather than on a date. **Retiring it on a quiet estate is the same
+Retiring it waits on the check above rather than on a date. **Doing it during a
+quiet spell is the same
 mistake**: nobody running a shim is not the same as nobody able to.
