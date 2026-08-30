@@ -14,7 +14,7 @@ resilience tasks are complete and deployed. Four tasks stand in
     resilience/50    .blocked     retire /mcp, gated on a process check
     interfaces/30    .planning    the entry points are barely covered
 
-**Two of the four are questions for our user**, which is where the work actually
+**Two of the four are open questions**, which is where the work actually
 is right now.
 
 `traceability/30` closed 2026-08-28. It asked whether the installer was inside
@@ -50,14 +50,14 @@ wrench's own record says its install is not reproducible from any manifest, and
 that gap is now skid's problem too: a machine rebuilt from `dotfiles/bin/setup`
 gets every tool, no wrench, and a service that will not start.
 
-Also filed: `clank/inbox/wrench/python-pack-ships-no-py-typed`. wrench ships no
-`py.typed`, so three imports are three mypy errors in skid's gate that are not
-about skid's code. Not suppressed, because that needs a human's answer.
+wrench ships `py.typed` and its public API is annotated, so its calls are
+type-checked here rather than skipped. `types` reports one error, kokoro, which
+ships no marker of its own.
 
 ## Not settled by use
 
-**Nobody has heard skid mispronounce anything.** FACT 2026-08-28, from the user:
-total real use is a handful of messages from silo and skid itself. So the
+**Nobody has heard skid mispronounce anything.** Total real use so far is a
+handful of messages, from silo and from skid itself. So the
 substitution surface, first-match-wins ordering, the literal-and-regex split and
 FR-8.4 making file order load-bearing, is designed against an imagined need.
 
@@ -118,8 +118,8 @@ posts there, Flask answered 404 with an HTML page, and an HTML page is no more
 matchable to a pending request than a null id was, so the client waited. I had
 traced the recovery path, predicted a clean failure and said so before
 deploying; the first call after the restart was still outstanding at 120
-seconds. `/mcp` now answers 200 with a JSON-RPC error carrying the request's own
-id, verified against this session's own pre-move shim.
+seconds. `/mcp` serves the protocol again, statelessly, so an old shim can still
+speak through it.
 
 **Retire the `/mcp` route** once `pgrep -af skid-mcp` shows nothing predating
 the move. Not urgent, and the drift test names it so removing it is noticed.
@@ -172,15 +172,15 @@ it called "Measured" is marked as one. What is left from it is small.
 
 ## Decided recently enough to restate
 
-**One HTTP service under systemd, not two processes.** Decided 2026-08-27 with
-the user. It deleted a start protocol that had a lock file, a stale-socket
+**One HTTP service under systemd, not two processes.** Decided deliberately. It
+deleted a start protocol that had a lock file, a stale-socket
 unlink and a bind-then-rename, which was the part of the spec nobody had run.
 `docs/SPEC.md` carries the reasoning.
 
 **A unix socket rather than a TCP port**, because reaching skid's tools means
 making the machine speak and rewriting its config. FR-5.4.
 
-**No mocks anywhere.** Decided by the user when the question was put: install
+**No mocks anywhere.** Settled when the question was put: install
 kokoro and test against the real engine. The seams made it a non-question in the
 end, because the queue and the player are units that never touch audio.
 
@@ -292,5 +292,5 @@ line.
 
 **Both bandit tasks pass now**, by five `#nosec` marks registered in
 `docs/SUPPRESSIONS.md`. Per-line rather than a threshold change or a tree-wide
-skip, which was the user's choice and is the narrowest of the three: a new
+skip, which is the narrowest of the three: a new
 subprocess call still fails the gate until somebody looks at it.

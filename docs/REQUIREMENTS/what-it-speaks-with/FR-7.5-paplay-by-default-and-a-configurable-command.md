@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.5 | The default player is **`paplay`**. A user-defined player is declared as a **command line with the file path substituted into it**. | [A] |
 
-Settled 2026-08-27, at the id the open question carried. It gives FR-1.3 its
+Settled at the id the open question carried. It gives FR-1.3 its
 player and FR-1.6 its one platform-specific value.
 
 `paplay` follows the default output device, which is what FR-1.4 requires, and

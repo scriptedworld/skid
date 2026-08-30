@@ -22,9 +22,8 @@ was accepted, and if it is not spoken there is a record saying why.
 ## Five minutes is a preference
 
 Nothing measures it and nothing could. It is a judgement about how long a
-summary stays worth hearing, not a property of the machine, so it is a
-`PREFERENCE` rather than a `FACT` and a later reader should leave it alone
-rather than correct it toward a default.
+summary stays worth hearing rather than a property of the machine, so a later
+reader should leave it alone rather than correct it toward a default.
 
 It lives in the config file beside the greeting window (FR-3.4, FR-7.1), so it
 is changeable without a release and by either route FR-6.3 requires.

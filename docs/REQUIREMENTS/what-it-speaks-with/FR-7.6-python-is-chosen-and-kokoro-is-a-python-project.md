@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.6 | skid is written in **Python**, because kokoro is a Python project and one language is preferred to two. | [A/D] |
 
-Settled 2026-08-27, at the id the open question carried. The rule was stated
+Settled at the id the open question carried. The rule was stated
 first-hand, the fact it turns on was measured, and the answer is what the two
 give together.
 

@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.7 | Each substitution entry **declares whether its pattern is a literal or a regular expression**. Both kinds are supported. | [A] |
 
-Settled 2026-08-27, at the id the open question carried.
+Settled at the id the open question carried.
 
 The literal kind covers FR-8.2's stated purpose with no rules to learn. The
 regular expression kind is there for what a literal cannot reach, and it is

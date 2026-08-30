@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.4 | `x` in FR-3.2 is **30 seconds**, measured from the **end of the last clip spoken for that name**. | [A] |
 
-Settled 2026-08-27, at the id the open question carried, and it gives FR-3.4 its
+Settled at the id the open question carried, and it gives FR-3.4 its
 default.
 
 Thirty seconds is short: a name that pauses between messages announces itself

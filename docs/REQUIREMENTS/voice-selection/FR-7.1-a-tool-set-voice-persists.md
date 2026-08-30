@@ -4,7 +4,7 @@
 |---|---|---|
 | FR-7.1 | **The config file is the record.** A voice set through the MCP tool is written through to it and survives a restart. | [A] |
 
-Settled 2026-08-27, at the id the open question carried. It answers FR-6.3's
+Settled at the id the open question carried. It answers FR-6.3's
 remaining half: both routes reach one setting, and the file is the one that
 holds it.
 
