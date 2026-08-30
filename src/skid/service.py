@@ -16,7 +16,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from skid.config import Config, load_config
@@ -37,10 +37,15 @@ so one wakeup can cover several entries and a restart needs none at all.
 PROGRESS_GRACE = 60.0
 """How long the serve loop may go without a step before it is called stuck.
 
-Twice the generation time of the longest clip the player would accept. Measured
-2026-08-28: 6.4 characters per second of audio, so the 300 second playback
-ceiling in `player.py` is about 1950 characters, which generates in roughly 30
-seconds. `.ephemera/measure-clip-length.py` regenerates the figures.
+It has to clear one generation step, because playback pings and a clip on the
+speaker is health however long it runs. Speech is about 15.5 characters per
+second of audio and generation runs at about 6.8 times realtime, so the 300
+second playback ceiling in `player.py` is roughly 4,660 characters and takes
+about 44 seconds to generate.
+
+That is inside this grace and not by much: 60 against 44 is a margin of about a
+third, where an earlier reading of the measurement put it at twice.
+`.ephemera/measure-clip-length.py` regenerates the figures.
 """
 
 STOP = None
@@ -77,6 +82,48 @@ class Workspace:
     config_path: Path | None = None
 
 
+@dataclass
+class Parts:
+    """The units a service is composed of.
+
+    Mutable because `_refresh_config` rebuilds the player when the command
+    changes, and re-voices the generator rather than replacing it, which is what
+    keeps the model warm across a config reload.
+    """
+
+    generator: Generator
+    player: Player
+    spool: Spool
+    table: QuietTable
+
+
+@dataclass
+class Loop:
+    """The serve loop's own state, separate from what it operates on.
+
+    `incoming` carries wakeups rather than work: the spool is the queue, so one
+    wakeup can cover several entries and a restart needs none at all.
+    """
+
+    incoming: queue.Queue[object | None]
+    idle: threading.Event
+    progressed: float
+    thread: threading.Thread | None = None
+
+
+@dataclass
+class Record:
+    """What the service has done, for a caller or a test to read.
+
+    Not persisted. `failures` is what `status` reports and the log holds the
+    same lines durably, which is FR-4.7's two destinations.
+    """
+
+    greeted: list[str] = field(default_factory=list)
+    spoken: list[tuple[str, str]] = field(default_factory=list)
+    failures: list[str] = field(default_factory=list)
+
+
 class Service:
     """One long-lived service: takes submissions, speaks them in order."""
 
@@ -88,27 +135,34 @@ class Service:
     ) -> None:
         """Compose the units. The generator is shared so the model stays warm."""
         self._config = config
-        self._work = workspace.work_dir
-        self._log_path = workspace.log_path
-        self._config_path = workspace.config_path
         self._config_seen: float | None = None
-        self._generator = generator or Generator(config.voice)
-        self._player = Player(command=config.player)
-
-        self._incoming: queue.Queue[object | None] = queue.Queue()
-        self._spool = Spool(
-            workspace.work_dir.parent / "spool",
-            ttl_seconds=float(config.expiry_seconds),
+        self._workspace = workspace
+        self._parts = Parts(
+            generator=generator or Generator(config.voice),
+            player=Player(command=config.player),
+            spool=Spool(
+                workspace.work_dir.parent / "spool",
+                ttl_seconds=float(config.expiry_seconds),
+            ),
+            table=QuietTable(),
         )
-        self._table = QuietTable()
-        self._failures: list[str] = []
-        self._idle = threading.Event()
-        self._idle.set()
-        self._thread: threading.Thread | None = None
-        self._progressed = time.monotonic()
+        self._loop = Loop(
+            incoming=queue.Queue(),
+            idle=threading.Event(),
+            progressed=time.monotonic(),
+        )
+        self._loop.idle.set()
+        self._record = Record()
 
-        self.greeted: list[str] = []
-        self.spoken: list[tuple[str, str]] = []
+    @property
+    def greeted(self) -> list[str]:
+        """Names announced so far, in the order they were announced."""
+        return self._record.greeted
+
+    @property
+    def spoken(self) -> list[tuple[str, str]]:
+        """Every name and text actually played, in the order heard."""
+        return self._record.spoken
 
     def start(self) -> None:
         """Begin serving. Idempotent enough to call once.
@@ -123,15 +177,15 @@ class Service:
         the log records the text a caller submitted whenever generation fails,
         so it was readable by any local user.
         """
-        for directory in (self._work, self._log_path.parent):
+        for directory in (self._workspace.work_dir, self._workspace.log_path.parent):
             directory.mkdir(parents=True, exist_ok=True)
             directory.chmod(0o700)
         self._recover()
-        self._thread = threading.Thread(target=self._serve, daemon=True)
-        self._thread.start()
-        if self._spool.pending():
-            self._idle.clear()
-            self._incoming.put(WAKE)
+        self._loop.thread = threading.Thread(target=self._serve, daemon=True)
+        self._loop.thread.start()
+        if self._parts.spool.pending():
+            self._loop.idle.clear()
+            self._loop.incoming.put(WAKE)
 
     def _recover(self) -> None:
         """Clear what a crash left in the spool, and say so where a person reads.
@@ -140,7 +194,7 @@ class Service:
         so a silent clean-up would make FR-4.5 a lie in exactly the case nobody
         would notice.
         """
-        found = self._spool.recover(now=time.time())
+        found = self._parts.spool.recover(now=time.time())
         for name in found.expired:
             self._record_failure(
                 f"discarded on start-up, older than the window: {name}"
@@ -157,10 +211,10 @@ class Service:
 
     def stop(self) -> None:
         """Stop serving after the current submission."""
-        self._incoming.put(STOP)
-        if self._thread is not None:
-            self._thread.join(timeout=30)
-            self._thread = None
+        self._loop.incoming.put(STOP)
+        if self._loop.thread is not None:
+            self._loop.thread.join(timeout=30)
+            self._loop.thread = None
 
     def submit(self, name: str, messages: list[str]) -> None:
         """Queue an array. Returns once it is on disk, not once it is heard.
@@ -171,17 +225,17 @@ class Service:
         wakeup and carries nothing: the spool is the queue.
         """
         submission = Submission(name=name, messages=list(messages))
-        self._spool.put(submission, now=time.time())
-        self._idle.clear()
-        self._incoming.put(WAKE)
+        self._parts.spool.put(submission, now=time.time())
+        self._loop.idle.clear()
+        self._loop.incoming.put(WAKE)
 
     def wait_idle(self, timeout: float) -> bool:
         """Block until nothing is waiting or being spoken."""
-        return self._idle.wait(timeout=timeout)
+        return self._loop.idle.wait(timeout=timeout)
 
     def _progress(self) -> None:
         """Note that the serve loop got somewhere. Called at each step it takes."""
-        self._progressed = time.monotonic()
+        self._loop.progressed = time.monotonic()
 
     def is_progressing(self, now: float, grace: float = PROGRESS_GRACE) -> bool:
         """Whether the serve loop is working or waiting, rather than stuck.
@@ -203,17 +257,17 @@ class Service:
         Wrong in this direction is a watchdog that fires late. Wrong in the
         other restarts a service that is speaking and cuts a clip mid-sentence.
         """
-        if self._idle.is_set():
+        if self._loop.idle.is_set():
             return True
-        if self._player.playing_since() is not None:
+        if self._parts.player.playing_since() is not None:
             return True
-        return (now - self._progressed) < grace
+        return (now - self._loop.progressed) < grace
 
     def status(self) -> dict[str, object]:
         """Health, queue depth and recent failures, for a caller that cannot log."""
         return {
-            "pending": self._spool.pending(),
-            "recent_failures": list(self._failures[-20:]),
+            "pending": self._parts.spool.pending(),
+            "recent_failures": list(self._record.failures[-20:]),
             "voice": self._config.voice,
         }
 
@@ -225,28 +279,31 @@ class Service:
         start would give the tool route effect and the file route none, which is
         two routes that do not agree.
         """
-        if self._config_path is None or not self._config_path.exists():
+        if (
+            self._workspace.config_path is None
+            or not self._workspace.config_path.exists()
+        ):
             return
-        stamp = self._config_path.stat().st_mtime
+        stamp = self._workspace.config_path.stat().st_mtime
         if stamp == self._config_seen:
             return
         self._config_seen = stamp
         try:
-            self._config = load_config(self._config_path)
+            self._config = load_config(self._workspace.config_path)
         except ValueError as exc:
             self._record_failure(f"config not reloaded: {exc}")
             return
-        self._player = Player(command=self._config.player)
-        self._generator.set_voice(self._config.voice)
+        self._parts.player = Player(command=self._config.player)
+        self._parts.generator.set_voice(self._config.voice)
 
     def _log(self, line: str) -> None:
         """Append one line to the log a person reads when the machine goes quiet."""
-        with self._log_path.open("a", encoding="utf-8") as out:
+        with self._workspace.log_path.open("a", encoding="utf-8") as out:
             out.write(f"{time.time():.3f} {line}\n")
 
     def _record_failure(self, line: str) -> None:
         """Record a failure where both a person and a caller can find it."""
-        self._failures.append(line)
+        self._record.failures.append(line)
         self._log(line)
 
     def _generate_into(
@@ -258,9 +315,9 @@ class Service:
 
         for offset, (raw, is_greeting) in enumerate(texts):
             spoken_text = apply_substitutions(self._config.substitutions, raw)
-            path = self._work / f"{index_base + offset:04d}.wav"
+            path = self._workspace.work_dir / f"{index_base + offset:04d}.wav"
             try:
-                self._generator.generate(spoken_text, path)
+                self._parts.generator.generate(spoken_text, path)
             except (GenerationFailed, OSError) as exc:
                 self._record_failure(f"generation failed for {raw!r}: {exc}")
                 continue
@@ -286,31 +343,31 @@ class Service:
 
             if greet is None:
                 greet = should_greet(
-                    self._table,
+                    self._parts.table,
                     submission.name,
                     now=time.monotonic(),
                     window=float(self._config.greeting_window_seconds),
                 )
                 if greet:
-                    self.greeted.append(submission.name)
+                    self._record.greeted.append(submission.name)
 
             if clip.is_greeting and not greet:
                 clip.path.unlink(missing_ok=True)
                 continue
 
             try:
-                self._player.play(clip.path)
+                self._parts.player.play(clip.path)
             except PlaybackFailed as exc:
                 self._record_failure(str(exc))
             else:
                 if not clip.is_greeting:
-                    self.spoken.append((submission.name, clip.text))
+                    self._record.spoken.append((submission.name, clip.text))
             finally:
                 clip.path.unlink(missing_ok=True)
                 self._progress()
 
         worker.join(timeout=5)
-        self._table.record_finished(submission.name, when=time.monotonic())
+        self._parts.table.record_finished(submission.name, when=time.monotonic())
 
     def _serve(self) -> None:
         """Take submissions in turn, each spoken to completion before the next.
@@ -326,7 +383,7 @@ class Service:
         """
         index = 0
         while True:
-            if self._incoming.get() is None:
+            if self._loop.incoming.get() is None:
                 return
             self._progress()
             self._refresh_config()
@@ -334,7 +391,7 @@ class Service:
                 self._record_failure(
                     f"discarded, older than the window: {entry.submission.name}"
                 )
-            while (taken := self._spool.take(now=time.time())) is not None:
+            while (taken := self._parts.spool.take(now=time.time())) is not None:
                 submission = taken.submission
                 try:
                     self._speak(submission, index)
@@ -343,11 +400,11 @@ class Service:
                         f"submission from {submission.name} failed: {exc}"
                     )
                 finally:
-                    self._spool.done(taken)
+                    self._parts.spool.done(taken)
                     self._progress()
                 index += len(submission.messages) + 1
-            self._idle.set()
+            self._loop.idle.set()
 
     def _expired_now(self) -> list[Entry]:
         """Whatever has aged out since the last look, for the log."""
-        return self._spool.take_expired(now=time.time())
+        return self._parts.spool.take_expired(now=time.time())
