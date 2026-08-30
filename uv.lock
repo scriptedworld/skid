@@ -2225,7 +2225,7 @@ wheels = [
 
 [[package]]
 name = "wrench"
-version = "0.1.0"
+version = "0.3.0"
 source = { directory = "../wrench/python" }
 dependencies = [
     { name = "jsonschema" },
