@@ -603,8 +603,10 @@ service manager.
   **This is not unconstrained**: an idle timeout that unloads the model makes
   FR-5.1's warm model sometimes-warm, and whatever is chosen has to keep the
   mtime re-read of FR-6.3 working.
-- **The bound in FR-1.9**, which wants to be longer than any clip skid produces
-  and is not measurable until kokoro is installed.
+- **Which remedy the bound in FR-1.9 wants.** Speech runs at about 15.5
+  characters per second of audio, so the 300 second bound clears roughly 4,660
+  characters and cuts off anything longer, and nothing caps a message at
+  submission. `NEXT_STEPS.md` states the three options open to it.
 
 Recorded so that making one of these later does not look like discovering it.
 
