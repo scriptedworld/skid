@@ -23,6 +23,12 @@ accepted, written to the config, and then every submission fails silently: the
 caller has already been told its message was queued, and the setting survives a
 restart. Recovering means editing `~/.config/skid/config.yaml` by hand.
 
+Thirteen of the 54 are in that state on a standard install, and which thirteen
+is known. The five Japanese voices need `pyopenjtalk` and the eight Chinese
+voices need `ordered-set`, which arrive only with misaki's `ja` and `zh` extras.
+kokoro depends on misaki with the English extra alone, so neither package is in
+`uv.lock` and neither is installed. The other 41 render.
+
 That is FR-6.5 unmet, on a row that has a test citing it. The automatic
 assignment path cannot reach one of these, because the shortlist in the config
 was chosen from voices that produced a sample; the exposed tool can.
