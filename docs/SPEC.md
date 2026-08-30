@@ -473,8 +473,9 @@ kokoro is torch and generation blocks. Under asyncio without an executor it
 would stall the event loop, which would stall accepts, which would break
 FR-4.5's promise that submitting returns immediately.
 
-The HTTP surface is whatever the MCP SDK's server requires, served on the
-socket systemd hands over.
+The HTTP surface is the six plain routes named in `skid/tools.py`, served on the
+socket systemd hands over. The service imports no MCP SDK; the protocol lives in
+`skid-mcp`.
 
 *Discharges FR-4.5, FR-4.2.*
 

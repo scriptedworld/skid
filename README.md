@@ -87,7 +87,10 @@ and these are the things a stranger would otherwise find out by running it:
   writes it to the config, and then everything fails quietly until you edit the
   file back by hand;
 - Linux only, and the pronunciation substitutions have been designed rather
-  than worn in.
+  than worn in;
+- the MCP path is going to change: a forwarder that holds no connection to the
+  backend is planned but not built, so build against the current one knowing
+  that.
 
 `NEXT_STEPS.md` has the rest, including what a green test run does not prove.
 
