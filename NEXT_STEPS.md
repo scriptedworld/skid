@@ -1,8 +1,8 @@
 # skid, what is not done
 
 Every requirement `docs/REQUIREMENTS/` states is built and has a test citing it.
-What follows is what is open anyway: one blocker, one known defect, and a set of
-questions nothing depends on.
+What follows is what is open anyway: one blocker, one known defect, one piece of
+planned work, and a set of questions nothing depends on.
 
 ## The blocker: skid cannot be installed from a standalone clone
 
@@ -26,6 +26,26 @@ restart. Recovering means editing `~/.config/skid/config.yaml` by hand.
 That is FR-6.5 unmet, on a row that has a test citing it. The automatic
 assignment path cannot reach one of these, because the shortlist in the config
 was chosen from voices that produced a sample; the exposed tool can.
+
+## Planned: an MCP forwarder that holds no connection
+
+The largest outstanding piece of work, and it is not started. A new MCP
+forwarder passes each call straight through to the backend and keeps nothing
+open between calls.
+
+The reason is restarts rather than speed. The backend is socket-activated and
+systemd restarts it, so a client holding a long-lived connection turns a clean
+restart into a broken client, and every consumer then needs reconnection logic
+that runs only when something has already gone wrong. Forwarding per call makes
+a restart invisible to the caller, because there is nothing to go stale.
+
+Today's `skid-mcp` holds no session, which was removed deliberately, and does
+hold a pooled connection: one `httpx.Client` per process, reused across calls.
+So the existing statements that it holds nothing between calls are about state
+and are accurate about state.
+`docs/DECISIONS/the-forwarder-holds-no-connection.md` carries the reasoning, the
+measurement, and the one thing about the current behaviour that has not been
+measured.
 
 ## What a green traceability run does and does not prove
 
