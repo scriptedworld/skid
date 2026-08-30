@@ -37,5 +37,6 @@ coverage.xml
 # own, not toolbox's, and it is what points the common jig at a requirements
 # directory instead of the retired single file.
 bolt.*-quality.yaml
+bolt.secrets.yaml
 bin/*.py
 adapters/
