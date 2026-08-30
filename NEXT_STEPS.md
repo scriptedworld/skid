@@ -31,9 +31,11 @@ at all.
 `skid-mcp` must postdate the 2026-08-28 deploy before `/mcp` can go, and
 deleting it early takes the voice off every session holding an older shim.
 `docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md` is what
-happened the first time. Checked 2026-08-28 at 18:47 and it is **not** clear:
-eight of the nine shims running started between 02:06 and 10:48, before the
-10:51 deploy.
+happened the first time. Checked 2026-08-30 at 03:40 and it is **not** clear:
+thirteen shims are running and eight of them started between 02:06 and 10:48 on
+08-28, before the 10:51 deploy. The same eight were there on 08-28 and on 08-30
+at 01:40, so nothing is ageing out on its own; each one is a session that has
+not cleared since.
 
     for p in $(pgrep -f skid-mcp); do ps -o pid=,lstart= -p $p; done
 
