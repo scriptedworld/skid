@@ -48,17 +48,14 @@ dependencies = [
     # how socket activation reaches this process. Flask is WSGI and has no
     # server of its own for that.
     #
-    # DECLARED BEFORE USE. Nothing imports these until
-    # clank/tasks/skid/resilience/40 lands, and mcp becomes the script's
-    # dependency alone at the same time.
+    # DECLARED BEFORE USE. Nothing imports these until the resilience work
+    # lands, and mcp becomes the script's dependency alone at the same time.
     "flask>=3.0",
     "waitress>=3.0",
 ]
 
-# wrench is unpublished, so it is a path dependency. A relative path, because
-# every repository here sits at `~/.projects/<name>` and
-# `dotfiles/repos.live.toml` is what clones them, so the sibling is there on any
-# machine set up from the roster.
+# wrench is unpublished, so it is a path dependency, relative because the
+# repositories are cloned as siblings.
 #
 # Not editable. wrench used to resolve its schemas by walking up from __file__,
 # which forced an editable install, and a PEP 660 import hook is something mypy
@@ -86,7 +83,7 @@ wrench = { path = "../wrench/python" }
 # interpreter the code actually uses. `types` reports 30 phantom errors from
 # PATH and one real one from the venv, which is the whole argument.
 #
-# Filed against the jig as clank/tasks/toolbox/jig-validation/30.
+# Filed against the jig.
 [dependency-groups]
 dev = [
     "ruff",
@@ -166,7 +163,7 @@ python_executable = ".venv/bin/python"
 # A gate that fails a project for the code it adopted to run the gate is
 # reporting on the wrong repository. Excluding a path holding none of this
 # project's code says so; it hides no finding about skid and adds no pragma.
-# Filed for toolbox as clank/inbox/toolbox/an-adopter-is-graded-on-the-checkers-it-adopts.
+# Filed against toolbox: an adopter is graded on the checkers it adopts.
 
 [tool.ruff]
 extend-exclude = ["bin"]

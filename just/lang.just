@@ -8,7 +8,7 @@
 #
 # skid's own pyproject records what that costs: the `types` task reports thirty
 # phantom errors from PATH and one real one from the venv. Filed against the jig
-# as clank/tasks/toolbox/jig-validation/30.
+# against the jig.
 #
 # So `just test` here means `uv run pytest`, and the jig calls in `checks` are
 # the exception: those run bolt, which invokes the checkers from PATH by design,
