@@ -6,11 +6,9 @@
 # bolt refuses with usage, writing no run directory at all.
 #
 # `requirements` defaults to REQUIREMENTS.md, the retired single-file layout.
-# skid holds requirements as a directory, ruled in
-# silo/docs/DECISIONS/requirements-are-a-directory.md, so the check is pointed
-# at where they actually live. THIS IS NOT SILENCING THE CHECK: the decision
-# names the wrong move by name, which is concatenating the tree into a file to
-# feed the checker.
+# skid holds requirements as a directory, so the check is pointed at where they
+# actually live. THIS IS NOT SILENCING THE CHECK: the wrong move would be
+# concatenating the tree into a file to feed the checker a default it expects.
 #
 # `suppressions` defaults to SUPPRESSIONS at the run root. skid's register is
 # docs/SUPPRESSIONS.md. Without this line the checker looks for a register that

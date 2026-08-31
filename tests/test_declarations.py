@@ -204,7 +204,7 @@ def test_kokoro_is_still_a_python_project() -> None:
 
     It fails on the day kokoro becomes a thin wrapper over a compiled runtime,
     which is the day the choice of language is worth re-examining rather than
-    inheriting. Ruled at `clank/tasks/skid/traceability/20`.
+    inheriting.
     """
     required = _kokoro().get_all("Requires-Dist") or []
     names = {Requirement(str(entry)).name.lower() for entry in required}

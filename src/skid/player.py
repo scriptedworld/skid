@@ -23,7 +23,7 @@ DEFAULT_TIMEOUT = 300.0
 It does not clear every clip skid can produce. At about 15.5 characters per
 second of audio this is roughly 4,660 characters, and nothing caps a message at
 submission, so a longer one is cut off mid-sentence. Whether that is the right
-ceiling is open, at `clank/tasks/skid/playback/20`.
+ceiling is open.
 """
 
 
