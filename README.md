@@ -82,7 +82,7 @@ no port to bind. See `SECURITY.md`.
 There has been no release and no tag. skid runs as a service and is used daily,
 and these are the things a stranger would otherwise find out by running it:
 
-- it cannot be installed from a standalone clone, which is the blocker below;
+- it needs a wrench checkout beside it, since wrench is not on a registry;
 - `set_voice` accepts any of kokoro's 54 voice names, including the thirteen
   Japanese and Chinese ones a standard install cannot render, writes it to the
   config, and then everything fails quietly until you edit the file back by
@@ -115,13 +115,13 @@ a start waits for the model to load; every call after that does not.
 
 ## Installing
 
-**A standalone clone cannot install yet.** skid depends on `wrench` for its
-config and spool handling, wrench is unpublished, and `pyproject.toml` names it
-by relative path. Until wrench is published or fetched by the bootstrap, an
-install works only where a wrench checkout sits beside this one. There is no
-workaround to write down; the dependency has to be resolved first.
+**Clone wrench beside this one first.** skid uses it for config and spool
+handling, and since wrench is not on a package registry, `pyproject.toml` names
+it by relative path:
 
-Where it can resolve, the whole install is one command from a checkout:
+    git clone https://github.com/scriptedworld/wrench.git ../wrench
+
+The install is then one command from a checkout:
 
     python3 src/skid/install.py
 

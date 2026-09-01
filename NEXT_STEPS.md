@@ -1,18 +1,30 @@
 # skid, what is not done
 
 Every requirement `docs/REQUIREMENTS/` states is built and has a test citing it.
-What follows is what is open anyway: one blocker, one known defect, one piece of
-planned work, and a set of questions nothing depends on.
+What follows is what is open anyway: three pieces of planned work, one known
+defect, and a set of questions nothing depends on.
 
-## The blocker: skid cannot be installed from a standalone clone
+## Open: a voice belongs to a name, and is chosen rather than allocated
 
-`wrench` handles the config file and the spool, it is unpublished, and both
-`pyproject.toml` and `uv.lock` name it by relative path at `../wrench/python`.
-Without a wrench checkout beside this one, `uv sync` fails and so does the
-installer, which means the suite cannot be run either.
+A voice is assigned from a pool as names arrive, so which one a name gets
+depends on who spoke first and it does not survive the assignment expiring. A
+name should hold a voice because somebody picked it for that name.
 
-Publishing wrench, or having the bootstrap fetch it, is the prerequisite for
-skid going anywhere. Nothing else on this page matters until it is done.
+Two halves. **The assignment becomes data rather than an allocation**: a name
+maps to a voice in the config, and the pool stays as the fallback for a name
+nobody has chosen for. And **the choice becomes settable over MCP**, which
+`set_voice` cannot express today: it takes a voice and no name, so it changes
+the default for everybody rather than one caller's voice.
+
+## Open: the MCP server becomes a thin proxy
+
+The MCP path holds a connection to the backend, so the client and the service
+have to agree about lifetime. The plan is **a very thin executable that passes
+the submission to the service and exits**, holding nothing.
+
+That is the shape `skid-say` already has, and the reason it cannot fall out of
+step with the service behind it. The MCP entry point should be the same thing
+with a different front door.
 
 ## The known defect: a voice that is named but cannot render
 

@@ -1712,7 +1712,7 @@ requires-dist = [
     { name = "kokoro", specifier = ">=0.9.4" },
     { name = "mcp", specifier = ">=2.0" },
     { name = "waitress", specifier = ">=3.0" },
-    { name = "wrench", directory = "../wrench/python" },
+    { name = "wrench", git = "https://github.com/scriptedworld/wrench.git?subdirectory=python" },
 ]
 
 [package.metadata.requires-dev]
@@ -2226,15 +2226,8 @@ wheels = [
 [[package]]
 name = "wrench"
 version = "0.3.0"
-source = { directory = "../wrench/python" }
+source = { git = "https://github.com/scriptedworld/wrench.git?subdirectory=python#17df8da8116d46765d772dcc1313cab98fb67438" }
 dependencies = [
-    { name = "jsonschema" },
-    { name = "pyyaml" },
-    { name = "referencing" },
-]
-
-[package.metadata]
-requires-dist = [
     { name = "jsonschema" },
     { name = "pyyaml" },
     { name = "referencing" },
