@@ -143,6 +143,8 @@ reinstalling and deploying a change.
     docs/SPEC.md         how skid is arranged, and why one service
     docs/TEST_PLAN.md    one test named per requirement
     docs/config.sample.yaml   every setting with its default and its reasons
+    docs/running-in-a-container.md  Debian and container prerequisites, and the
+                         audio problem a container has and a host does not
     docs/DECISIONS/      one file per decision
     docs/LESSONS/        what went wrong once, written up so it does not twice
     CONTRIBUTING.md      how to run the suite and what a change has to carry
