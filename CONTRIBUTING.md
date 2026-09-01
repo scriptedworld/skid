@@ -2,16 +2,13 @@
 
 ## Read this before you set up
 
-skid does not yet install or build from a standalone clone. `wrench`, which
-handles the config file and the spool, is unpublished, and both `pyproject.toml`
-and `uv.lock` name it by relative path at `../wrench/python`. `uv sync` fails
-without a wrench checkout beside this one, so the suite cannot be run either.
+`uv sync` is all a clone needs. `wrench`, which handles the config file and the
+spool, is not on a package registry, so `pyproject.toml` names it by git URL and
+`uv` fetches it like any other dependency.
 
-Publishing wrench, or having the bootstrap fetch it, is the open prerequisite.
-Nothing in this file works around it, and a change that adds a workaround is not
-the fix.
-
-Everything below assumes that is resolved.
+To develop against a local wrench, override the source at the command line
+rather than editing `pyproject.toml`, so the committed file keeps working for
+everybody else.
 
 ## Setting up
 

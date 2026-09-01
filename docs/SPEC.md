@@ -545,11 +545,9 @@ Dependencies: `kokoro`, `flask` and `waitress` for the service, the Anthropic
 MCP SDK for Python for the script alone, `httpx` between them, `wrench` for the
 config and the spool, and numpy, which arrives with kokoro.
 
-wrench is a path dependency and that is a real constraint. It is unpublished, so
-`[tool.uv.sources]` points at `../wrench/python`, which holds on any machine set
-up from `dotfiles/repos.live.toml` and **not** on a standalone clone. Publishing
-wrench, or fetching it in the bootstrap, is a prerequisite for skid going
-public.
+wrench is not on a package registry, so `[tool.uv.sources]` names it by git URL
+and `uv` fetches it like any other dependency. That resolves on a standalone
+clone, which the relative path it replaced did not.
 
 It is installed as an ordinary copy. An editable install was once required, and
 a PEP 660 import hook is something mypy cannot follow, so wrench's `py.typed`

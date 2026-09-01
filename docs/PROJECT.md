@@ -237,7 +237,7 @@ into an environment holding an interpreter kokoro accepts is the answer to the
 declaration, and it is already the arrangement.
 
 **wrench is a path dependency, and skid cannot be installed without it.** It is
-unpublished, so `[tool.uv.sources]` points at a sibling checkout. It is not
+not on a registry, so `[tool.uv.sources]` points at a sibling checkout. It is not
 editable: wrench used to resolve its schemas by walking up from `__file__`,
 which forced an editable install, and a PEP 660 import hook is something mypy
 cannot follow, so wrench's `py.typed` was invisible and every import of it was
@@ -247,4 +247,4 @@ prerequisite for skid going public. `NEXT_STEPS.md` carries what it blocks.
 ## What is not built
 
 Nothing a requirement names. `NEXT_STEPS.md` holds what is open anyway: the
-wrench blocker, one known defect, and the questions nothing depends on.
+voice-per-name work, the MCP proxy, one known defect, and the questions nothing depends on.
