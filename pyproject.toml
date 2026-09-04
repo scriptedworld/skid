@@ -153,6 +153,24 @@ exclude = ['^bin/', '^adapters/']
 # than report on which python invoked it.
 python_executable = ".venv/bin/python"
 
+# kokoro ships no `py.typed` and publishes no stub package, so mypy reports
+# `import-untyped` for it and stops describing skid.
+#
+# AN OVERRIDE RATHER THAN A STUB PACKAGE, which is the opposite of the choice
+# made for waitress a few lines above, and the difference is that there is no
+# stub package to install. `types-waitress` exists; nothing equivalent exists
+# for kokoro, and writing one here would be this repository maintaining a
+# description of somebody else's API.
+#
+# AN OVERRIDE RATHER THAN A `# type: ignore`, because the ignore would sit in
+# `generation.py` at the one import and say nothing about why, and it would be a
+# pragma the suppression register then has to carry. This says the same thing
+# once, where the other tool configuration is, and holds every other import in
+# that file to `strict`.
+[[tool.mypy.overrides]]
+module = ["kokoro.*"]
+ignore_missing_imports = true
+
 # WHY bin/ IS EXCLUDED EVERYWHERE BELOW, and why it is scoping rather than
 # silencing. bin/ holds nothing skid wrote. It is two symlinks into
 # toolbox/bin/, adopted because the common jig resolves its checkers against
