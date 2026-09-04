@@ -28,6 +28,7 @@ __pycache__/
 .bolt-*/
 coverage.xml
 .coverage
+.coverage.*
 
 # The adopted jigs and the checkers they name, linked into toolbox. A committed
 # copy would be a second statement of one thing, free to drift from the file it
