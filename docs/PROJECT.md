@@ -236,13 +236,24 @@ environment on 3.12 with no flag, whatever the machine's default is. Installing
 into an environment holding an interpreter kokoro accepts is the answer to the
 declaration, and it is already the arrangement.
 
-**wrench is a path dependency, and skid cannot be installed without it.** It is
-not on a registry, so `[tool.uv.sources]` points at a sibling checkout. It is not
-editable: wrench used to resolve its schemas by walking up from `__file__`,
-which forced an editable install, and a PEP 660 import hook is something mypy
-cannot follow, so wrench's `py.typed` was invisible and every import of it was
-an error. Publishing wrench, or fetching it in the bootstrap, is the
-prerequisite for skid going public. `NEXT_STEPS.md` carries what it blocks.
+**wrench is a git dependency, and a clone needs no sibling checkout.** It is not
+on a registry, so `[tool.uv.sources]` names it by git URL; uv takes one as
+readily as a registry name, which is what lets a standalone clone install. This
+document said "path dependency, pointing at a sibling checkout" until 2026-09-04,
+which had been the arrangement and had already been replaced — fetching it in the
+bootstrap was named here as a prerequisite for going public, and it is what
+happened.
+
+It is not editable: wrench used to resolve its schemas by walking up from
+`__file__`, which forced an editable install, and a PEP 660 import hook is
+something mypy cannot follow, so wrench's `py.typed` was invisible and every
+import of it was an error. wrench carries its schemas as generated source now.
+
+**The consequence is that skid tracks the wrench that is pushed, not the one
+beside it.** A local wrench is invisible here without `uv sync --no-sources` or
+an overridden source, so a change written in a sibling checkout cannot be
+verified against skid until it lands. `NEXT_STEPS.md` carries what publishing
+still blocks.
 
 ## What is not built
 
