@@ -42,12 +42,19 @@ from skid.install import (
     Paths,
     Step,
     already_installed,
+    ask_about_reinstalling,
     confirmed,
+    install,
     install_plan,
+    main,
     missing_tools,
+    parse,
     perform,
+    registration_is_current,
     report_what_changed,
+    run,
     spacy_model_present,
+    uninstall,
     uninstall_plan,
     verify_plan,
 )
@@ -56,14 +63,39 @@ CHECKOUT = Path(__file__).resolve().parent.parent
 """The real checkout, read from but never written to."""
 
 
-def _paths(tmp_path: Path) -> Paths:
-    """A Paths pointing everything writable at a temporary directory."""
+def _paths(tmp_path: Path, *, registration: str | None = None) -> Paths:
+    """A Paths pointing everything readable and writable at a temporary directory.
+
+    `client_config` is included deliberately. It defaults to the real
+    `~/.claude.json`, and a plan now reads it to decide whether re-registering
+    is owed, so a test that left it defaulted would branch on whether the
+    machine running the suite happens to have skid registered. That is the
+    property `Paths` exists for, and the default is the one field that can leak.
+
+    `registration` writes a client config first: pass the JSON a real client
+    would hold, or leave it None for a machine that has never registered skid.
+    """
+    config = tmp_path / ".claude.json"
+    if registration is not None:
+        config.write_text(registration, encoding="utf-8")
     return Paths(
         checkout=CHECKOUT,
         units=tmp_path / "systemd" / "user",
         bin_dir=tmp_path / "bin",
         tool_dir=tmp_path / "tools" / "skid",
+        client_config=config,
     )
+
+
+CURRENT_REGISTRATION = (
+    '{"mcpServers": {"skid": {"type": "stdio", "command": "skid-mcp",'
+    ' "args": [], "env": {}}}}'
+)
+"""A client config holding exactly what this installer would write.
+
+Taken from the live `~/.claude.json` on 2026-09-07 rather than invented, so a
+test asserting that this shape is left alone is asserting against the real one.
+"""
 
 
 def _argvs(steps: list[Step]) -> list[tuple[str, ...]]:
@@ -115,16 +147,26 @@ def test_the_installer_checks_each_unit_before_writing_it(
 def test_the_units_are_checked_before_the_first_thing_is_written(
     tmp_path: Path,
 ) -> None:
-    """A unit systemd will reject must be found before the machine is touched.
+    """A unit systemd will reject must be found before either unit is copied.
 
     Installing one leaves a machine that looks installed and cannot start, and
     the order is the whole content of the guard, so it is asserted as order.
+
+    **Measured against the copies, not against every command.** This once
+    asserted the checks came before the first command of any kind, which read
+    as the stronger guarantee and was not one this installer could keep:
+    `skid.service` names `~/.local/bin/skid` in `ExecStart` and
+    `systemd-analyze verify` fails on a command that is not there, so the check
+    could only pass on a machine some earlier install had already put that
+    binary on. It verified a stale binary, and on a clean machine the installer
+    stopped dead. Ordered after `uv tool install`, it verifies the executable
+    this run just produced, and still precedes every copy.
     """
     plan = _argvs(install_plan(_paths(tmp_path)))
     last_check = max(i for i, argv in enumerate(plan) if argv[0] == "systemd-analyze")
-    first_write = min(i for i, argv in enumerate(plan) if argv[0] != "systemd-analyze")
+    first_copy = min(i for i, argv in enumerate(plan) if argv[0] == "install")
 
-    assert last_check < first_write
+    assert last_check < first_copy
 
 
 # COVERS: FR-5.4 | property
@@ -201,9 +243,9 @@ def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
     verbs = [argv[:3] for argv in _argvs(install_plan(paths))]
 
     assert verbs == [
-        ("systemd-analyze", "--user", "verify"),
-        ("systemd-analyze", "--user", "verify"),
         ("uv", "tool", "install"),
+        ("systemd-analyze", "--user", "verify"),
+        ("systemd-analyze", "--user", "verify"),
         ("install", "-D", "-m"),
         ("install", "-D", "-m"),
         ("systemctl", "--user", "daemon-reload"),
@@ -471,3 +513,375 @@ def test_the_installer_imports_nothing_it_installs() -> None:
     assert imported <= sys.stdlib_module_names | {"__future__"}, sorted(
         imported - sys.stdlib_module_names
     )
+
+
+# COVERS: FR-9.14 | regression
+def test_nothing_is_verified_against_a_binary_the_install_has_not_made_yet(
+    tmp_path: Path,
+) -> None:
+    """The tool is installed before any step that needs it to exist.
+
+    FR-9.14 is discharged above by reading the import set, and the import set
+    was always clean. It did not catch this, because the requirement is about
+    the plan running on a machine that has never had skid, and the plan can
+    fail that while importing nothing.
+
+    `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
+    `systemd-analyze verify` refuses a command that is not there. Measured
+    2026-09-07 by uninstalling the tool and running the installer:
+
+        FAILED (1): skid.service: Command /home/ancient/.local/bin/skid is not
+        executable: No such file or directory
+
+    The installer stopped there and installed nothing. It had only ever passed
+    because a previous install had left that binary behind, which also means it
+    was verifying a stale binary rather than the one being installed.
+    """
+    plan = _argvs(install_plan(_paths(tmp_path)))
+
+    assert plan[0][:3] == ("uv", "tool", "install")
+    installs_tool = 0
+    for argv in plan:
+        if argv[:3] == ("uv", "tool", "install"):
+            installs_tool = 1
+        elif argv[0] == "systemd-analyze":
+            assert installs_tool, "a unit is verified before skid is on PATH"
+
+
+# COVERS: FR-9.11 | positive
+def test_a_registration_already_in_the_wanted_shape_is_left_alone(
+    tmp_path: Path,
+) -> None:
+    """A reinstall re-registers nothing when the entry is already correct.
+
+    The entry names a command on PATH, `skid-mcp`, and never a checkout. So it
+    is already right for whichever checkout was just installed and rewriting it
+    changes no bytes. It is not free: every running session loses `speak` until
+    it restarts, because a session acquires an MCP server when it starts.
+    """
+    paths = _paths(tmp_path, registration=CURRENT_REGISTRATION)
+
+    verbs = [argv[:2] for argv in _argvs(install_plan(paths, reinstall=True))]
+
+    assert ("claude", "mcp") not in verbs
+
+
+# COVERS: FR-9.11 | negative
+@pytest.mark.parametrize(
+    ("name", "config"),
+    [
+        ("absent", None),
+        ("not json", "{not json at all"),
+        ("no servers", '{"other": {}}'),
+        ("another command", '{"mcpServers": {"skid": {"command": "elsewhere"}}}'),
+        (
+            "carries args",
+            '{"mcpServers": {"skid": {"command": "skid-mcp", "args": ["--x"]}}}',
+        ),
+        ("not an object", '{"mcpServers": {"skid": "skid-mcp"}}'),
+    ],
+)
+def test_a_registration_that_is_not_the_wanted_one_is_rewritten(
+    name: str, config: str | None, tmp_path: Path
+) -> None:
+    """Anything other than the exact shape this installer writes is replaced.
+
+    The skip exists to spare running sessions, never to leave a wrong entry in
+    place, so every way of being wrong has to fall through to remove-then-add.
+    """
+    paths = _paths(tmp_path, registration=config)
+
+    verbs = [argv[:3] for argv in _argvs(install_plan(paths, reinstall=True))]
+
+    assert ("claude", "mcp", "remove") in verbs, name
+    assert ("claude", "mcp", "add") in verbs, name
+
+
+# COVERS: FR-9.11 | edge
+def test_a_first_install_registers_without_removing(tmp_path: Path) -> None:
+    """There is nothing to remove on a machine that has never registered skid."""
+    verbs = [argv[:3] for argv in _argvs(install_plan(_paths(tmp_path)))]
+
+    assert ("claude", "mcp", "remove") not in verbs
+    assert ("claude", "mcp", "add") in verbs
+
+
+# COVERS: FR-9.11 | property
+def test_reading_the_registration_never_runs_the_client(tmp_path: Path) -> None:
+    """The decision is read from the file, never from `claude mcp get`.
+
+    `already_installed` gives the reason and it applies here identically: the
+    CLI health-checks the server it is asked about, a health check opens the
+    socket, and opening the socket starts the service. Deciding whether to
+    re-register must not load a model.
+    """
+    source = (CHECKOUT / "src" / "skid" / "install.py").read_text(encoding="utf-8")
+    function = next(
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.FunctionDef) and node.name == "registration_is_current"
+    )
+    # The docstring explains why `claude mcp get` is not used, so scanning the
+    # raw text would match the explanation and fail. Read the code instead.
+    body = ast.unparse(ast.Module(body=function.body[1:], type_ignores=[]))
+
+    assert "read_text" in body
+    assert "subprocess" not in body
+    assert "claude" not in body
+
+
+# COVERS: FR-9.11 | edge
+def test_an_unreadable_client_config_registers_rather_than_assuming(
+    tmp_path: Path,
+) -> None:
+    """A config that cannot be read is treated as no registration.
+
+    Registering when one was already there is tolerated and costs a session its
+    `speak`. Skipping when there was none leaves skid unreachable. So the
+    unreadable case takes the recoverable side.
+    """
+    unreadable = tmp_path / "not-a-file"
+    unreadable.mkdir()
+
+    assert registration_is_current(unreadable) is False
+
+
+# COVERS: FR-9.4 | positive
+def test_every_path_named_is_one_this_run_would_touch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The report names the paths from `Paths`, not from the real home.
+
+    It used to print `Path.home() / '.claude.json'` while the plan read the
+    registration from `paths.client_config`, so a run pointed at a temporary
+    directory reported a file it had not touched.
+    """
+    paths = _paths(tmp_path)
+
+    report_what_changed(paths)
+
+    printed = capsys.readouterr().out
+    assert str(paths.units) in printed
+    assert str(paths.tool_dir) in printed
+    assert str(paths.client_config) in printed
+    assert str(Path.home() / ".claude.json") not in printed
+
+
+# COVERS: FR-9.2 | property
+def test_a_dry_run_runs_none_of_the_commands(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`perform` prints every step and executes nothing when dry.
+
+    The command asserted here does not exist, so a dry run that executed it
+    would fail rather than pass quietly.
+    """
+    steps = [Step(says="would run", argv=("definitely-not-a-command", "--now"))]
+
+    assert perform(steps, dry_run=True) is True
+    assert "definitely-not-a-command" in capsys.readouterr().out
+
+
+# COVERS: FR-9.12 | positive
+def test_the_reinstall_question_is_answered_by_yes(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`--yes` answers for a script, and what is already there is still shown."""
+    answered = ask_about_reinstalling(["/somewhere/skid.socket"], assume_yes=True)
+
+    assert answered is True
+    assert "/somewhere/skid.socket" in capsys.readouterr().out
+
+
+# COVERS: FR-9.5 | negative
+def test_an_install_stops_before_writing_when_a_tool_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A machine without the tools is told, and nothing is written.
+
+    **PATH is the boundary, so PATH is what the test moves.** `missing_tools`
+    asks `shutil.which`, which reads PATH and nothing else, so emptying it is
+    the honest way to be a machine without uv. Replacing `missing_tools` with a
+    function returning `["uv"]` would assert that `install` believes whatever it
+    is told, which is not the property.
+    """
+    monkeypatch.setenv("PATH", "")
+
+    code = install(_paths(tmp_path), dry_run=False)
+
+    assert code == 1
+    assert "uv" in capsys.readouterr().err
+    assert not (tmp_path / "systemd").exists()
+
+
+# COVERS: FR-9.12 | negative
+def test_a_reinstall_with_no_terminal_to_ask_on_changes_nothing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Silence is taken for no, and the machine is left as it was.
+
+    Nothing is replaced here either. `confirmed` asks `sys.stdin.isatty()`, and
+    under the suite stdin is not a terminal, so this IS the no-terminal case
+    rather than a simulation of one. That is the case the installer is most
+    likely to meet in anger: a script or a hook with no one to answer.
+    """
+    paths = _paths(tmp_path)
+    paths.units.mkdir(parents=True)
+    (paths.units / "skid.socket").write_text("", encoding="utf-8")
+
+    code = install(paths, dry_run=False)
+
+    printed = capsys.readouterr().out
+    assert code == 0
+    assert "Left alone" in printed
+    assert "not a terminal" in printed
+    assert not (paths.units / "skid.service").exists()
+
+
+# COVERS: FR-9.2 | positive
+def test_a_dry_run_install_writes_nothing_and_says_so(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The whole plan is printed and the machine is untouched."""
+    paths = _paths(tmp_path)
+
+    code = install(paths, dry_run=True)
+
+    printed = capsys.readouterr().out
+    assert code == 0
+    assert "Dry run: nothing was changed." in printed
+    assert "uv tool install" in printed
+    assert not paths.units.exists()
+
+
+# COVERS: FR-9.13 | positive
+def test_a_dry_run_uninstall_writes_nothing_and_says_so(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The reversal is printed without being carried out."""
+    code = uninstall(_paths(tmp_path), dry_run=True)
+
+    printed = capsys.readouterr().out
+    assert code == 0
+    assert "Dry run: nothing was changed." in printed
+    assert "uv tool uninstall" in printed
+
+
+# COVERS: FR-9.2 | positive
+def test_the_options_this_installer_has(capsys: pytest.CaptureFixture[str]) -> None:
+    """Three flags, and defaults that change nothing without being asked."""
+    default = parse([])
+
+    assert (default.dry_run, default.uninstall, default.yes) == (False, False, False)
+    assert parse(["--dry-run"]).dry_run is True
+    assert parse(["--uninstall"]).uninstall is True
+    assert parse(["--yes"]).yes is True
+
+
+# COVERS: FR-9.13 | property
+def test_main_routes_uninstall_away_from_install(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`--uninstall` reaches the removal plan and `--dry-run` alone reaches the install.
+
+    **Both routes are taken for real, under `--dry-run`.** Neither function is
+    replaced: a dry run prints its plan and executes nothing, so the two can be
+    told apart by what they print, and the thing under test is the routing
+    rather than a pair of stand-ins agreeing with the test.
+    """
+    assert main(["--uninstall", "--dry-run"]) == 0
+    removing = capsys.readouterr().out
+
+    assert main(["--dry-run"]) == 0
+    installing = capsys.readouterr().out
+
+    assert "Removing skid" in removing
+    assert "uv tool uninstall" in removing
+    assert "uv tool install" in installing
+    assert "Removing skid" not in installing
+
+
+# COVERS: FR-9.10 | positive
+def test_a_step_that_exits_clean_has_succeeded() -> None:
+    """Run for real against a command that does nothing and exits 0."""
+    assert run(Step(says="does nothing", argv=("true",))) is True
+
+
+# COVERS: FR-9.10 | positive
+def test_a_step_that_finds_the_state_it_wanted_has_succeeded(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A non-zero exit whose output carries the tolerated message is success.
+
+    This is the case the installer meets on every re-run: `claude mcp add`
+    exits 1 on a name that is already registered, and reading the status alone
+    would call a working reinstall a failure. Exercised with a real command
+    that prints the message and exits non-zero, so the reading of stdout and
+    the reading of the status are both real.
+    """
+    step = Step(
+        says="reports what is already so",
+        argv=("sh", "-c", "echo already exists; exit 1"),
+        tolerate="already exists",
+    )
+
+    assert run(step) is True
+    assert "already so" in capsys.readouterr().out
+
+
+# COVERS: FR-9.10 | negative
+def test_a_step_that_fails_for_another_reason_is_a_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A tolerated message is matched, not assumed from the exit status alone."""
+    step = Step(
+        says="fails in a way nothing tolerates",
+        argv=("sh", "-c", "echo something else >&2; exit 3"),
+        tolerate="already exists",
+    )
+
+    assert run(step) is False
+    assert "FAILED (3)" in capsys.readouterr().err
+
+
+# COVERS: FR-9.1 | negative
+def test_performing_stops_at_the_first_step_that_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A plan is a sequence, so a failure halts it rather than carrying on.
+
+    The step after the failure would create a file if it ran, so its absence is
+    the assertion rather than the printed output.
+    """
+    steps = [
+        Step(says="fails", argv=("false",)),
+        Step(says="would run next", argv=("echo", "reached")),
+    ]
+
+    assert perform(steps, dry_run=False) is False
+    assert "reached" not in capsys.readouterr().out
+
+
+# COVERS: FR-9.1 | positive
+def test_performing_runs_every_step_when_each_one_succeeds(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A plan that succeeds runs all of it, for real, in order.
+
+    Asserted by what the commands left on disk rather than by what they
+    printed, because printing is what a dry run also does and the difference
+    between the two is the whole point of this one.
+    """
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    steps = [
+        Step(says="makes the first", argv=("touch", str(first))),
+        Step(says="makes the second", argv=("touch", str(second))),
+    ]
+
+    assert perform(steps, dry_run=False) is True
+    assert first.exists()
+    assert second.exists()
