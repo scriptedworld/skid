@@ -36,6 +36,7 @@ and no terminal to ask on is taken as no.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess  # nosec B404 - docs/SUPPRESSIONS.md S-1
@@ -91,6 +92,10 @@ class Paths:
     units: Path
     bin_dir: Path
     tool_dir: Path
+    client_config: Path = Path.home() / ".claude.json"
+    """Where the MCP client keeps its registrations, read to decide whether to
+    re-register. Defaulted so existing callers are unaffected, and a parameter
+    so a test can point it at a temporary file like everything else here."""
 
     @classmethod
     def from_environment(cls, checkout: Path) -> Paths:
@@ -104,11 +109,26 @@ class Paths:
             units=config_home / "systemd" / "user",
             bin_dir=Path.home() / ".local" / "bin",
             tool_dir=data_home / "uv" / "tools" / "skid",
+            client_config=Path.home() / ".claude.json",
         )
 
 
 def _unit_checks(source: Path) -> list[Step]:
-    """Ask systemd to accept each unit, before anything is written (FR-9.6)."""
+    """Ask systemd to accept each unit, before either is copied (FR-9.6).
+
+    **These run after the tool is installed and before the units are written.**
+    `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
+    `systemd-analyze verify` fails on a command that is not there, so a check
+    placed before the tool install cannot pass on a machine that has never had
+    skid. It only ever passed because a previous install had left the binary
+    behind, and it verified that stale binary rather than the one being
+    installed.
+
+    Ordering it after the install makes the `ExecStart` check mean something:
+    it verifies the executable this run just produced. FR-9.6 is unchanged,
+    because what it protects is a unit reaching `~/.config/systemd/user` before
+    systemd has accepted it, and no unit is copied until these pass.
+    """
     return [
         Step(
             says=f"check systemd accepts {unit} before installing it",
@@ -134,6 +154,35 @@ def _unit_copies(source: Path, destination: Path) -> list[Step]:
         )
         for unit in UNITS
     ]
+
+
+def registration_is_current(config: Path) -> bool:
+    """Whether the MCP client already launches skid the way this install wants.
+
+    **The registration names a command on PATH, not a checkout.** It is
+    `{"type": "stdio", "command": "skid-mcp"}`, and `~/.local/bin/skid-mcp` is a
+    symlink into the tool environment that `uv tool install` re-points. So an
+    entry in this shape is already correct for whichever checkout was just
+    installed, and removing and re-adding it changes nothing on disk.
+
+    It is not free, though. Re-registering drops every running session's `speak`
+    until that session restarts, because a session acquires an MCP server when
+    it starts. That is the whole cost of a reinstall for anyone using skid at
+    the time, and it buys nothing when the entry is already right.
+
+    Read from the file rather than from `claude mcp get`, for the reason
+    `already_installed` gives: the CLI health-checks a server it is asked
+    about, a health check opens the socket, and opening the socket starts the
+    service. Deciding whether to re-register must not load a model.
+    """
+    try:
+        parsed = json.loads(config.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    entry = parsed.get("mcpServers", {}).get(SERVER_NAME)
+    if not isinstance(entry, dict):
+        return False
+    return entry.get("command") == "skid-mcp" and not entry.get("args")
 
 
 def _unregister() -> Step:
@@ -165,14 +214,21 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     A reinstall unregisters before it registers, because `claude mcp add`
     refuses a name that is taken and does not update it, so an entry pointing at
     the wrong command survives every re-run that only adds (FR-9.11).
+
+    **Both steps are skipped when the entry is already the one this install
+    would write.** FR-9.11 asks that the registration name the checkout being
+    installed, and an entry reading `command: skid-mcp` does that for every
+    checkout, because the name resolves through a symlink the tool install
+    re-points. Re-registering it would change no bytes and would cost every
+    running session its `speak`. `registration_is_current` is the test.
     """
     source = paths.checkout / "share" / "systemd" / "user"
     return [
-        *_unit_checks(source),
         Step(
             says=f"install skid as a uv tool from {paths.checkout}",
             argv=("uv", "tool", "install", "--editable", str(paths.checkout)),
         ),
+        *_unit_checks(source),
         *_unit_copies(source, paths.units),
         Step(
             says="reload the user unit files",
@@ -182,9 +238,20 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
             says="enable and start the socket, which does not start the service",
             argv=("systemctl", "--user", "enable", "--now", "skid.socket"),
         ),
-        *([_unregister()] if reinstall else []),
-        _register(),
+        *_registration_steps(paths, reinstall=reinstall),
     ]
+
+
+def _registration_steps(paths: Paths, *, reinstall: bool) -> list[Step]:
+    """The registration steps this run actually owes, which may be none.
+
+    A first install registers. A reinstall whose entry is already correct does
+    nothing, so the sessions using skid keep working across it. A reinstall
+    whose entry is missing or differently shaped removes and adds.
+    """
+    if registration_is_current(paths.client_config):
+        return []
+    return [*([_unregister()] if reinstall else []), _register()]
 
 
 def uninstall_plan(paths: Paths) -> list[Step]:
@@ -344,7 +411,7 @@ def report_what_changed(paths: Paths) -> None:
         (f"{paths.units}/", "skid.socket and skid.service"),
         (f"{paths.bin_dir}/", "skid and skid-mcp"),
         (f"{paths.tool_dir}/", "the tool environment"),
-        (str(Path.home() / ".claude.json"), "the MCP registration"),
+        (str(paths.client_config), "the MCP registration"),
     ]
     width = max(len(where) for where, _ in changed)
     print("\nWhat this changed, all of it inside your home:")
