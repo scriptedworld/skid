@@ -105,7 +105,31 @@ running.
 
     the sound server exposes a socket    pipewire-pulse, $XDG_RUNTIME_DIR/pulse/native
     skid runs without systemd            it binds its own socket when LISTEN_FDS is unset
-    the git source installs              uv resolves wrench from GitHub, 174 tests pass
+    the git source resolves              uv fetches wrench from GitHub, 158 packages,
+                                         and picks CPython 3.12 over a newer default
+
+**The suite is NOT verified on a clean machine.** 174 tests pass here. A cold
+review elsewhere got 45 dots and then a native crash inside the generation
+tests, with espeak-ng failing to find its data directory.
+
+**espeak-ng is part of the speech engine, not a system package to add.** It
+arrives with `kokoro`, which pulls `espeakng_loader`, and that wheel carries
+both the library and the data:
+
+    espeakng_loader/  libespeak-ng.so.1.52.0, espeak-ng-data/
+
+Nothing in skid's own source names espeak. This machine has no system
+espeak-ng at all: not on `PATH`, no dpkg package, nothing in
+`/usr/lib/x86_64-linux-gnu`. So the image does not need `espeak-ng` installed,
+and adding it would mask whatever actually broke rather than fix it.
+
+**What that crash was is still unexplained.** A wheel that carries its own data
+directory should find it from any install layout, so the cause is more likely
+the install layout, the loader version, or the interpreter than a missing
+package. Reproducing it in the image is what would settle it, and that is the
+same build the rest of this page is waiting on.
+
+**So installing is verified for a stranger and running is not.**
 
 **Not verified.** The image has not been built, no clip has been played from
 inside a container, and none of the Debian steps has been run on a clean
