@@ -114,7 +114,13 @@ model costs, and the first run downloads about 340 MB of kokoro weights into
 `~/.cache/huggingface`. The first call after a start waits for the model to load;
 every call after that does not.
 
-    du -sh ~/.local/share/uv/tools/skid ~/.local/share/uv/tools/skid-mcp
+    du -sh ~/.local/share/uv/tools/skid
+    du -sh ~/.local/share/uv/tools/skid-mcp
+
+Two commands and not one, because uv hardlinks package files from `~/.cache/uv`
+into every environment it builds, and `du` counts a shared inode once. Asked
+about both at once it charges everything to whichever it walks first and reports
+the second as almost empty.
 
 ## Installing
 

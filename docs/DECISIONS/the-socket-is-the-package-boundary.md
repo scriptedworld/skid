@@ -246,6 +246,20 @@ a fresh install and it grows to 39 MB once the bytecode caches are written**, so
 quote whichever answers the question being asked; the 5.8 MB difference is
 `__pycache__`.
 
+**Measure one environment per `du` invocation, or the number is wrong.** uv
+hardlinks package files out of `~/.cache/uv` into every environment it builds,
+and `du` counts a shared inode once, so asking about two environments in one
+command charges everything to whichever it walks first:
+
+    du -sh proto real       ->  134M proto, 1.5M real
+    du -sh real             ->  33M
+
+Same files, same instant, two answers, and 1.5M is the one that looks like a
+result. Both figures in this document are from a `du` given one directory. The
+comparison is still fair, because the service's 1.3 GB is measured the same way
+and hardlinks from the same cache; what neither figure is, is the marginal disk
+a second environment costs, which is much smaller than either.
+
 **A service reinstall stops touching the shim.** Measured by fingerprinting every
 path and mtime under the shim's tool environment, running
 `uv tool install --editable --reinstall` on the service, and fingerprinting
