@@ -1,0 +1,48 @@
+[project]
+name = "skid-mcp"
+version = "0.1.0"
+description = "The client side of skid's socket: the MCP server and the command line client"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+]
+requires-python = ">=3.12,<3.13"
+# THE WHOLE LIST, AND ITS SHORTNESS IS THE REASON THIS PACKAGE EXISTS. Measured
+# 2026-09-07: this environment is 33 MB where the one it was split out of is
+# 1.3 GB, because nothing here reaches kokoro, torch, spacy or generation.
+#
+# `client.py` imports os, pathlib, typing, httpx, mcp.server.mcpserver and the
+# contract. `say.py` imports argparse, json, sys and client. That is all of it,
+# and a new entry here is a claim that the client side of the socket needs
+# something it did not need before.
+dependencies = [
+    "httpx",
+    "mcp>=2.0",
+    "skid-contract",
+]
+
+# BOTH SCRIPTS ARE CLIENTS OF THE SOCKET, WHICH IS WHY THEY SHARE A PACKAGE.
+# `skid-say` is not an MCP thing, so the distribution's name is narrower than
+# what it holds. The name stays because it is already on PATH, in the MCP
+# registration and in every document; the socket is the interface and MCP is one
+# client of it, `skid-say` is another, and both belong on this side of it.
+#
+# `docs/DECISIONS/the-socket-is-the-package-boundary.md` carries the reasoning.
+[project.scripts]
+skid-mcp = "skid_mcp.client:main"
+skid-say = "skid_mcp.say:main"
+
+# `workspace = true` and not a path, because uv refuses a path source naming
+# something that is already a workspace member. `uv tool install --editable` on
+# this directory discovers the workspace root and resolves it anyway, so the
+# package still installs standalone. Measured 2026-09-07.
+[tool.uv.sources]
+skid-contract = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skid_mcp"]

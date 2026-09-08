@@ -24,10 +24,10 @@ import httpx
 import pytest
 from flask.testing import FlaskClient
 
-from skid.client import Backend
 from skid.config import Config
 from skid.routes import build_app
 from skid.service import Service, Workspace
+from skid_mcp.client import Backend
 
 
 @pytest.fixture(name="config_path")

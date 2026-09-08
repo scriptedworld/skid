@@ -28,7 +28,7 @@ from skid.config import load_config, save_config
 from skid.generation import VOICES
 from skid.service import Service
 from skid.substitution import Kind, Substitution
-from skid.tools import ERROR, RESULT, ROUTES, SCHEMAS
+from skid_contract.tools import ERROR, RESULT, ROUTES, SCHEMAS
 
 COMPILED = {
     tool: wrench.compile_schema(f"skid {tool} arguments", document)
@@ -312,7 +312,7 @@ def _tool_call(
 def _tools_listing(
     operations: dict[str, Callable[[dict[str, Any]], Any]],
 ) -> dict[str, Any]:
-    """The tool surface an older shim asks for, derived from `skid.tools`."""
+    """The tool surface an older shim asks for, derived from `skid_contract.tools`."""
     return {
         "tools": [
             {

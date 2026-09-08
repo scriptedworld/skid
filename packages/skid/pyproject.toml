@@ -1,0 +1,118 @@
+[project]
+name = "skid"
+version = "0.1.0"
+description = "Voice output for the agents. Text in, one clip at a time out."
+# The machine-readable half of the licence, which a package index reads and
+# LICENSE alone does not give it. An SPDX expression, matching wrench, and it
+# must stay in step with the LICENSE file beside it: `tests/test_declarations.py`
+# asserts the two agree rather than trusting them to, for all three packages.
+#
+# license-files puts LICENSE and NOTICE in the built distribution, so a wheel
+# carries the terms rather than pointing at a repository somebody may not have.
+# Both are symlinks to the repository root, because PEP 639 resolves these globs
+# inside the project directory and `../../LICENSE` is not permitted.
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+# FR-1.6 is scope rather than a permanent boundary, and until this line it was a
+# sentence in a document with nothing a test could read. Declared so the scope
+# is checkable: `tests/test_declarations.py` asserts this exact string.
+#
+# What makes another platform cheap later is FR-1.3 through FR-1.5, so widening
+# this is a matter of naming a player and its command line rather than of
+# reworking the output path.
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+]
+# 3.12 alone, and not a floor. kokoro declares requires_python <3.13,>=3.10, so
+# a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
+# measurement and says to retire the row rather than edit this in place.
+requires-python = ">=3.12,<3.13"
+# THE SERVICE SIDE OF THE SOCKET AND NOTHING ELSE. `httpx` and `mcp` left when
+# this package split from `skid-mcp`: nothing the service imports reaches
+# either, and `tests/test_declarations.py` asserts that per package now rather
+# than asserting it once for a tree that held both sides.
+dependencies = [
+    # kokoro's English path needs this spaCy model and will try to DOWNLOAD it
+    # at runtime if it is absent, using pip or uv. Under systemd neither is on
+    # PATH, so the service failed to start 76 times before this line existed.
+    # Declared rather than fetched: a service must not need a package installer.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "kokoro>=0.9.4",
+    # DECLARED ONLY TO CHOOSE THE BUILD. kokoro brings torch whether this line
+    # is here or not; naming it is what lets `tool.uv.sources` point it at the
+    # CPU index. The default Linux wheel hard-depends on nvidia-cudnn-cu13,
+    # nvidia-cusparselt-cu13, nvidia-nccl-cu13, nvidia-nvshmem-cu13 and triton,
+    # which is 4.1 GB of a 5.7 GB environment.
+    #
+    # None of it runs here. Measured 2026-09-07: torch reports the NVIDIA driver
+    # too old, found version 12040, and falls back to CPU, so the environment
+    # was carrying a CUDA stack it could not use even once.
+    "torch",
+    # The config and the spool are read, written and validated through wrench,
+    # which is the ecosystem's one answer for structured files. It replaced
+    # tomlkit, which was here to preserve comments in a file a person edits;
+    # `docs/config.sample.yaml` does that job now, so the live file needs no
+    # comments and can be emitted canonically.
+    "wrench",
+    # Six plain HTTP routes on the socket systemd hands this process.
+    #
+    # waitress rather than gunicorn because it takes an inherited fd, which is
+    # how socket activation reaches this process. Flask is WSGI and has no
+    # server of its own for that.
+    "flask>=3.0",
+    "waitress>=3.0",
+    # The route declaration, which the MCP shim also depends on. It carries no
+    # dependencies of its own, so depending on it costs this environment nothing
+    # and costs the shim's environment nothing.
+    "skid-contract",
+]
+
+[project.scripts]
+skid = "skid.main:main"
+# Reachable by name only once the install it performs has happened, which is why
+# `python3 packages/skid/src/skid/install.py` is the documented first run. Both
+# are this file.
+#
+# IT INSTALLS BOTH TOOLS AND SHIPS WITH ONE OF THEM. The installer belongs to
+# neither side of the socket, and it lives here because the service is the thing
+# that has to be installed and started, and because giving it a package of its
+# own would mean a third tool install to obtain the installer.
+skid-install = "skid.install:main"
+
+# wrench is not on a package registry, so it is named by git URL. uv takes one
+# as readily as a registry name, which is what lets a standalone clone install.
+#
+# Not editable. wrench used to resolve its schemas by walking up from __file__,
+# which forced an editable install, and a PEP 660 import hook is something mypy
+# cannot follow, so wrench's py.typed was invisible and every import of it was
+# an error. wrench carries its schemas as generated source now.
+#
+# To develop against a local wrench, override the source rather than editing
+# this line:
+#
+#     uv sync --no-sources        # or point it at ../wrench/python locally
+[tool.uv.sources]
+wrench = { git = "https://github.com/scriptedworld/wrench.git", subdirectory = "python" }
+torch = [{ index = "pytorch-cpu" }]
+skid-contract = { workspace = true }
+
+# `explicit` means nothing resolves here unless it is sent here by name, so this
+# index serves torch and nothing else. Without it every package would be looked
+# for on pytorch's index first, which is slower and gives it a say over names it
+# has no business answering for.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.hatch.metadata]
+# The spaCy model is a direct URL because it is not on PyPI. Declaring it is
+# what stops the service reaching for a package installer at start-up.
+allow-direct-references = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skid"]

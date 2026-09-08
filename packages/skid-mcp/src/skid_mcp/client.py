@@ -46,7 +46,7 @@ from typing import Any, Self
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-from skid.tools import ERROR, RESULT, method_and_path
+from skid_contract.tools import ERROR, RESULT, method_and_path
 
 HOST = "http://localhost"
 """A name for the URL, since a unix socket has no host and httpx wants one."""
@@ -218,7 +218,7 @@ def build_server(backend: Backend) -> MCPServer:
 
     The schemas are derived from the tool signatures, so the arguments a client
     sees and the arguments sent to the service are one declaration. What each
-    route is, is `skid.tools`; what each tool means is in the two registrars
+    route is, is `skid_contract.tools`; what each tool means is in the two registrars
     above; what it does is the service's.
     """
     server = MCPServer("skid")

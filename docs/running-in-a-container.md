@@ -49,7 +49,7 @@ playback somebody else's problem.
     ENV PATH="/root/.local/bin:${PATH}"
 
     RUN uv tool install --python 3.12 \
-            git+https://github.com/scriptedworld/skid.git
+            "git+https://github.com/scriptedworld/skid.git#subdirectory=packages/skid"
 
     ENV XDG_RUNTIME_DIR=/run/skid
     RUN mkdir -p /run/skid && chmod 700 /run/skid
@@ -92,12 +92,23 @@ The same prerequisites, minus the image:
 
     apt-get install -y python3 curl ca-certificates pulseaudio-utils git
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    uv tool install --python 3.12 git+https://github.com/scriptedworld/skid.git
+    uv tool install --python 3.12 \
+        "git+https://github.com/scriptedworld/skid.git#subdirectory=packages/skid"
 
-`python3 src/skid/install.py` from a clone does more than that: it installs the
-systemd user units, enables the socket and registers the MCP server. That path
-wants a systemd user session, which a minimal Debian install may not have
-running.
+**The subdirectory is required and naming the repository root will not work.**
+skid is three distributions in one checkout and the root declares no `[project]`
+table, so a resolver pointed at it finds nothing to install. `packages/skid` is
+the service and `packages/skid-mcp` is the MCP shim; a container that only speaks
+needs the first.
+
+This form matches how skid itself depends on wrench, which is the same shape one
+level out. It is written from the layout rather than measured against the remote,
+because the split is not pushed yet.
+
+`python3 packages/skid/src/skid/install.py` from a clone does more than that: it
+installs both tools, puts the systemd user units in place, enables the socket and
+registers the MCP server. That path wants a systemd user session, which a minimal
+Debian install may not have running.
 
 ## What is verified here and what is not
 

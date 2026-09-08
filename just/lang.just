@@ -56,20 +56,25 @@ format:
 build:
     @echo "build: python needs no build step; see dist"
 
+# ALL THREE PACKAGES. The root declares no [project], so a bare `uv build` here
+# has nothing to build; `--all-packages` walks the workspace members instead.
+
 # whatever this language distributes
 dist:
-    uv build
+    uv build --all-packages
 
-# EDITABLE, so the package resolves from the tree rather than from a copy.
-#
 # `skid-install` is a different thing from this recipe and both are needed:
-# this one puts the package in the environment, that one performs skid's own
-# first-run installation. `python3 src/skid/install.py` is the documented first
-# run because the console script is only reachable after it.
+# this one puts the packages in the development environment, that one performs
+# skid's own first-run installation into two uv TOOL environments.
+# `python3 packages/skid/src/skid/install.py` is the documented first run,
+# because the console script is only reachable after it.
+#
+# `uv sync` and not `uv pip install -e .`: there is no project at the root to
+# install, and sync is what puts all three members in `.venv` editable.
 
 # put the built artefact where it is used from
 install:
-    uv pip install -e .
+    uv sync
 
 # remove run directories and build output
 clean:

@@ -31,7 +31,7 @@ import argparse
 import json
 import sys
 
-from skid.client import Backend, Unreachable, socket_path
+from skid_mcp.client import Backend, Unreachable, socket_path
 
 
 def build_parser() -> argparse.ArgumentParser:

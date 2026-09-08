@@ -28,10 +28,10 @@ from typing import Any
 import httpx
 import pytest
 
-from skid.client import Backend, Unreachable, build_server
 from skid.config import load_config
 from skid.service import Service
-from skid.tools import ROUTES, SCHEMAS
+from skid_contract.tools import ROUTES, SCHEMAS
+from skid_mcp.client import Backend, Unreachable, build_server
 
 NOWHERE = Path("/nowhere/skid.sock")
 """A socket path nothing is listening on, which is what an absent service is."""
@@ -52,7 +52,7 @@ def _call(server: Any, tool: str, **arguments: Any) -> Any:
 def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None:
     """The protocol stops here now, so this is where the tool surface lives.
 
-    Asserted as the whole set against `skid.tools`, so a tool added to the
+    Asserted as the whole set against `skid_contract.tools`, so a tool added to the
     routes and not to this process is caught, and so is the reverse. That pair
     is the failure mode the split introduced.
     """
@@ -141,11 +141,11 @@ def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> N
 
     `skid-mcp` derives its schemas from function signatures through the SDK,
     which is the right source and the one a current client sees.
-    `skid.tools.SCHEMAS` states them again for the compatibility endpoint,
+    `skid_contract.tools.SCHEMAS` states them again for the compatibility endpoint,
     because the service answers an older shim's `tools/list` and has no SDK to
     derive anything with.
 
-    Two statements is exactly the drift `skid.tools` exists to prevent, so they
+    Two statements is exactly the drift `skid_contract.tools` exists to prevent, so they
     are compared on what a caller can act on: the tool names, the required
     fields, and the property names. Titles and the SDK's generated wrapper name
     carry no meaning to a caller and are not compared.
