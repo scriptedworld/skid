@@ -34,6 +34,16 @@ dependencies = [
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "mcp>=2.0",
     "kokoro>=0.9.4",
+    # DECLARED ONLY TO CHOOSE THE BUILD. kokoro brings torch whether this line
+    # is here or not; naming it is what lets `tool.uv.sources` point it at the
+    # CPU index. The default Linux wheel hard-depends on nvidia-cudnn-cu13,
+    # nvidia-cusparselt-cu13, nvidia-nccl-cu13, nvidia-nvshmem-cu13 and triton,
+    # which is 4.1 GB of a 5.7 GB environment.
+    #
+    # None of it runs here. Measured 2026-09-07: torch reports the NVIDIA driver
+    # too old, found version 12040, and falls back to CPU, so the environment
+    # was carrying a CUDA stack it could not use even once.
+    "torch",
     # The config and the spool are read, written and validated through wrench,
     # which is the ecosystem's one answer for structured files. It replaced
     # tomlkit, which was here to preserve comments in a file a person edits;
@@ -68,6 +78,16 @@ dependencies = [
 #     uv sync --no-sources        # or point it at ../wrench/python locally
 [tool.uv.sources]
 wrench = { git = "https://github.com/scriptedworld/wrench.git", subdirectory = "python" }
+torch = [{ index = "pytorch-cpu" }]
+
+# `explicit` means nothing resolves here unless it is sent here by name, so this
+# index serves torch and nothing else. Without it every package would be looked
+# for on pytorch's index first, which is slower and gives it a say over names it
+# has no business answering for.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 # Declared 2026-08-28, having never been. pytest was in the virtualenv because
 # somebody installed it rather than because this file asked for it, so `uv sync`
