@@ -26,12 +26,21 @@ waiting.
 
 ## Layout
 
-    src/skid/           config, generation, greeting, assignment, player,
-                        spool, substitution, then service, routes and client.
-                        tools.py is the route declaration both processes
-                        derive from, and imports neither of them.
-                        install.py stands apart: stdlib only, so it can run
-                        before skid is installed
+    packages/           three distributions, split by which side of the
+                        socket a module sits on. Two install as tools
+      skid/src/skid/      the service side: config, generation, greeting,
+                          assignment, player, spool, substitution, queue,
+                          schemas, service, routes, main.
+                          install.py stands apart: stdlib only, so it can
+                          run before skid is installed
+      skid-mcp/src/skid_mcp/   the client side: client.py is the MCP
+                          server, say.py the command line client. Both
+                          speak plain HTTP to the socket
+      skid-contract/src/skid_contract/
+                          tools.py, the route declaration both processes
+                          derive from. It depends on nothing, which is
+                          what lets each side install it without
+                          acquiring the other's weight
     tests/              one file per module, external test package
     share/systemd/user/ skid.socket and skid.service, the real units
     bin/                links to the adopted checkers, untracked
@@ -52,8 +61,8 @@ already cost.
 
     systemd   ~/.config/systemd/user/skid.{socket,service}
               socket-activated at $XDG_RUNTIME_DIR/skid/skid.sock, mode 0600
-    tool      uv tool install --editable, giving skid, skid-mcp, skid-say
-              and skid-install
+    tool      uv tool install --editable packages/skid       skid, skid-install
+              uv tool install --editable packages/skid-mcp   skid-mcp, skid-say
     client    claude mcp add --scope user skid -- skid-mcp
 
 `skid` is the service: one process, one warm model, six Flask routes served by
@@ -64,8 +73,17 @@ Without it every session would load kokoro for itself.
     claude <-stdio-> skid-mcp <-plain HTTP-> skid
 
 What crosses the socket is plain HTTP and nothing is cached on either side.
-`skid/tools.py` names the six routes and both processes derive from it, so a
-tool cannot exist on one side only.
+`skid_contract/tools.py` names the six routes and both processes derive from it,
+so a tool cannot exist on one side only.
+
+**Two tool environments, and that is the reason for the layout.** Measured
+2026-09-07: the service's is 1.3 GB and the shim's is 33 MB, and reinstalling
+the service leaves the shim's byte-for-byte identical. Before the split there was
+one environment, so replacing the part that makes noise rebuilt the part that
+talks to the client, and every running session lost `speak` until it restarted.
+`docs/DECISIONS/the-socket-is-the-package-boundary.md` carries the measurements
+and says why the contract is a third distribution rather than living on either
+side.
 
 ### Deploying a change
 
@@ -79,10 +97,16 @@ and `waitress` were declared and locked, `uv sync` had put them in `.venv`, the
 suite was green, and the service went into a restart loop on
 `ModuleNotFoundError: No module named 'waitress'`.
 
-    uv tool install --editable . --reinstall
+    uv tool install --editable packages/skid --reinstall
 
-That is the deploy step whenever a dependency changed. `.venv` passing says
-nothing about it, because they are two environments.
+That is the deploy step whenever a service dependency changed. `.venv` passing
+says nothing about it, because they are two environments.
+
+**Name the package whose dependency moved, and only that one.** Reinstalling the
+service does not touch the shim, which is the whole point of the split, so a
+change to `client.py` or to the shim's dependencies wants
+`--editable packages/skid-mcp` instead. A change to the contract wants both,
+because both environments hold a copy of that dependency edge.
 
 wrench is installed as an ordinary copy rather than editable, so editing the
 sibling checkout does not reach skid's virtualenv:
@@ -109,7 +133,8 @@ wedged session clearing and then calling `status()` would settle it.
 stdio script, and holds no session. It answers `initialize`, `tools/list`,
 `tools/call` and `ping`, returns a JSON-RPC method-not-found for anything else,
 and returns 202 to a notification, which has no id and which JSON-RPC forbids
-answering. The tools it publishes come from `skid.tools`, so it cannot drift.
+answering. The tools it publishes come from `skid_contract.tools`, so it cannot
+drift.
 
 Deleting it once reintroduced the hang it had removed. An old client posted
 there, Flask answered 404 with an HTML page, and an HTML page is no more
@@ -224,8 +249,9 @@ machine speak and rewriting its config. `SECURITY.md` states the boundary.
 **No mocks.** kokoro is installed and tested against.
 
 **Python 3.12 exactly**, because kokoro declares `<3.13,>=3.10`. **Linux only,
-first pass**, declared as a classifier in `pyproject.toml` so FR-1.6 has
-something a test can read.
+first pass**, declared as a classifier in all three `pyproject.toml` files, so
+FR-1.6 has something a test can read and one package cannot claim to be portable
+while another declares Linux.
 
 **kokoro's `<3.13` is a declaration, not a ceiling.** It runs on 3.13 and 3.14
 and has simply not had a release since, so "kokoro refuses 3.13" is about the

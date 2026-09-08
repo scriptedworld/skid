@@ -29,12 +29,12 @@ from pathlib import Path
 import pytest
 from waitress.server import create_server
 
-from skid.client import Backend, Unreachable
 from skid.config import load_config
 from skid.routes import build_app
-from skid.say import build_parser, main, run
 from skid.service import Service
 from skid.spool import Spool
+from skid_mcp.client import Backend, Unreachable
+from skid_mcp.say import build_parser, main, run
 
 
 def _said(backend: Backend, *arguments: str) -> str:

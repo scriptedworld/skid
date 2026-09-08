@@ -19,7 +19,7 @@ per-client stdio script, `skid-mcp`.
     lifetime    systemd socket activation: started on first connection,
                 restarted if it dies
     server      waitress, handed the socket systemd already bound
-    app         flask, six routes named in skid/tools.py
+    app         flask, six routes named in skid_contract/tools.py
 
 `skid` holds the model, owns playback, and is the only writer of the config.
 `skid-mcp` is the MCP server: it holds the six tool schemas and the dispatch,
@@ -34,7 +34,7 @@ the session removes the failure rather than recovering from it.
 
 **The cost is a new failure mode, and it is guarded.** With the schemas in one
 process and the implementations in another, a tool can exist on one side only.
-`skid/tools.py` is the single declaration both derive from, and
+`skid_contract/tools.py` is the single declaration both derive from, and
 `tests/test_routes.py` asserts the route set and the tool set are equal in both
 directions.
 
@@ -473,9 +473,10 @@ kokoro is torch and generation blocks. Under asyncio without an executor it
 would stall the event loop, which would stall accepts, which would break
 FR-4.5's promise that submitting returns immediately.
 
-The HTTP surface is the six plain routes named in `skid/tools.py`, served on the
-socket systemd hands over. The service imports no MCP SDK; the protocol lives in
-`skid-mcp`.
+The HTTP surface is the six plain routes named in `skid_contract/tools.py`,
+served on the socket systemd hands over. The service imports no MCP SDK; the
+protocol lives in `skid-mcp`, which is a separate distribution so that the SDK
+is not merely unimported by the service but absent from its environment.
 
 *Discharges FR-4.5, FR-4.2.*
 

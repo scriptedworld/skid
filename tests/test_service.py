@@ -28,7 +28,7 @@ from skid.generation import Generator
 from skid.routes import build_app
 from skid.service import PROGRESS_GRACE, Service, Workspace
 from skid.substitution import Substitution, apply_substitutions
-from skid.tools import ROUTES
+from skid_contract.tools import ROUTES
 
 # Below the imports rather than above them, because skid imports kokoro lazily,
 # so these resolve without it and the skip still fires at collection.

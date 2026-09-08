@@ -20,7 +20,7 @@ from flask.testing import FlaskClient
 from skid.config import load_config
 from skid.routes import LEGACY_ENDPOINT
 from skid.service import Service
-from skid.tools import ERROR, RESULT, ROUTES
+from skid_contract.tools import ERROR, RESULT, ROUTES
 
 
 def _result(response: Any) -> Any:

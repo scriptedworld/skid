@@ -6,6 +6,27 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 
+[manifest]
+members = [
+    "skid",
+    "skid-contract",
+    "skid-mcp",
+]
+
+[manifest.dependency-groups]
+dev = [
+    { name = "bandit" },
+    { name = "complexipy" },
+    { name = "coverage" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "pylint" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "ruff" },
+    { name = "types-waitress" },
+    { name = "vulture" },
+]
+
 [[package]]
 name = "addict"
 version = "2.4.0"
@@ -1464,57 +1485,49 @@ wheels = [
 [[package]]
 name = "skid"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "packages/skid" }
 dependencies = [
     { name = "en-core-web-sm" },
     { name = "flask" },
-    { name = "httpx" },
     { name = "kokoro" },
-    { name = "mcp" },
+    { name = "skid-contract" },
     { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "waitress" },
     { name = "wrench" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "complexipy" },
-    { name = "coverage" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "pylint" },
-    { name = "pytest" },
-    { name = "ruff" },
-    { name = "types-waitress" },
-    { name = "vulture" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "flask", specifier = ">=3.0" },
-    { name = "httpx" },
     { name = "kokoro", specifier = ">=0.9.4" },
-    { name = "mcp", specifier = ">=2.0" },
+    { name = "skid-contract", editable = "packages/skid-contract" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
     { name = "waitress", specifier = ">=3.0" },
     { name = "wrench", git = "https://github.com/scriptedworld/wrench.git?subdirectory=python" },
 ]
 
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit" },
-    { name = "complexipy" },
-    { name = "coverage" },
-    { name = "interrogate" },
-    { name = "mypy" },
-    { name = "pylint" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "ruff" },
-    { name = "types-waitress" },
-    { name = "vulture" },
+[[package]]
+name = "skid-contract"
+version = "0.1.0"
+source = { editable = "packages/skid-contract" }
+
+[[package]]
+name = "skid-mcp"
+version = "0.1.0"
+source = { editable = "packages/skid-mcp" }
+dependencies = [
+    { name = "httpx" },
+    { name = "mcp" },
+    { name = "skid-contract" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx" },
+    { name = "mcp", specifier = ">=2.0" },
+    { name = "skid-contract", editable = "packages/skid-contract" },
 ]
 
 [[package]]

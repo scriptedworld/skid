@@ -82,7 +82,8 @@ def _paths(tmp_path: Path, *, registration: str | None = None) -> Paths:
         checkout=CHECKOUT,
         units=tmp_path / "systemd" / "user",
         bin_dir=tmp_path / "bin",
-        tool_dir=tmp_path / "tools" / "skid",
+        service_tool_dir=tmp_path / "tools" / "skid",
+        mcp_tool_dir=tmp_path / "tools" / "skid-mcp",
         client_config=config,
     )
 
@@ -237,12 +238,19 @@ def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
 
     This is the list `docs/PROJECT.md` promised an installer would run. Asserting
     it as data is what stops the two documents drifting apart silently.
+
+    **Two tool installs, and the second is the MCP shim.** skid is three
+    distributions split by which side of the socket a module sits on, and the two
+    carrying console scripts install separately so that replacing the service
+    does not rebuild the shim. The next assertion pins which directory each one
+    reads, because two identical verbs say nothing about that.
     """
     paths = _paths(tmp_path)
 
     verbs = [argv[:3] for argv in _argvs(install_plan(paths))]
 
     assert verbs == [
+        ("uv", "tool", "install"),
         ("uv", "tool", "install"),
         ("systemd-analyze", "--user", "verify"),
         ("systemd-analyze", "--user", "verify"),
@@ -252,6 +260,42 @@ def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
         ("systemctl", "--user", "enable"),
         ("claude", "mcp", "add"),
     ]
+
+
+# COVERS: FR-9.1 | property
+def test_each_tool_is_installed_from_its_own_package(tmp_path: Path) -> None:
+    """Two tool installs, naming the two package directories, service first.
+
+    The sequence above sees two identical verbs and cannot tell which package
+    either one reads. Installing the same directory twice would satisfy it and
+    would produce one environment, which is the arrangement the split removed.
+
+    Order matters and is asserted rather than assumed: `skid.service` names
+    `~/.local/bin/skid` in `ExecStart`, and the unit checks that follow fail on a
+    command that is not there yet.
+
+    The contract is absent from this list and that is not an omission. It carries
+    no console script, so it installs as a dependency of each of these two rather
+    than as a tool of its own.
+    """
+    packages = tmp_path / "checkout" / "packages"
+    paths = _paths(tmp_path)
+    paths = Paths(
+        checkout=packages.parent,
+        units=paths.units,
+        bin_dir=paths.bin_dir,
+        service_tool_dir=paths.service_tool_dir,
+        mcp_tool_dir=paths.mcp_tool_dir,
+        client_config=paths.client_config,
+    )
+
+    installs = [
+        argv[-1]
+        for argv in _argvs(install_plan(paths))
+        if argv[:3] == ("uv", "tool", "install")
+    ]
+
+    assert installs == [str(packages / "skid"), str(packages / "skid-mcp")]
 
 
 # COVERS: FR-9.3 | positive
@@ -330,11 +374,21 @@ def test_uninstalling_disables_before_it_removes_the_files(tmp_path: Path) -> No
 
 # COVERS: FR-9.13 | positive
 def test_uninstalling_reverses_everything_the_install_created(tmp_path: Path) -> None:
-    """Each thing the install adds has something in the uninstall that removes it."""
-    paths = _paths(tmp_path)
-    undone = " ".join(" ".join(argv) for argv in _argvs(uninstall_plan(paths)))
+    """Each thing the install adds has something in the uninstall that removes it.
 
-    assert "uv tool uninstall skid" in undone
+    **Both tool environments, asserted as whole commands rather than as a
+    substring.** The install creates two, and `uv tool uninstall skid` is a
+    prefix of `uv tool uninstall skid-mcp`, so a containment check on the shorter
+    string passes against a plan that removes only the shim and leaves 1.3 GB of
+    service behind. Asked of the argv tuples, which cannot be a prefix of each
+    other.
+    """
+    paths = _paths(tmp_path)
+    argvs = _argvs(uninstall_plan(paths))
+    undone = " ".join(" ".join(argv) for argv in argvs)
+
+    assert ("uv", "tool", "uninstall", "skid") in argvs
+    assert ("uv", "tool", "uninstall", "skid-mcp") in argvs
     assert "claude mcp remove skid" in undone
     for unit in UNITS:
         assert str(paths.units / unit) in undone
@@ -402,11 +456,19 @@ def test_an_existing_install_is_found_from_the_filesystem_alone(tmp_path: Path) 
 
     paths.units.mkdir(parents=True)
     (paths.units / "skid.socket").write_text("[Socket]\n", encoding="utf-8")
-    paths.tool_dir.mkdir(parents=True)
+    paths.service_tool_dir.mkdir(parents=True)
 
     assert already_installed(paths) == [
         str(paths.units / "skid.socket"),
-        str(paths.tool_dir),
+        str(paths.service_tool_dir),
+    ]
+
+    paths.mcp_tool_dir.mkdir(parents=True)
+
+    assert already_installed(paths) == [
+        str(paths.units / "skid.socket"),
+        str(paths.service_tool_dir),
+        str(paths.mcp_tool_dir),
     ]
 
 
@@ -457,7 +519,12 @@ def test_every_path_an_install_changed_is_named(
     report_what_changed(paths)
 
     said = capsys.readouterr().out
-    for where in (paths.units, paths.bin_dir, paths.tool_dir):
+    for where in (
+        paths.units,
+        paths.bin_dir,
+        paths.service_tool_dir,
+        paths.mcp_tool_dir,
+    ):
         assert str(where) in said, where
     assert ".claude.json" in said
 
@@ -478,7 +545,7 @@ def test_an_environment_without_the_model_cannot_start(tmp_path: Path) -> None:
 
     assert spacy_model_present(paths) is False
 
-    interpreter = paths.tool_dir / "bin" / "python"
+    interpreter = paths.service_tool_dir / "bin" / "python"
     interpreter.parent.mkdir(parents=True)
     interpreter.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
     interpreter.chmod(0o755)
@@ -499,7 +566,9 @@ def test_the_installer_imports_nothing_it_installs() -> None:
     because importing it here would succeed on a developer's machine whatever it
     imports, which is the one place the answer does not matter.
     """
-    source = (CHECKOUT / "src" / "skid" / "install.py").read_text(encoding="utf-8")
+    source = (CHECKOUT / "packages" / "skid" / "src" / "skid" / "install.py").read_text(
+        encoding="utf-8"
+    )
     imported = {
         (node.module or "").split(".")[0]
         if isinstance(node, ast.ImportFrom)
@@ -615,7 +684,9 @@ def test_reading_the_registration_never_runs_the_client(tmp_path: Path) -> None:
     socket, and opening the socket starts the service. Deciding whether to
     re-register must not load a model.
     """
-    source = (CHECKOUT / "src" / "skid" / "install.py").read_text(encoding="utf-8")
+    source = (CHECKOUT / "packages" / "skid" / "src" / "skid" / "install.py").read_text(
+        encoding="utf-8"
+    )
     function = next(
         node
         for node in ast.walk(ast.parse(source))
@@ -662,7 +733,8 @@ def test_every_path_named_is_one_this_run_would_touch(
 
     printed = capsys.readouterr().out
     assert str(paths.units) in printed
-    assert str(paths.tool_dir) in printed
+    assert str(paths.service_tool_dir) in printed
+    assert str(paths.mcp_tool_dir) in printed
     assert str(paths.client_config) in printed
     assert str(Path.home() / ".claude.json") not in printed
 

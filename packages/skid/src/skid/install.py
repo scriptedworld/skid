@@ -8,18 +8,25 @@ before it is run and asserted against in a test without touching the machine.
 library and nothing from its own package.** The first step is what puts `skid`
 on PATH, so an installer that needed skid installed could not perform it:
 
-    python3 src/skid/install.py              from a fresh checkout
-    skid-install                             afterwards, by name
+    python3 packages/skid/src/skid/install.py    from a fresh checkout
+    skid-install                                 afterwards, by name
 
 Both reach this file. The first is the one that works on a machine that has
 never seen skid.
 
 **What it writes, all of it inside the user's own home:**
 
-    ~/.local/share/uv/tools/skid/     the tool environment, uv's to manage
-    ~/.local/bin/skid, skid-mcp       the two executables
-    ~/.config/systemd/user/           skid.socket and skid.service
-    ~/.claude.json                    the MCP registration, via `claude mcp`
+    ~/.local/share/uv/tools/skid/         the service's environment, uv's to manage
+    ~/.local/share/uv/tools/skid-mcp/     the MCP shim's environment, likewise
+    ~/.local/bin/skid, skid-install,      the four executables
+                skid-mcp, skid-say
+    ~/.config/systemd/user/               skid.socket and skid.service
+    ~/.claude.json                        the MCP registration, via `claude mcp`
+
+**Two tool environments, because skid is two installables.** The service carries
+kokoro and torch and the shim carries httpx and mcp, so replacing one does not
+rebuild the other and a service restart no longer disturbs the MCP side.
+`docs/DECISIONS/the-socket-is-the-package-boundary.md`.
 
 Nothing needs root and nothing is written outside `$HOME`, which is the property
 that makes an installer for this service an ordinary thing to run rather than
@@ -91,7 +98,20 @@ class Paths:
     checkout: Path
     units: Path
     bin_dir: Path
-    tool_dir: Path
+    service_tool_dir: Path
+    mcp_tool_dir: Path
+    """The two tool environments, which are separate on purpose.
+
+    skid is three distributions and two of them install as tools, so that
+    replacing the service does not rebuild the MCP shim. Measured 2026-09-07:
+    the service's environment is 1.3 GB and the shim's is 33 MB, and reinstalling
+    the service leaves the shim's environment byte-for-byte identical.
+
+    Two fields rather than one directory holding both, because uv owns the layout
+    under `~/.local/share/uv/tools` and names each environment for its
+    distribution. `docs/DECISIONS/the-socket-is-the-package-boundary.md`.
+    """
+
     client_config: Path = Path.home() / ".claude.json"
     """Where the MCP client keeps its registrations, read to decide whether to
     re-register. Defaulted so existing callers are unaffected, and a parameter
@@ -108,7 +128,8 @@ class Paths:
             checkout=checkout,
             units=config_home / "systemd" / "user",
             bin_dir=Path.home() / ".local" / "bin",
-            tool_dir=data_home / "uv" / "tools" / "skid",
+            service_tool_dir=data_home / "uv" / "tools" / "skid",
+            mcp_tool_dir=data_home / "uv" / "tools" / "skid-mcp",
             client_config=Path.home() / ".claude.json",
         )
 
@@ -206,6 +227,15 @@ def _register() -> Step:
 def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     """The commands that take a checkout to a running socket, in order.
 
+    **Two tool installs and not one.** skid is three distributions split by which
+    side of the socket a module sits on, and the two that carry console scripts
+    install separately so that replacing the service does not rebuild the MCP
+    shim. The service goes first because `skid.service` names `~/.local/bin/skid`
+    in `ExecStart` and the unit checks below verify it.
+
+    The contract is not installed here and is not missing. It carries no console
+    script, so it is a dependency of each of the other two and arrives with them.
+
     The socket is enabled and started and the service is not. Socket activation
     means the first connection starts it, and starting it here would load the
     model to prove an install worked, which is a minute of nothing for no
@@ -223,10 +253,15 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     running session its `speak`. `registration_is_current` is the test.
     """
     source = paths.checkout / "share" / "systemd" / "user"
+    packages = paths.checkout / "packages"
     return [
         Step(
-            says=f"install skid as a uv tool from {paths.checkout}",
-            argv=("uv", "tool", "install", "--editable", str(paths.checkout)),
+            says=f"install the skid service as a uv tool from {packages / 'skid'}",
+            argv=("uv", "tool", "install", "--editable", str(packages / "skid")),
+        ),
+        Step(
+            says=f"install the skid MCP shim as a uv tool from {packages / 'skid-mcp'}",
+            argv=("uv", "tool", "install", "--editable", str(packages / "skid-mcp")),
         ),
         *_unit_checks(source),
         *_unit_copies(source, paths.units),
@@ -280,7 +315,14 @@ def uninstall_plan(paths: Paths) -> list[Step]:
             argv=("claude", "mcp", "remove", SERVER_NAME, "--scope", "user"),
             tolerate="No MCP server",
         ),
-        Step(says="uninstall the uv tool", argv=("uv", "tool", "uninstall", "skid")),
+        Step(
+            says="uninstall the MCP shim",
+            argv=("uv", "tool", "uninstall", "skid-mcp"),
+        ),
+        Step(
+            says="uninstall the service",
+            argv=("uv", "tool", "uninstall", "skid"),
+        ),
     ]
 
 
@@ -311,10 +353,17 @@ def already_installed(paths: Paths) -> list[str]:
     health check on skid opens the socket, and opening the socket is what starts
     the service. An installer must not load a model to find out whether it has
     run before.
+
+    Both tool environments are asked about separately, so a machine holding one
+    half is told which half. A run that installed the service and failed before
+    the shim leaves exactly that state, and reporting it as "skid is installed"
+    would describe a machine that cannot speak.
     """
     found = [str(paths.units / unit) for unit in UNITS if (paths.units / unit).exists()]
-    if paths.tool_dir.exists():
-        found.append(str(paths.tool_dir))
+    if paths.service_tool_dir.exists():
+        found.append(str(paths.service_tool_dir))
+    if paths.mcp_tool_dir.exists():
+        found.append(str(paths.mcp_tool_dir))
     return found
 
 
@@ -359,8 +408,12 @@ def spacy_model_present(paths: Paths) -> bool:
     before the model was declared as a dependency. Checking it here is what
     stops the next one, and it is a question about the installed environment
     rather than about the checkout, so the tool's own interpreter answers it.
+
+    **The service's environment and not the shim's.** kokoro is the service's
+    dependency alone, so the shim has no spaCy model and is not supposed to.
+    Asking the wrong interpreter would report a broken install on every machine.
     """
-    python = paths.tool_dir / "bin" / "python"
+    python = paths.service_tool_dir / "bin" / "python"
     if not python.exists():
         return False
     finished = subprocess.run(  # nosec B603 - docs/SUPPRESSIONS.md S-1
@@ -409,8 +462,9 @@ def report_what_changed(paths: Paths) -> None:
     """Name every file the install touched, because they are the user's."""
     changed = [
         (f"{paths.units}/", "skid.socket and skid.service"),
-        (f"{paths.bin_dir}/", "skid and skid-mcp"),
-        (f"{paths.tool_dir}/", "the tool environment"),
+        (f"{paths.bin_dir}/", "skid, skid-install, skid-mcp and skid-say"),
+        (f"{paths.service_tool_dir}/", "the service's environment"),
+        (f"{paths.mcp_tool_dir}/", "the MCP shim's environment"),
         (str(paths.client_config), "the MCP registration"),
     ]
     width = max(len(where) for where, _ in changed)

@@ -106,13 +106,15 @@ Python 3.12 exactly, because kokoro declares `<3.13`. `uv tool install` reads
 that and builds the tool environment on 3.12 whatever your default interpreter
 is, so it costs you nothing to arrange.
 
-It is a machine learning stack and it is not small. The installed tool
-environment is about 5 GB, mostly torch. The warm service holds a few gigabytes
-resident, since that is what a loaded model costs, and the first run downloads
-about 340 MB of kokoro weights into `~/.cache/huggingface`. The first call after
-a start waits for the model to load; every call after that does not.
+It is a machine learning stack and it is not small. **The weight is all on the
+service side**: skid installs as two tools, and measured 2026-09-07 the service's
+environment is about 1.3 GB, mostly torch, while the MCP shim's is about 33 MB.
+The warm service holds a few gigabytes resident, since that is what a loaded
+model costs, and the first run downloads about 340 MB of kokoro weights into
+`~/.cache/huggingface`. The first call after a start waits for the model to load;
+every call after that does not.
 
-    du -sh ~/.local/share/uv/tools/skid
+    du -sh ~/.local/share/uv/tools/skid ~/.local/share/uv/tools/skid-mcp
 
 ## Installing
 
@@ -124,9 +126,9 @@ local wrench instead, override the source rather than editing that line —
 
 The install is one command from a checkout:
 
-    python3 src/skid/install.py
+    python3 packages/skid/src/skid/install.py
 
-That installs skid as a uv tool, puts the two systemd user units in place,
+That installs skid as two uv tools, puts the two systemd user units in place,
 enables the socket and registers skid with an MCP client. Everything it writes
 is inside your home, it checks the units and the tools before writing anything,
 and it names each file it changed. `--dry-run` prints the commands without

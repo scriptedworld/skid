@@ -14,10 +14,14 @@ nothing until there are several.
 **Five marks, two rules, two files, and no test carries one.** `B404` for
 importing `subprocess`, `B603` for calling it without `shell=True`.
 
-    src/skid/install.py        #nosec B404    import subprocess
-    src/skid/install.py   ×2   #nosec B603    the spaCy check, and a plan step
-    src/skid/player.py         #nosec B404    import subprocess
-    src/skid/player.py         #nosec B603    playing a clip
+    packages/skid/src/skid/install.py        #nosec B404    import subprocess
+    packages/skid/src/skid/install.py   ×2   #nosec B603    the spaCy check, and a plan step
+    packages/skid/src/skid/player.py         #nosec B404    import subprocess
+    packages/skid/src/skid/player.py         #nosec B603    playing a clip
+
+Both files are on the service side of the socket, which is where every one of
+these marks belongs: the client side runs no subprocess at all. The MCP shim and
+the contract carry no suppression of any kind.
 
 **The rows carry the pragma as it is spelled in the source, and `×N` where a
 file holds more than one.** That is what makes this an index rather than a

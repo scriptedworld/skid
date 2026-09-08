@@ -17,7 +17,17 @@ Linux, Python 3.12, and `uv`.
     uv sync
 
 That builds `.venv` with the runtime dependencies and the whole quality
-toolchain. Use the project interpreter for everything: kokoro declares
+toolchain. **skid is three packages in one checkout** and the root is a uv
+workspace, so one `uv sync` installs all three editable:
+
+    packages/skid-contract   the route declaration both sides derive from
+    packages/skid-mcp        the client side. httpx and mcp
+    packages/skid            the service side. kokoro, torch, spacy, flask
+
+Two of them install as separate uv tools, which is what stops a service restart
+rebuilding the MCP shim.
+`docs/DECISIONS/the-socket-is-the-package-boundary.md` says why, with the
+measurements. Use the project interpreter for everything: kokoro declares
 `<3.13`, so a system python outside that range cannot import skid's
 dependencies at all, and a tool run from PATH reports on the wrong environment
 rather than failing honestly.
@@ -60,6 +70,10 @@ repointing or removing every `COVERS:` mark that named it, in the same change.
 length, duplication and complexity bar as the source. Name a fixture separately
 from its function, `@pytest.fixture(name="client")` on `client_fixture`, so a
 parameter shadowing a module-level name stays a real finding.
+
+One suite covers all three packages and it stays at the root. `uv sync` puts
+every member in `.venv` editable, so `skid`, `skid_mcp` and `skid_contract` all
+import from a plain `uv run pytest` with no flag added.
 
 **`docs/SPEC.md` says how skid is arranged** and names the requirements each
 section discharges. A change that moves the design updates it, and the

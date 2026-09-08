@@ -1,8 +1,8 @@
 # The forwarder holds no connection
 
 **This is planned and not built.** What runs today is `skid-mcp` as
-`src/skid/client.py` describes it. Nothing in this file describes current
-behaviour except the section that says it does.
+`packages/skid-mcp/src/skid_mcp/client.py` describes it. Nothing in this file
+describes current behaviour except the section that says it does.
 
 ## The decision
 
@@ -47,7 +47,7 @@ it for the life of the stdio loop, closing it on the way out. httpx pools
 connections, so the process keeps one open and reuses it:
 
     .venv/bin/python -c "
-    from skid.client import Backend, socket_path
+    from skid_mcp.client import Backend, socket_path
     b = Backend.over_socket(socket_path())
     p = b._http._transport._pool
     b.call('status'); print(len(p.connections), [str(c) for c in p.connections])

@@ -1,0 +1,32 @@
+[project]
+name = "skid-contract"
+version = "0.1.0"
+description = "The route declaration both sides of skid's socket derive from"
+# The same SPDX expression and the same two files as the other two packages.
+# `tests/test_declarations.py` asserts every package agrees with LICENSE, so
+# three distributions cannot drift into three different answers.
+#
+# Both are symlinks to the repository root, because PEP 639 resolves these globs
+# inside the project directory and `../../LICENSE` is not permitted. A symlink
+# keeps ONE copy of the terms. wrench's python pack does the same.
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+]
+# Matched to the service's pin rather than widened, because a resolver picking
+# an interpreter for this package must pick one the other two can also use.
+requires-python = ">=3.12,<3.13"
+# NOTHING, AND THAT IS THE POINT OF THE PACKAGE. The contract is what both sides
+# of the socket derive from, so it must be installable into either side without
+# bringing the other side's weight with it. A dependency added here lands in the
+# MCP shim's environment and in the service's, so it is added deliberately or
+# not at all.
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skid_contract"]
