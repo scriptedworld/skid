@@ -127,7 +127,7 @@ the second as almost empty.
 **No sibling checkout is needed.** skid uses wrench for config and spool
 handling, and since wrench is not on a package registry `pyproject.toml` names it
 by git URL, which uv fetches like any other dependency. To develop against a
-local wrench instead, override the source rather than editing that line —
+local wrench instead, override the source rather than editing that line -
 `pyproject.toml` says how.
 
 The install is one command from a checkout:

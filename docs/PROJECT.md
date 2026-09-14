@@ -266,7 +266,7 @@ declaration, and it is already the arrangement.
 on a registry, so `[tool.uv.sources]` names it by git URL; uv takes one as
 readily as a registry name, which is what lets a standalone clone install. This
 document said "path dependency, pointing at a sibling checkout" until 2026-09-04,
-which had been the arrangement and had already been replaced — fetching it in the
+which had been the arrangement and had already been replaced, fetching it in the
 bootstrap was named here as a prerequisite for going public, and it is what
 happened.
 
