@@ -21,7 +21,7 @@ id inherits it.~~
 **Retested 2026-08-30 and false.** skid retired FR-2.2 at `884b0cd`, which was
 already true when the line above was written and stayed unread for two days.
 
-FACT 2026-08-30: **the `## Retired` record lives in
+Checked 2026-08-30: **the `## Retired` record lives in
 `docs/REQUIREMENTS/README.md`**, under a `## Retired` heading carrying the id,
 the date, what absorbed it and why it went. That is skid answering the promoted
 decision's open question by having done it, rather than by arguing about it.
