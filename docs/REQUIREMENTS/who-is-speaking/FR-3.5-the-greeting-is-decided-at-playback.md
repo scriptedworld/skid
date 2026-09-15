@@ -12,14 +12,14 @@ and says why: an unbounded queue can put minutes between submission and speech,
 and measuring from submission would announce a name whose voice was still
 audibly in the room.
 
-**Moving which clock is read does not help if it is read at the wrong time.** A
+Moving which clock is read does not help if it is read at the wrong time. A
 name that submits a long array and then one more message is quiet at the moment
 the second is queued, and still talking when it plays.
 
 This is the same shape as FR-4.4: every row satisfied, the audible behaviour
 wrong, and the gap living between the rows rather than in any of them.
 
-**It constrains FR-4.2**, because the prefix is text kokoro has to render, so
+It constrains FR-4.2, because the prefix is text kokoro has to render, so
 the first clip of a submission cannot be prepared ahead until the decision is
 made. `docs/SPEC.md` resolves that by generating the greeting as a clip of its
 own, which keeps the lookahead unbounded and makes the decision a choice about

@@ -8,7 +8,7 @@ Derived from FR-2.1 and FR-4.6. A player that neither plays nor exits holds the
 playback lock forever, and FR-2.1 is then satisfied in the worst possible way:
 nothing is ever audible again.
 
-**Everything else compounds it.** FR-4.5 keeps accepting submissions, FR-7.2
+Everything else compounds it. FR-4.5 keeps accepting submissions, FR-7.2
 refuses to reject them, and FR-7.3 keeps generating ahead of a playhead that has
 stopped. The machine grows a queue and a pile of clips and says nothing.
 

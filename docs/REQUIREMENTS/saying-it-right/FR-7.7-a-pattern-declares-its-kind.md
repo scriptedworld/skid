@@ -15,9 +15,9 @@ opt-in per entry rather than the default reading of every pattern.
 Supporting regular expressions brings three problems that literals do not have.
 Naming them is what stops them being discovered by being bitten:
 
-- **Ordering.** FR-8.4. The set lives in a file and is applied in file order, so
+- Ordering. FR-8.4. The set lives in a file and is applied in file order, so
   reordering is editing the file.
-- **Overlap and self-match.** FR-8.5. One pass, left to right, and what a
+- Overlap and self-match. FR-8.5. One pass, left to right, and what a
   replacement produces is not examined again.
 
 Neither rule is specific to regular expressions. Stating them once means the two

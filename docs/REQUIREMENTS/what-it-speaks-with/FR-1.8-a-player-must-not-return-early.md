@@ -12,7 +12,7 @@ released when the player exits. A command that returns before its audio finishes
 one that backgrounds itself, or one that hands off to a daemon releases the lock
 early and two clips overlap. That is the one thing FR-2.1 forbids.
 
-**FR-7.5 deliberately allows any command line**, so skid cannot enforce this and
+FR-7.5 deliberately allows any command line, so skid cannot enforce this and
 does not try. It is stated for the same reason FR-7.5 already states the other
 one: `aplay` is signed off as the user's choice to break FR-1.4 with. Nothing had
 signed off breaking FR-2.1, so it read as impossible rather than as permitted.

@@ -22,7 +22,7 @@ over something else, another language would be considered, probably Rust.
     repository      https://github.com/hexgrad/kokoro
     version         0.9.4
 
-**kokoro is a Python project, not a binding.** Its dependencies are Python
+kokoro is a Python project, not a binding. Its dependencies are Python
 libraries and the model runs on PyTorch, so the Python package is the
 implementation rather than a wrapper around one.
 

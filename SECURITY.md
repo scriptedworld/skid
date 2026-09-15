@@ -41,7 +41,7 @@ to write `~/.config/skid/config.yaml`, which already requires the account. So a
 config file you did not write is code execution as you, and a config file is
 input to be trusted at the same level as a shell profile.
 
-## Two things worth knowing before you run it
+## Two things to know before you run it
 
 **Substitution patterns may be regular expressions**, and `add_substitution`
 takes one over the socket and persists it. A pattern that backtracks

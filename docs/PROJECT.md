@@ -76,13 +76,13 @@ What crosses the socket is plain HTTP and nothing is cached on either side.
 `skid_contract/tools.py` names the six routes and both processes derive from it,
 so a tool cannot exist on one side only.
 
-**Two tool environments, and that is the reason for the layout.** Measured
-2026-09-07: the service's is 1.3 GB and the shim's is 33 MB, and reinstalling
-the service leaves the shim's byte-for-byte identical. Before the split there was
-one environment, so replacing the part that makes noise rebuilt the part that
-talks to the client, and every running session lost `speak` until it restarted.
+Two tool environments are the reason for the layout. The service's measures
+1.3 GB and the shim's 33 MB, and reinstalling the service leaves the shim's
+byte-for-byte identical. With one environment, replacing the part that makes
+noise rebuilds the part that talks to the client, and every running session
+loses `speak` until it restarts.
 `docs/DECISIONS/the-socket-is-the-package-boundary.md` carries the measurements
-and says why the contract is a third distribution rather than living on either
+and says why the contract is a third distribution instead of living on either
 side.
 
 ### Deploying a change
@@ -90,7 +90,7 @@ side.
 The installed tool is editable, so a code edit reaches the running service only
 after `systemctl --user restart skid.service`.
 
-**An editable install carries code, not dependencies.** The tool environment is
+An editable install carries code, not dependencies. The tool environment is
 resolved when the tool is installed, so a new entry in `pyproject.toml` is not
 there however many times the service restarts. Measured the hard way: `flask`
 and `waitress` were declared and locked, `uv sync` had put them in `.venv`, the
@@ -102,13 +102,13 @@ suite was green, and the service went into a restart loop on
 That is the deploy step whenever a service dependency changed. `.venv` passing
 says nothing about it, because they are two environments.
 
-**Name the package whose dependency moved, and only that one.** Reinstalling the
+Name the package whose dependency moved, and only that one. Reinstalling the
 service does not touch the shim, which is the whole point of the split, so a
 change to `client.py` or to the shim's dependencies wants
 `--editable packages/skid-mcp` instead. A change to the contract wants both,
 because both environments hold a copy of that dependency edge.
 
-wrench is installed as an ordinary copy rather than editable, so editing the
+wrench is installed as an ordinary copy, not editable, so editing the
 sibling checkout does not reach skid's virtualenv:
 
     uv sync --reinstall-package wrench
@@ -124,7 +124,7 @@ is. `claude mcp list` does not answer this: it reports that the server is up,
 not that the asking session can reach it.
 
 A `/clear` is enough and a full restart is not needed. That a clear is what
-respawns the shim is inferred from the correlation rather than observed; one
+respawns the shim is inferred from the correlation, not observed; one
 wedged session clearing and then calling `status()` would settle it.
 
 ### The legacy protocol route
@@ -151,7 +151,7 @@ because they would be dangling links in anybody's clone.
 `bolt.skid.definitions.yaml` is tracked, because it is skid's own and it is what
 points the checker at a requirements directory.
 
-**Read `result.yaml` in the run directory, never the runner's summary line**,
+Read `result.yaml` in the run directory, never the runner's summary line,
 and read all of it: the reasons list is longer than a truncated grep shows. The
 shell exit status says only that the run was carried out. Both jigs exit 0 while
 failing, so `success` in `result.yaml` is the verdict.
@@ -160,7 +160,7 @@ One failing task is skid's own. pylint rates this code 10.00/10 and still exits
 non-zero on a single finding, the lazy kokoro import in `generation.py`. The
 import cannot move to the top without loading torch at module import, which
 breaks FR-5.1 and the stdlib-only chain `install.py` depends on, so clearing it
-needs a registered suppression rather than an edit.
+needs a registered suppression and not an edit.
 
 The register's index rows have to spell the pragma as the source does, because
 the checker reads them with the same patterns it scans the source with. A row
@@ -175,7 +175,7 @@ The part least worth reopening.
 The lock covers playback alone, so generation runs ahead of the speaker,
 unbounded, and a submission arriving while another plays queues.
 
-**The watchdog measures progress, not liveness**, `WatchdogSec=120`. skid pings
+The watchdog measures progress, not liveness, `WatchdogSec=120`. skid pings
 only while the serve loop is getting somewhere, and withholding the ping is the
 mechanism: a timer on a thread that is always alive proves the timer runs, which
 is the failure being detected. Health is idle, or a clip on the speaker, or a
@@ -185,75 +185,75 @@ measurements behind that, and
 `docs/LESSONS/a-derived-figure-next-to-its-premise-is-checkable.md` the two
 rates it is easy to confuse.
 
-**The start limit is 10 attempts over 120 seconds**, where systemd's default was
+The start limit is 10 attempts over 120 seconds, where systemd's default was
 5 over 10. The default latches on fast failures and not on slow ones: an import
 error stops in 7 seconds, while the spaCy episode restarted 76 times without
 tripping it because each attempt outlived the window. Latching is deliberate;
 `systemctl --user status skid.service` says failed and `reset-failed` clears it.
 
-**`StartLimit*` goes in `[Unit]`.** systemd moved it in v229, ignores it in
+`StartLimit*` goes in `[Unit]`. systemd moved it in v229, ignores it in
 `[Service]` with a warning, and `systemd-analyze verify` exits 0 either way, so
 the exit status cannot tell you which you wrote.
 
-**`paplay` as the player**, with a user-defined one declared as a command line.
+`paplay` as the player, with a user-defined one declared as a command line.
 It follows the default output device and works on PulseAudio and PipeWire alike.
 
-**A 30 second quiet window**, measured from the end of the last clip spoken for
+A 30 second quiet window, measured from the end of the last clip spoken for
 that name.
 
-**A voice per name, drawn from a shortlist in the config.** The key is the name
+A voice per name, drawn from a shortlist in the config. The key is the name
 `speak` already carries, so no session id comes back. A name keeps its voice
 while it keeps talking and loses it after six hours of quiet; when every voice
-is held the one silent longest is given out again, rather than refusing or
+is held the one silent longest is given out again, instead of refusing or
 falling back to one shared default. The voice sits alongside FR-3.2's spoken
-greeting rather than replacing it.
+greeting and does not replace it.
 
 The shortlist is 28 voices chosen by ear from samples, English only and both
 Englishes. Five are Spanish, French or Italian speakers carrying `pipeline: a`,
 which is the other half of the decision: a kokoro voice is a speaker and a
-pipeline is a phonemiser, they are separable, and skid used to weld them
-together by reading the voice id's first letter. Those five are on the list as
+pipeline is a phonemiser, and the two are separable. Reading the pipeline from
+the voice id's first letter would weld them together. Those five are on the list as
 English speakers with an accent.
 
 Each entry carries an `alias`, an ordinary first name matching the sex in the
 voice id. It is read and never spoken, so it only has to be distinguishable on
 the page. `status` reports the live map as `assigned`.
 
-**The config file is the record**, for the voice and the substitutions alike. A
+The config file is the record, for the voice and the substitutions alike. A
 setting made through an MCP tool is written through and survives a restart, and
 the ordering of substitutions is preserved.
 
-**It is YAML, at `~/.config/skid/config.yaml`, read and written by wrench**
+It is YAML, at `~/.config/skid/config.yaml`, read and written by wrench
 against a schema in `skid/schemas.py`. skid emits wrench's canonical form,
 quoted keys and sorted names, and a person may write plain unquoted YAML and it
 loads. `docs/config.sample.yaml` is the readable version and the place reasons
 live, since the live file is rewritten whenever a tool changes a setting.
 
-**A key skid does not know is refused by name.** `voce: af_bella` used to load
-and silently keep the default voice. FR-6.4 is untouched, so a missing config is
-still not an error. One consequence to remember before rolling back: a config
-holding keys an older checkout does not know is refused rather than ignored, and
+A key skid does not know is refused by name. Ignored, `voce: af_bella` would
+load and silently keep the default voice. FR-6.4 still holds, so a missing
+config is not an error. One consequence to remember before rolling back: a config
+holding keys an older checkout does not know is refused, not ignored, and
 a refusal at start-up is a service that will not start.
 
-**Substitutions are global**, each declaring itself literal or regular
+Substitutions are global, each declaring itself literal or regular
 expression, applied in one left-to-right pass whose output no later entry
 examines. File order is the order.
 
-**One HTTP service under systemd, not two processes.** It deleted a start
+One HTTP service under systemd, not two processes. It deleted a start
 protocol with a lock file, a stale-socket unlink and a bind-then-rename, which
 was the part of the design nobody had run.
 
-**A unix socket, not a TCP port**, since reaching skid's tools means making the
+A unix socket, not a TCP port, since reaching skid's tools means making the
 machine speak and rewriting its config. `SECURITY.md` states the boundary.
 
-**No mocks.** kokoro is installed and tested against.
+No mocks. kokoro is installed and tested against.
 
-**Python 3.12 exactly**, because kokoro declares `<3.13,>=3.10`. **Linux only,
-first pass**, declared as a classifier in all three `pyproject.toml` files, so
+Python 3.12 exactly, because kokoro declares `<3.13,>=3.10`. Linux only,
+first pass, declared as a classifier in all three `pyproject.toml` files, so
 FR-1.6 has something a test can read and one package cannot claim to be portable
 while another declares Linux.
 
-**kokoro's `<3.13` is a declaration, not a ceiling.** It runs on 3.13 and 3.14
+kokoro's `<3.13` is a declaration, not a ceiling. It runs on 3.13 and 3.14
 and has simply not had a release since, so "kokoro refuses 3.13" is about the
 metadata rather than the software. The pin stands anyway, because it costs
 nothing: nothing in skid's source needs a newer interpreter, and
@@ -262,21 +262,19 @@ environment on 3.12 with no flag, whatever the machine's default is. Installing
 into an environment holding an interpreter kokoro accepts is the answer to the
 declaration, and it is already the arrangement.
 
-**wrench is a git dependency, and a clone needs no sibling checkout.** It is not
+wrench is a git dependency, and a clone needs no sibling checkout. It is not
 on a registry, so `[tool.uv.sources]` names it by git URL; uv takes one as
-readily as a registry name, which is what lets a standalone clone install. This
-document said "path dependency, pointing at a sibling checkout" until 2026-09-04,
-which had been the arrangement and had already been replaced, fetching it in the
-bootstrap was named here as a prerequisite for going public, and it is what
-happened.
+readily as a registry name, which is what lets a standalone clone install.
+Fetching it in the bootstrap, and not from a sibling checkout by path, was a
+prerequisite for going public.
 
-It is not editable: wrench used to resolve its schemas by walking up from
-`__file__`, which forced an editable install, and a PEP 660 import hook is
-something mypy cannot follow, so wrench's `py.typed` was invisible and every
-import of it was an error. wrench carries its schemas as generated source now.
+It is not editable. mypy cannot follow a PEP 660 import hook, so under an
+editable install wrench's `py.typed` is invisible and every import of it is an
+error. wrench carries its schemas as generated source, so nothing forces an
+editable install.
 
-**The consequence is that skid tracks the wrench that is pushed, not the one
-beside it.** A local wrench is invisible here without `uv sync --no-sources` or
+The consequence is that skid tracks the wrench that is pushed, not the one
+beside it. A local wrench is invisible here without `uv sync --no-sources` or
 an overridden source, so a change written in a sibling checkout cannot be
 verified against skid until it lands. `NEXT_STEPS.md` carries what publishing
 still blocks.

@@ -10,11 +10,11 @@ A voice is assigned from a pool as names arrive, so which one a name gets
 depends on who spoke first and it does not survive the assignment expiring. A
 name should hold a voice because somebody picked it for that name.
 
-Two halves. **The assignment becomes data rather than an allocation**: a name
+Two halves. **The assignment becomes data, not an allocation**: a name
 maps to a voice in the config, and the pool stays as the fallback for a name
 nobody has chosen for. And **the choice becomes settable over MCP**, which
 `set_voice` cannot express today: it takes a voice and no name, so it changes
-the default for everybody rather than one caller's voice.
+the default for everybody instead of one caller's voice.
 
 ## Open: the MCP server becomes a thin proxy
 
@@ -51,7 +51,7 @@ The largest outstanding piece of work, and it is not started. A new MCP
 forwarder passes each call straight through to the backend and keeps nothing
 open between calls.
 
-The reason is restarts rather than speed. The backend is socket-activated and
+The reason is restarts, not speed. The backend is socket-activated and
 systemd restarts it, so a client holding a long-lived connection turns a clean
 restart into a broken client, and every consumer then needs reconnection logic
 that runs only when something has already gone wrong. Forwarding per call makes
@@ -70,11 +70,11 @@ measured.
 The checker reads both directions: every requirement has a test citing it, and
 every test cites a requirement that exists. That proves the citations are
 complete. It does not prove the code satisfies the requirement, and it cannot,
-because it sees a mark and a row rather than a behaviour.
+because it sees a mark and a row, not a behaviour.
 
 Three rows here have passed the checker while the behaviour was wrong or the
 test could not have caught it. The defect above is one of them, found by
-measurement rather than by the suite. So a mark pointing at the wrong row, or a
+measurement and not by the suite. So a mark pointing at the wrong row, or a
 test too weak to fail, is invisible to the gate and only reading the row against
 the test finds it.
 
@@ -135,5 +135,5 @@ the config file. FR-3.4 requires only that it is configurable and FR-7.1 already
 says which route would win, so nothing is blocked on deciding.
 
 Whether the voice assignment window, six hours of quiet before a name loses its
-voice, is the right length. It was chosen rather than measured, and the first
+voice, is the right length. It was chosen, not measured, and the first
 evidence either way will be the shortlist running out or not.

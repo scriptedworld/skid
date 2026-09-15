@@ -13,26 +13,18 @@ What follows is skid's own part rather than the general rule:
 - The categories are the sections the retired document had, listed in that
   README.
 
-~~skid has retired no requirement, so the open question in the promoted
-decision, where the `## Retired` record lives once `REQUIREMENTS.md` is gone, is
-not one skid can settle by measurement. The first repository here to retire an
-id inherits it.~~
+- The `## Retired` record lives in `docs/REQUIREMENTS/README.md`, under a
+  `## Retired` heading carrying the id, the date, what absorbed it and why it
+  went. skid retired FR-2.2 at `884b0cd`, so this answers the promoted
+  decision's open question, where that record lives once `REQUIREMENTS.md` is
+  gone, by having done it.
 
-**Retested 2026-08-30 and false.** skid retired FR-2.2 at `884b0cd`, which was
-already true when the line above was written and stayed unread for two days.
+      grep -A6 '^## Retired' docs/REQUIREMENTS/README.md
 
-Checked 2026-08-30: **the `## Retired` record lives in
-`docs/REQUIREMENTS/README.md`**, under a `## Retired` heading carrying the id,
-the date, what absorbed it and why it went. That is skid answering the promoted
-decision's open question by having done it, rather than by arguing about it.
+A retired id sitting in the README, and not in the category directory it left,
+means the directory holds only live rows, so concatenating the tree reproduces
+exactly what the checker parses. That has held through adding a category,
+`a-voice-per-name`, which took the set to 71 rows across ten families.
 
-    grep -A6 '^## Retired' docs/REQUIREMENTS/README.md
-
-The choice has held through one more category being added, `a-voice-per-name` on
-2026-08-30, taking the set to 71 rows across ten families. A retired id sitting
-in the README rather than in the category directory it left means the directory
-holds only live rows, so concatenating the tree reproduces exactly what the
-checker parses.
-
-Where the retired record belongs is an open question for the general rule rather
-than for skid, and it is filed as one.
+Where the retired record belongs is an open question for the general rule and
+not for skid, and it is filed as one.

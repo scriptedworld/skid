@@ -4,7 +4,7 @@ skid is a good fit for a container everywhere except the last inch: it has to
 reach a speaker, and a container has none. That is the whole difficulty and
 everything below is about it.
 
-**This is guidance, not a shipped image.** The Containerfile here is short
+This is guidance, not a shipped image. The Containerfile here is short
 enough to read and has not been through the gate. Treat it as a starting point.
 
 ## What it needs
@@ -23,7 +23,7 @@ socket activation is an option on a host and not a requirement.
 A container has no sound device. Passing one through is possible and is more
 trouble than it is worth here, because the host already has a sound server.
 
-**Reach the host's sound server.** PulseAudio and PipeWire both expose a unix
+Reach the host's sound server. PulseAudio and PipeWire both expose a unix
 socket, and `paplay` will use it:
 
     -v $XDG_RUNTIME_DIR/pulse:/run/pulse:ro
@@ -32,7 +32,7 @@ socket, and `paplay` will use it:
 That keeps device selection, mixing and volume on the host, which is what skid
 does on a host anyway: it never opens an audio device itself.
 
-**Or generate in the container and play outside it.** Set `player` in the config
+Or generate in the container and play outside it. Set `player` in the config
 to a command that hands the file to the host. This is the better shape if the
 container is on another machine, and it makes skid a generation service with
 playback somebody else's problem.
@@ -68,10 +68,10 @@ have to match.
       -v $XDG_RUNTIME_DIR/skid:/run/skid \
       skid
 
-**Mount the model cache.** Without `skid-cache`, every start downloads the
+Mount the model cache. Without `skid-cache`, every start downloads the
 weights again.
 
-**Mount the runtime directory** if a client outside the container needs the
+Mount the runtime directory if a client outside the container needs the
 socket. skid creates it mode 0700 and keeps it that way, which is the trust
 boundary `SECURITY.md` describes; a bind mount does not change who can open it,
 but it does put it where another user's container could see the path exists.
@@ -95,7 +95,7 @@ The same prerequisites, minus the image:
     uv tool install --python 3.12 \
         "git+https://github.com/scriptedworld/skid.git#subdirectory=packages/skid"
 
-**The subdirectory is required and naming the repository root will not work.**
+The subdirectory is required and naming the repository root will not work.
 skid is three distributions in one checkout and the root declares no `[project]`
 table, so a resolver pointed at it finds nothing to install. `packages/skid` is
 the service and `packages/skid-mcp` is the MCP shim; a container that only speaks
@@ -112,18 +112,18 @@ Debian install may not have running.
 
 ## What is verified here and what is not
 
-**Verified**, on the machine this was written on:
+Verified, on the machine this was written on:
 
     the sound server exposes a socket    pipewire-pulse, $XDG_RUNTIME_DIR/pulse/native
     skid runs without systemd            it binds its own socket when LISTEN_FDS is unset
     the git source resolves              uv fetches wrench from GitHub, 158 packages,
                                          and picks CPython 3.12 over a newer default
 
-**The suite is NOT verified on a clean machine.** 174 tests pass here. A cold
+The suite is NOT verified on a clean machine. 174 tests pass here. A cold
 review elsewhere got 45 dots and then a native crash inside the generation
 tests, with espeak-ng failing to find its data directory.
 
-**espeak-ng is part of the speech engine, not a system package to add.** It
+espeak-ng is part of the speech engine, not a system package to add. It
 arrives with `kokoro`, which pulls `espeakng_loader`, and that wheel carries
 both the library and the data:
 
@@ -132,17 +132,17 @@ both the library and the data:
 Nothing in skid's own source names espeak. This machine has no system
 espeak-ng at all: not on `PATH`, no dpkg package, nothing in
 `/usr/lib/x86_64-linux-gnu`. So the image does not need `espeak-ng` installed,
-and adding it would mask whatever actually broke rather than fix it.
+and adding it would mask whatever actually broke instead of fixing it.
 
-**What that crash was is still unexplained.** A wheel that carries its own data
+What that crash was is still unexplained. A wheel that carries its own data
 directory should find it from any install layout, so the cause is more likely
 the install layout, the loader version, or the interpreter than a missing
 package. Reproducing it in the image is what would settle it, and that is the
 same build the rest of this page is waiting on.
 
-**So installing is verified for a stranger and running is not.**
+So installing is verified for a stranger and running is not.
 
-**Not verified.** The image has not been built, no clip has been played from
+Not verified. The image has not been built, no clip has been played from
 inside a container, and none of the Debian steps has been run on a clean
 install. A QEMU install test is what would settle the second half, and building
 the image once would settle the first.

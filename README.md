@@ -29,7 +29,7 @@ kokoro to load.
 
 Several callers share one set of speakers, so submissions are queued rather than
 mixed. A submission is spoken to completion before the next one starts, in the
-order you submitted rather than the order clips finished generating, so two
+order you submitted, not the order clips finished generating, so two
 callers cannot interleave into one stream you have to untangle.
 
 Speaking returns when the work is queued, not when it has been heard, which is
@@ -69,7 +69,7 @@ whole file with every setting explained.
 It never opens an audio device. Generating a file and running a player is the
 whole output path, which leaves device selection, mixing and volume where the
 operating system already handles them. The failure modes are a missing player
-and a bad file rather than an audio stack.
+and a bad file, not an audio stack.
 
 It never overlaps clips. One is audible at a time, held by a lock, because two
 callers speaking over each other is worse than either waiting.
@@ -82,7 +82,7 @@ no port to bind. See `SECURITY.md`.
 There has been no release and no tag. skid runs as a service and is used daily,
 and these are the things a stranger would otherwise find out by running it:
 
-- wrench is fetched from git rather than a registry, so an install reaches the
+- wrench is fetched from git and not a registry, so an install reaches the
   network for it and a pinned release is not available to pin to;
 - `set_voice` accepts any of kokoro's 54 voice names, including the thirteen
   Japanese and Chinese ones a standard install cannot render, writes it to the
@@ -106,9 +106,9 @@ Python 3.12 exactly, because kokoro declares `<3.13`. `uv tool install` reads
 that and builds the tool environment on 3.12 whatever your default interpreter
 is, so it costs you nothing to arrange.
 
-It is a machine learning stack and it is not small. **The weight is all on the
-service side**: skid installs as two tools, and measured 2026-09-07 the service's
-environment is about 1.3 GB, mostly torch, while the MCP shim's is about 33 MB.
+It is a machine learning stack and it is not small. The weight is all on the
+service side: skid installs as two tools, and the service's environment measures
+about 1.3 GB, mostly torch, while the MCP shim's is about 33 MB.
 The warm service holds a few gigabytes resident, since that is what a loaded
 model costs, and the first run downloads about 340 MB of kokoro weights into
 `~/.cache/huggingface`. The first call after a start waits for the model to load;
@@ -127,8 +127,8 @@ the second as almost empty.
 **No sibling checkout is needed.** skid uses wrench for config and spool
 handling, and since wrench is not on a package registry `pyproject.toml` names it
 by git URL, which uv fetches like any other dependency. To develop against a
-local wrench instead, override the source rather than editing that line -
-`pyproject.toml` says how.
+local wrench instead, override the source and leave that line alone
+(`pyproject.toml` says how).
 
 The install is one command from a checkout:
 

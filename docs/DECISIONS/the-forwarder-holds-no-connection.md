@@ -15,7 +15,7 @@ answer, hold nothing.
 The backend is socket-activated and systemd restarts it. A client holding a
 long-lived connection turns a clean restart into a broken client: the connection
 it is holding refers to a process that no longer exists, and the caller finds
-out on its next call rather than at the moment of the restart.
+out on its next call, not at the moment of the restart.
 
 Every consumer then needs reconnection logic, and that logic runs only when
 something has already gone wrong. It is the least exercised path in the system
@@ -36,7 +36,7 @@ the backend can restart underneath a caller.
 Removing the MCP session from the service was this argument about state. The
 service kept a session id, a restart forgot it, and a client that could not
 match the answer to its request waited until something outside it gave up. The
-fix was to hold no session rather than to recover from a lost one.
+fix was to hold no session instead of recovering from a lost one.
 
 That left the state gone and the connection still held. This is the other half.
 

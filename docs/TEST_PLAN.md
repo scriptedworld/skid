@@ -4,7 +4,7 @@ Which test discharges which requirement, and its kind. Written after the
 requirements and the spec, and before the tests.
 
 Derived from `docs/REQUIREMENTS/`, not from `docs/SPEC.md`. Where a row is
-awkward to test, the awkwardness is named rather than the row skipped.
+awkward to test, the awkwardness is named and the row is not skipped.
 
 Every test carries its marker directly above it:
 
@@ -12,33 +12,33 @@ Every test carries its marker directly above it:
 
 ## Two seams that make this testable without a mock
 
-**Hard rule 4 forbids a mock or a patch without a human having answered a
-question first.** Nothing here uses one. Two real configuration surfaces do the
+Hard rule 4 forbids a mock or a patch without a human having answered a
+question first. Nothing here uses one. Two real configuration surfaces do the
 work instead:
 
-**The player is a configured command line** (FR-7.5). A test points `player` at
+The player is a configured command line (FR-7.5). A test points `player` at
 a small script that records when it started and stopped, or at
 `sh -c 'sleep 600'` to hang deliberately. That is skid running a real player
 through its real seam, not a double standing in for skid's code.
 
-**The config file is a real file** (FR-7.1, FR-7.8). Tests write one in a
+The config file is a real file (FR-7.1, FR-7.8). Tests write one in a
 temporary directory and point `XDG_CONFIG_HOME` at it.
 
-**The HTTP surface is WSGI** (FR-5.2). Flask hands out a real test client, and
+The HTTP surface is WSGI (FR-5.2). Flask hands out a real test client, and
 `httpx.WSGITransport` puts the real MCP server in front of the real app, so a
 tool call in `test_client.py` runs the actual route with an actual `Service`
 behind it and no socket in the way. Nothing is scripted. The file this replaced
 had to hand-write a service that returned 404 on cue, because what it tested was
 recovery from a lost session and a session has to be broken on purpose.
 
-**kokoro has no such seam**, which is the constraint below.
+kokoro has no such seam, which is the constraint below.
 
 ## Fixtures are named, and the function is not
 
     @pytest.fixture(name="client")
     def client_fixture(...) -> ...:
 
-**Because `redefined-outer-name` is a check worth keeping.** pylint's W0621
+Because `redefined-outer-name` is a check to keep. pylint's W0621
 catches a parameter shadowing a module-level name, which is a real bug: you
 believe you are reading the module's value and you are reading whatever was
 passed. pytest's injection *requires* the parameter name to equal the fixture
@@ -47,11 +47,10 @@ finding, and there were about fifty. A genuine shadowing would have been
 invisible among them.
 
 Naming the fixture separately from the function removes the collision rather
-than the check. Measured 2026-08-28: W0621 went from 20 findings across `tests/`
-to zero and pylint from 9.45 to 9.79, and a deliberately shadowed name added
+than the check. Measured: W0621 went from 20 findings across `tests/` to zero and pylint from 9.45 to 9.79, and a deliberately shadowed name added
 afterwards was still reported.
 
-**Not a `disable=` comment.** That is a suppression, and hard rule 4 wants a
+Not a `disable=` comment. That is a suppression, and hard rule 4 wants a
 human's answer before one is written. This needs none, because nothing is being
 silenced.
 
@@ -64,13 +63,13 @@ to substitute at, so these rows have no honest unit test today:
     FR-1.2  generation produces an audio file
     FR-5.1  a backend holds the model warm
 
-**Faking it needs an answer first.** A fake generator is exactly the mock hard
+Faking it needs an answer first. A fake generator is exactly the mock hard
 rule 4 stops at, and the question to answer is whether skid may carry one for
 the tests that are not about generation at all. Most of the plan below needs
 *some* audio to exist and does not care what is in it.
 
 Until that is answered these three are `integration`, run only where kokoro is
-installed, and the suite reports them skipped rather than passed. A skip that
+installed, and the suite reports them skipped, not passed. A skip that
 reports as a pass is the failure this plan is trying not to build.
 
 ## The rows, and what discharges each
@@ -89,26 +88,26 @@ reports as a pass is the failure this plan is trying not to build.
 | FR-1.8 | `test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it` | negative |
 | FR-1.9 | `test_a_player_that_never_exits_is_killed` | edge |
 
-**FR-1.5 is a source property, not a call.** It reads skid's own imports and
+FR-1.5 is a source property, not a call. It reads skid's own imports and
 asserts none is an audio library. `soundfile` fails it and the stdlib `wave`
 module passes, which is why the spec picks `wave`. Asserted as the whole
-third-party set rather than as an absence, because a denylist of audio libraries
+third-party set and not as an absence, because a denylist of audio libraries
 only catches the ones somebody thought of.
 
-**FR-1.7 asserts a containment, not a version.** The planned name was
+FR-1.7 asserts a containment, not a version. The planned name was
 `test_requires_python_is_3_12_only`, which is the row copied into an assertion:
 it passes whenever somebody edits both the row and the test, and fails only when
 they edit one. What the row requires is that skid's range sits inside kokoro's,
 and the outer range belongs to somebody else, so the test reads it from kokoro's
 installed metadata and checks every interpreter skid admits against it.
 
-**What it watches is what kokoro DECLARES, which is not what kokoro SUPPORTS.**
-Told first-hand 2026-08-28: kokoro runs on 3.13 and 3.14 and has simply not had
-a release since, so `<3.13` is stale packaging metadata rather than a real
+What it watches is what kokoro DECLARES, which is not what kokoro SUPPORTS.
+kokoro is reported first-hand to run on 3.13 and 3.14, and has simply not had a
+release since, so `<3.13` is stale packaging metadata and not a real
 ceiling. The declaration is still what a resolver enforces, so it is still the
 thing skid has to sit inside in order to install, and still the thing that moves.
 
-**FR-1.8 tests a documented limit rather than a guarantee.** skid cannot detect
+FR-1.8 tests a documented limit, not a guarantee. skid cannot detect
 a player that returns early, so the test configures one, observes the overlap,
 and asserts that is what happens. A test that asserted no overlap here would be
 asserting something skid does not provide.
@@ -119,16 +118,14 @@ asserting something skid does not provide.
 |---|---|---|
 | FR-2.1 | `test_two_clips_never_overlap` | property |
 
-**FR-2.1 is about simultaneity, which no suite can hear.** The player script
+FR-2.1 is about simultaneity, which no suite can hear. The player script
 appends a start and an end timestamp to a file. The test submits from two
 callers at once and asserts no interval overlaps another. That is the observable
 form of the requirement.
 
-FR-2.2 stood beside it saying the mechanism was unconstrained, and this plan
-recorded it as "constrains nothing and is discharged by FR-2.1 passing with
-whatever mechanism exists". That was the right reading and it was written here
-before anybody acted on it: the row was retired on 2026-08-28 for exactly that
-reason. Its guidance is prose in FR-2.1 now.
+The retired FR-2.2 said the mechanism was unconstrained, which constrains
+nothing and is discharged by FR-2.1 passing with whatever mechanism exists. It
+was retired for exactly that reason, and its guidance is prose in FR-2.1.
 
 ### Who is speaking
 
@@ -142,7 +139,7 @@ reason. Its guidance is prose in FR-2.1 now.
 | FR-3.6 | `test_a_fresh_table_greets_everyone` | positive |
 | FR-7.4 | `test_the_window_defaults_to_thirty_seconds`, `test_the_window_boundary_is_the_window_itself`, `test_the_clock_is_the_end_of_speech_not_the_submission` | positive, edge, regression |
 
-**FR-3.5 is the test the spec review was for.** Submit a long array, then a
+FR-3.5 is the test the spec review was for. Submit a long array, then a
 second submission immediately. Assert the second is not prefixed. It passes
 against a playback-time decision and fails against a queue-time one, which is
 the bug the review found, so it is a `regression` even though the defect never
@@ -164,18 +161,17 @@ shipped.
 | FR-7.2 | `test_nothing_is_rejected_at_the_door` | property |
 | FR-7.3 | `test_generation_runs_ahead_of_the_speaker_without_a_bound` | property |
 
-**FR-4.2 and FR-7.3 are the same observation from two sides**, and both are the
-absence of a cap rather than a value. FR-4.2 says the two overlap; FR-7.3 says
+FR-4.2 and FR-7.3 are the same observation from two sides, and both are the
+absence of a cap, not a value. FR-4.2 says the two overlap; FR-7.3 says
 how far ahead generation may get, which is as far as it likes. Both hold the
-speaker with a blocking player rather than timing anything, since FR-7.5 makes
+speaker with a blocking player instead of timing anything, since FR-7.5 makes
 the player a command line and that is the seam.
 
-**Presence is not overlap, and the difference was measured rather than
-reasoned.** The first FR-4.2 test asserted which clips existed while the speaker
-was held, and a service that generated the whole array before playing a note of
-it satisfies that completely while being the one design where the two never
-overlap. Run against generation made to take the playback lock, that version
-passed. What the test asserts now is *arrival*: the clip set is snapshotted the
+Presence is not overlap, and the difference was measured. A test asserting which
+clips exist while the speaker is held is satisfied completely by a service that
+generates the whole array before playing a note of it, which is the one design
+where the two never overlap. Run against generation made to take the playback
+lock, such a test passed. What the test asserts is *arrival*: the clip set is snapshotted the
 moment the player reports it is holding, and the test waits for one that was not
 in it. Against the same lock it fails, which is the silent failure FR-7.3 exists
 to prevent.
@@ -183,7 +179,7 @@ to prevent.
 FR-7.3 is the one that catches a bound. Run against a clip queue capped at one
 it reports three clips where five were due.
 
-**FR-4.6 needs a message that fails.** The player script exits non-zero for a
+FR-4.6 needs a message that fails. The player script exits non-zero for a
 named clip, and the test asserts the rest of the array is still spoken.
 
 ### Warm, and the server
@@ -206,7 +202,7 @@ named clip, and the test asserts the rest of the array is still spoken.
 | FR-6.5 | `test_an_unknown_voice_fails_the_call`, `test_an_unknown_voice_is_refused`, `test_an_unknown_voice_is_refused_and_nothing_is_written`, `test_a_refusal_reaches_an_old_shim_as_a_tool_error`, `test_a_voice_that_would_silence_skid_is_refused_and_not_written` | negative |
 | FR-7.1 | `test_a_written_config_reads_back_as_what_was_written`, `test_a_config_skid_could_not_read_back_is_refused_on_write` | property, negative |
 
-**FR-6.3's own body names the observable**: setting the voice by either route
+FR-6.3's own body names the observable: setting the voice by either route
 changes what the next clip is spoken in. Both routes run against one started
 service, because the case the row rules out is each keeping its own copy with
 neither wrong, and a test that exercises one route cannot see that. The tool
@@ -216,11 +212,11 @@ one the running service generates from, without the test touching the service.
 The file half edits the file directly and asserts the change takes effect
 without a restart, which is what the mtime re-read is for.
 
-**The test player goes in the config file, not only in the constructor.** A
+The test player goes in the config file, not only in the constructor. A
 reload rebuilds the player from what it read, so a config carrying only a voice
 hands playback back to the default `paplay` and the suite makes the machine talk.
 
-**FR-6.5 is the one-call-bricks-it case.** Set an invalid voice, assert it is
+FR-6.5 is the one-call-bricks-it case. Set an invalid voice, assert it is
 refused, and assert the config on disk is unchanged.
 
 ### A voice per name
@@ -237,24 +233,24 @@ refused, and assert the config on disk is unchanged.
 | FR-10.8 | `test_two_voices_sharing_an_alias_are_refused` | negative |
 | FR-10.9 | `test_a_fresh_table_holds_nothing` | property |
 
-**The clock is a parameter, exactly as it is for the greeting.** Six hours is a
+The clock is a parameter, exactly as it is for the greeting. Six hours is a
 number passed in, so `test_speaking_refreshes_the_window` drives past the window
 in three lines and the suite stays fast. A test that slept would be testing the
 machine.
 
-**FR-10.2 is asserted twice on purpose, and the second one is the real check.**
+FR-10.2 is asserted twice on purpose, and the second one is the real check.
 `test_two_names_speaking_together_get_different_voices` proves the table hands
 out two voices. A service that computed an assignment and then generated with
 the single `voice` setting would pass it and be silently wrong, which is why
 `test_two_names_are_spoken_in_different_voices` runs a real service, really
 speaks, and reads the assignment back out of `status`.
 
-**FR-10.7 needs both a config test and a generation test**, because there are
+FR-10.7 needs both a config test and a generation test, because there are
 two distinct failures. The config can drop the declared pipeline on the way
 through, and the generator can record one code and hand kokoro another. Neither
 test sees the other's failure.
 
-**FR-10.9 has nothing to break, and that is recorded rather than hidden.** A
+FR-10.9 has nothing to break, and that is recorded, not hidden. A
 table built fresh holds nothing by construction, so no mutation of the source
 can make it hold something. It sits with FR-1.8 and FR-7.9 as a row the suite
 cannot distinguish. The other eight FR-10 rows were probed by mutation and all
@@ -274,7 +270,7 @@ eight caught it.
 ### Putting it on a machine
 
 The plan is asserted as data. `Paths` takes every destination as a parameter, so
-these build the plan against `tmp_path` and read the commands rather than
+these build the plan against `tmp_path` and read the commands instead of
 running them, and the suite cannot write into a real
 `~/.config/systemd/user`. `tests/test_install.py` says what the one exception
 is and why.
@@ -298,7 +294,7 @@ is and why.
 | FR-7.7 | `test_a_regex_that_will_not_compile_is_refused`, `test_a_literal_and_a_regex_of_the_same_pattern_are_different_entries`, `test_both_kinds_are_supported`, `test_an_invalid_regex_is_refused` | negative, positive |
 | FR-7.9 | `test_the_substitution_set_is_global`, `test_the_substitution_set_is_global` | property |
 
-**FR-8.3 has two clauses and gets a test each**, because the row says a
+FR-8.3 has two clauses and gets a test each, because the row says a
 substitution changes nothing a caller submitted *or a log records* and those are
 different surfaces. The first asserts what the service reports back is the
 submitted spelling; the second asserts the same of the log.
@@ -316,10 +312,10 @@ the submitted spelling cannot also be finding the substituted one, and both
 assert the set actually transforms the text. Without that, a service whose
 substitutions never fired would pass either of them trivially.
 
-**FR-8.5 carries the case that caught the contradiction.** Entries `b -> x`
+FR-8.5 carries the case that caught the contradiction. Entries `b -> x`
 (regex) then `ab -> Z` (literal), input `ab`. Position wins, so the answer is
 `Z`. Entry priority would give `ax`. That case is a `regression` because the row
-and the spec disagreed on it before 2026-08-27.
+and the spec once disagreed on it.
 
 ### Packaging
 
@@ -328,45 +324,45 @@ and the spec disagreed on it before 2026-08-27.
 | FR-7.5 | `test_paplay_is_the_default_player` | positive |
 | FR-7.6 | `test_kokoro_is_still_a_python_project` | property |
 
-**FR-7.6 is a decision row, and a decision row is tested by asserting its
-premise still holds rather than its consequence.** The consequence, that skid is
+FR-7.6 is a decision row, and a decision row is tested by asserting its
+premise still holds rather than its consequence. The consequence, that skid is
 written in Python, is tautological: this suite is Python and could not run
 otherwise, so a test named `test_the_project_is_python` asserts that the test
 exists. The premise is a measurement, and measurements expire. What settles
-whether kokoro is a Python project rather than a binding over something compiled
+whether kokoro is a Python project and not a binding over something compiled
 is what it depends on, so the test reads kokoro's `Requires-Dist` and asserts
 torch, transformers and numpy are still in it.
 
 It fails on the day kokoro becomes a thin wrapper over a compiled runtime, which
-is the day the choice of language is worth re-examining rather than inheriting.
+is the day to re-examine the choice of language instead of inheriting it.
 Same file and same shape as FR-1.7's test; both are tripwires on an external
 premise.
 
 ## What this plan does not cover, and why
 
-**The start protocol has no test here.** Bind-then-rename, the start lock, the
+The start protocol has no test here. Bind-then-rename, the start lock, the
 stale-socket unlink and the readiness wait are `docs/SPEC.md`'s, and no
 requirement states them. They are the part of the design the second review is
 most likely to move, so writing tests against them now is writing tests against
 a draft.
 
 They need requirements first if they are to be tested, and that is a decision
-for after the review rather than something to settle here.
+for after the review, not something to settle here.
 
 ## Order of writing
 
 Stage 4 writes these to fail. The order that fails most informatively:
 
-1. **Config and substitution.** Pure functions, no audio, no processes. They
+1. Config and substitution. Pure functions, no audio, no processes. They
    fail with `ImportError` and `AttributeError`, which name what is missing.
-2. **The greeting clock**, including FR-3.5. Still no audio.
-3. **Queue and ordering**, using the recording player. First tests needing a
+2. The greeting clock, including FR-3.5. Still no audio.
+3. Queue and ordering, using the recording player. First tests needing a
    running backend.
-4. **Playback and failure**, including the hung player and the early-returning
+4. Playback and failure, including the hung player and the early-returning
    one.
-5. **The MCP tools.**
-6. **The three integration rows**, last, and only once the kokoro question is
+5. The MCP tools.
+6. The three integration rows, last, and only once the kokoro question is
    answered.
 
-**A test that passes at stage 4 is a red flag**, and the ones to watch are the
+A test that passes at stage 4 is a red flag, and the ones to watch are the
 property tests: an assertion written loosely enough can pass against nothing.

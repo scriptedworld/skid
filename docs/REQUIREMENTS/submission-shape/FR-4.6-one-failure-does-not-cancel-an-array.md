@@ -8,7 +8,7 @@ Derived from FR-4.1 and FR-4.5. Text arrives in arrays and the caller has
 already been told the work was accepted, so a failure part way through has
 nobody to return to and must not take the rest of the array with it.
 
-**Silence is the failure mode this rules out.** One bad clip stopping the queue
+Silence is the failure mode this rules out. One bad clip stopping the queue
 means every later submission from every caller is lost to a fault none of them
 caused, and nothing about a quiet machine says which.
 

@@ -17,7 +17,7 @@ Linux, Python 3.12, and `uv`.
     uv sync
 
 That builds `.venv` with the runtime dependencies and the whole quality
-toolchain. **skid is three packages in one checkout** and the root is a uv
+toolchain. skid is three packages in one checkout and the root is a uv
 workspace, so one `uv sync` installs all three editable:
 
     packages/skid-contract   the route declaration both sides derive from
@@ -30,7 +30,7 @@ rebuilding the MCP shim.
 measurements. Use the project interpreter for everything: kokoro declares
 `<3.13`, so a system python outside that range cannot import skid's
 dependencies at all, and a tool run from PATH reports on the wrong environment
-rather than failing honestly.
+instead of failing honestly.
 
 ## Running the suite
 
@@ -48,12 +48,12 @@ Coverage, which is not gated and is measured per file:
 
 ## What a change has to carry
 
-**Behaviour comes from a requirement, and the requirement comes first.**
+Behaviour comes from a requirement, and the requirement comes first.
 `docs/REQUIREMENTS/<category>/FR-<id>-<slug>.md` is one file per requirement,
 stated as an observable property: what is true of a run, not how it is arranged.
 `docs/REQUIREMENTS/README.md` describes the categories and the status markers.
 
-**Every test names the requirement it discharges**, in a comment directly above
+Every test names the requirement it discharges, in a comment directly above
 it:
 
     # COVERS: FR-4.4 | property
@@ -62,11 +62,11 @@ The kinds are `positive`, `negative`, `edge`, `property` and `regression`. A
 test citing nothing, or citing a requirement no file defines, fails the
 traceability check. So does a requirement no test cites.
 
-**An id is never reused.** Retiring a requirement means recording it under
+An id is never reused. Retiring a requirement means recording it under
 `## Retired` in `docs/REQUIREMENTS/README.md` with what replaced it, and
 repointing or removing every `COVERS:` mark that named it, in the same change.
 
-**Tests live in `tests/`, an external test package**, and are held to the same
+Tests live in `tests/`, an external test package, and are held to the same
 length, duplication and complexity bar as the source. Name a fixture separately
 from its function, `@pytest.fixture(name="client")` on `client_fixture`, so a
 parameter shadowing a module-level name stays a real finding.
@@ -75,7 +75,7 @@ One suite covers all three packages and it stays at the root. `uv sync` puts
 every member in `.venv` editable, so `skid`, `skid_mcp` and `skid_contract` all
 import from a plain `uv run pytest` with no flag added.
 
-**`docs/SPEC.md` says how skid is arranged** and names the requirements each
+`docs/SPEC.md` says how skid is arranged and names the requirements each
 section discharges. A change that moves the design updates it, and the
 requirement wins wherever the two disagree.
 
@@ -118,6 +118,6 @@ the jig files are adopted the same way, so `just checks` and the traceability
 checker do not resolve here. `bolt.skid.definitions.yaml` is tracked because it
 is skid's own.
 
-That is a gap rather than a policy. The suite, ruff, mypy, pylint and bandit are
+That is a gap, not a policy. The suite, ruff, mypy, pylint and bandit are
 the checks a contributor can run today, and they are the ones a change is judged
 on.

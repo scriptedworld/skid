@@ -1,6 +1,6 @@
 # A namespace package drops out of coverage without saying so
 
-2026-09-07. Cost: one design revision, caught before any of skid's source moved.
+Cost: one design revision, caught before any of skid's source moved.
 Had it not been caught, the gate would have kept reporting green over modules it
 had stopped measuring.
 

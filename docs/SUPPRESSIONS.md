@@ -1,17 +1,17 @@
 # skid, suppressions
 
 Every `#nosec`, `noqa`, `type: ignore` or equivalent in this repository, with
-the question that was asked and the answer that was given. **A suppression that
-is not here is a defect**, because the register is the only thing standing
+the question that was asked and the answer that was given. A suppression that
+is not here is a defect, because the register is the only thing standing
 between a silenced check and nobody remembering why.
 
-A file rather than a directory, which is what `NEXT_STEPS.md` anticipated. One
+A file and not a directory, which is what `NEXT_STEPS.md` anticipated. One
 class of suppression is one entry, and a directory holding a single file buys
 nothing until there are several.
 
 ## S-1, bandit's subprocess findings
 
-**Five marks, two rules, two files, and no test carries one.** `B404` for
+Five marks, two rules, two files, and no test carries one. `B404` for
 importing `subprocess`, `B603` for calling it without `shell=True`.
 
     packages/skid/src/skid/install.py        #nosec B404    import subprocess
@@ -23,31 +23,25 @@ Both files are on the service side of the socket, which is where every one of
 these marks belongs: the client side runs no subprocess at all. The MCP shim and
 the contract carry no suppression of any kind.
 
-**The rows carry the pragma as it is spelled in the source, and `×N` where a
-file holds more than one.** That is what makes this an index rather than a
+The rows carry the pragma as it is spelled in the source, and `×N` where a
+file holds more than one. That is what makes this an index and not a
 description of one: the checker reads these rows with the same patterns it scans
 the source with, so a row naming no recognised pragma is prose to it. Written as
-`B404` alone, all five marks read as unregistered while this document sat here
+`B404` alone, all five marks read as unregistered even with this document
 describing them in full.
 
 Line numbers are deliberately not recorded. They go stale on the next edit and a
 stale line number is worse than none, because it sends a reader to the wrong
 call. `grep -rn nosec src/ tests/` is the current list and it is one command.
 
-**It was seven marks for about an hour, and the two that went are the useful
-part of this entry.** `tests/test_install.py` ran `systemd-analyze verify` on
-the unit files and carried `B404`, `B603` and `B607` for it. Asked why there
-were so many subprocess calls, the answer turned out to be that one of them was
-a test doing work the installer should have been doing.
+A test that runs `systemd-analyze verify` on the unit files would need `B404`,
+`B603` and `B607` of its own, and would be a test doing the installer's work:
+it would only ever check the machine the suite ran on. The check is a step in the
+install plan, so it runs on whichever machine is being installed to, catches a
+unit systemd would reject before anything is written, and the test asserts the
+command without running it.
 
-The check was right and its placement was wrong twice over: it only ever ran on
-the machine the suite ran on, and it made that file the only test module
-shelling out. It is a step at the head of the install plan now, so it runs on
-whichever machine is being installed to, catches a unit systemd would reject
-before anything is written, and the test asserts the command instead of running
-it.
-
-**No test in this repository imports `subprocess`.** That is the property to
+No test in this repository imports `subprocess`. That is the property to
 keep. `test_player.py` was already the model for it: FR-7.5 makes the player a
 command line, so the test writes a real script, configures it, and asserts what
 the script recorded. The production code runs it; the test never does.
@@ -67,22 +61,21 @@ A test that needs to shell out is usually a seam that has not been found yet.
 
 > `#nosec` those subprocess warnings and ensure they are in SUPPRESSIONS.
 
-Per-line marks, which is the narrowest of the three and the only one where **a
-new subprocess call still fails the gate until somebody looks at it**. A
+Per-line marks, which is the narrowest of the three and the only one where a
+new subprocess call still fails the gate until somebody looks at it. A
 threshold change would stop enforcing every Low finding estate-wide; a tree-wide
 skip would stop enforcing these two rules at any severity, including on code
 nobody has written yet. Both were offered and neither was chosen.
 
-The cost, stated because it is real: this spends skid's zero-suppression record.
-Before today the tree carried no `nosec`, no `noqa` and no `type: ignore`.
+The cost: this spends skid's zero-suppression record. Apart from these marks the
+tree carries no `nosec`, no `noqa` and no `type: ignore`.
 
 ### Which calls are forced, and which was chosen
 
-Asked directly: why are there this many? Six of the seven are forced by the
-design and one is a convenience, and the convenience is worth naming rather than
-being covered by the general argument.
+Why are there this many? Six of the seven are forced by the design and one is a convenience,
+and the convenience is named here instead of hiding under the general argument.
 
-**Forced, because the work is running another program:**
+Forced, because the work is running another program:
 
     player.py    plays a clip               FR-1.3, and the whole design
     install.py   uv tool install            an external tool
@@ -92,13 +85,13 @@ being covered by the general argument.
     install.py   checks en_core_web_sm      a DIFFERENT interpreter, so an
                                             in-process import cannot answer
 
-**Chosen:** the unit files are copied with `install -D -m 0644` where
+Chosen: the unit files are copied with `install -D -m 0644` where
 `shutil.copy`, `mkdir` and `chmod` would do. It buys one thing, which is that
 every step of the plan is an argv, so `--dry-run` prints exactly what will run
 and the tests assert the sequence as data. A Python copy would make one step
 describable only in prose and the plan no longer uniform.
 
-**Removing it would not remove a single mark**, which is the honest reason it
+Removing it would not remove a single mark, which is the honest reason it
 stays. `install.py` shells out to `uv`, `systemctl` and `claude` regardless, so
 it keeps its `B404` on the import and its `B603` on `run`. The count is driven
 by which modules run programs at all, not by how many programs each one runs.
@@ -108,20 +101,20 @@ would go.
 
 ### Why the findings cannot be fixed
 
-**They are correct and describe the design accurately.** skid's entire
+They are correct and describe the design accurately. skid's entire
 output path is generate a file and run a player:
 
-- **FR-1.3** a subprocess plays the file
-- **FR-1.4** playback uses the default output device, which is what a player
+- FR-1.3 a subprocess plays the file
+- FR-1.4 playback uses the default output device, which is what a player
   reaching the OS gets and what skid would lose by touching a device itself
-- **FR-1.5** skid never talks to an audio device, stated on its own so it can be
+- FR-1.5 skid never talks to an audio device, stated on its own so it can be
   tested as one
-- **FR-7.5** the player is `paplay` by default and a user-declared command line
+- FR-7.5 the player is `paplay` by default and a user-declared command line
   otherwise
 
 `B603` asks whether the argument vector is untrusted. It is not. `player.py`
 builds it from the configured command through `shlex.split`, which is the
-mechanism FR-7.5 requires and a person's own config file rather than input from
+mechanism FR-7.5 requires and a person's own config file, not input from
 a caller. `install.py` builds each `argv` as a literal tuple in `install_plan`,
 asserted by `test_install.py` as data. Nothing reaching `subprocess` comes from
 an MCP caller.
@@ -130,7 +123,7 @@ an MCP caller.
 skips when it is not on PATH, so hard-coding a path would make the test assert
 against a location rather than against the tool.
 
-**Not shell=True, which is what would make these findings real.** No shell is
+Not shell=True, which is what would make these findings real. No shell is
 involved anywhere. The suppression says "we run subprocesses on purpose", not
 "we are not worried about injection".
 
