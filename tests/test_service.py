@@ -326,9 +326,8 @@ def test_the_directories_it_creates_are_owner_only(
 
     `_record_failure` writes the text a caller submitted into the log, so a
     world-readable log directory hands a caller's messages to any local user.
-    Measured 2026-08-28 before this test: the live `~/.local/state/skid` was
-    0775, and so was the clips directory inside the runtime dir, which FR-5.4
-    survived only because systemd's own runtime directory above it is 0700.
+    Without the chmod the live `~/.local/state/skid` came out 0775, and so did
+    the clips directory inside the runtime dir, where FR-5.4 held only because systemd's own runtime directory above it is 0700.
 
     `mkdir(mode=...)` does nothing to a directory that already exists, which is
     why both are pre-created here: creating them fresh would pass either way.
@@ -356,12 +355,12 @@ def test_the_rest_are_prepared_while_one_is_being_spoken(
 ) -> None:
     """Generation and playback overlap, asserted as clips arriving during playback.
 
-    **Which clips exist while the speaker is held is not enough to show this**,
-    and an earlier version of this test asserted exactly that and was wrong. A
+    Which clips exist while the speaker is held is not enough to show this. A
     service that generated the whole array before playing a note of it satisfies
     that check completely, and it is the one design where the two never overlap.
     Measured: with generation made to take the playback lock, which the module
-    docstring says would destroy this row, that version still passed.
+    docstring says would destroy this row, a test asserting only presence still
+    passed.
 
     So what is asserted is arrival, not presence. The set of clips is snapshotted
     at the moment the player reports it is holding, and the test then waits for a
@@ -562,7 +561,7 @@ def test_a_long_clip_on_the_speaker_is_progressing_not_stuck(
 ) -> None:
     """Playback is health however long it lasts, so the grace does not bound it.
 
-    Measured 2026-08-28: 1196 characters is 76.9 seconds of audio, and nothing
+    1196 characters measured 76.9 seconds of audio, and nothing
     caps a message's length. A watchdog tuned to clip length would either fire
     mid-sentence or be set so high it never fires. Asserted with the player held
     and the grace set to zero, which is the strongest form: no elapsed time

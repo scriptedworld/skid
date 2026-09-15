@@ -35,10 +35,10 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
 ) -> None:
     """The script and the service derive from one declaration, asserted as one.
 
-    This is the failure mode the split introduces. When one module owned the
-    schemas and the implementations together, a tool could not exist on one side
-    only; now it can, and a tool the script offers with no route behind it fails
-    at call time in front of a user rather than here.
+    This is the failure mode the split introduces. With the schemas and the
+    implementations in different processes a tool can exist on one side only,
+    and a tool the script offers with no route behind it fails at call time in
+    front of a user instead of here.
 
     Asserted as equality in both directions, so an orphaned route is caught as
     well as an unreachable tool.
@@ -200,14 +200,12 @@ def test_a_call_that_does_not_match_its_schema_is_refused_by_field(
 ) -> None:
     """The published schema is the enforced one, checked by wrench.
 
-    An earlier version declared these only to show them in `tools/list`, with
-    hand-written checks doing the real work, which is one contract stated twice
-    and nothing holding the two together. wrench validates every call against
-    the same document a client is handed.
+    wrench validates every call against the same document a client is handed in
+    `tools/list`, so the contract is stated once.
 
-    `messages: []` is the case worth naming: it used to reach `Submission` and
-    raise from a dataclass three frames down, and now it is refused at the edge
-    naming the field. Nothing is queued either way, which is what is asserted.
+    `messages: []` is the case to watch: unvalidated, it reaches `Submission` and
+    raises from a dataclass three frames down. It is refused at the edge naming
+    the field. Nothing is queued either way, which is what is asserted.
     """
     empty = client.post(ROUTES["speak"][1], json={"name": "silo", "messages": []})
     wrong_type = client.post(ROUTES["speak"][1], json={"name": 7, "messages": ["a"]})

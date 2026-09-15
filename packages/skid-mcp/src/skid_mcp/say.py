@@ -1,10 +1,9 @@
 """`skid-say`: reach skid from a shell, with no MCP client in the way.
 
-**Why this exists.** The MCP route needs a `skid-mcp` the session spawned at
+The MCP route needs a `skid-mcp` that the Claude Code session spawned at
 start-up, so a session whose shim predates a deploy cannot speak until it is
-restarted, and only a person can do that. That left the machine silent for hours
-with a service that was working perfectly, which is a bad way for a voice tool
-to fail.
+restarted, and only a person can do that. That has left the machine silent for
+hours with a service that was working perfectly.
 
 The socket is the interface and MCP is one client of it. This is another, and it
 needs nothing but the socket being there.
@@ -14,8 +13,7 @@ needs nothing but the socket being there.
     skid-say --status
     skid-say --voice af_bella
 
-Equivalent to a `curl --unix-socket`, which also works and is worth knowing when
-this is not installed:
+A `curl --unix-socket` does the same, and works where this is not installed:
 
     curl --unix-socket $XDG_RUNTIME_DIR/skid/skid.sock \\
          -H 'Content-Type: application/json' \\

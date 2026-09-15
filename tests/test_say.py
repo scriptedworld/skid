@@ -1,20 +1,19 @@
 """`skid-say`, against the real service, over a real request.
 
-**Why this file exists at all.** `skid-say` was written and deployed on
-2026-08-28 because the MCP route was unusable and the machine had been silent
-for hours. It went out untested: `coverage report` read `say.py 32 stmts 32
-miss 0%`, and neither gate noticed. Traceability read 48 of 48 because it
+`skid-say` was first deployed while the MCP route was unusable and the machine
+had been silent for hours, and it went out untested: `coverage report` read
+`say.py 32 stmts 32 miss 0%`, and neither gate noticed. Traceability read 48 of 48 because it
 measures requirement-to-test and every row already had one, and the gate's
 coverage task runs from PATH's python, which cannot import skid's dependencies.
 Two green numbers over an uncovered file.
 
-**Nothing is stood in for.** `run` is exercised against the actual Flask app
+Nothing is stood in for. `run` is exercised against the actual Flask app
 behind `httpx.WSGITransport`, exactly as `tests/test_client.py` does, so a call
 goes through the code a socket would reach. `main` is exercised twice over a
 real unix socket: once with nothing listening, and once against waitress
 serving the real app, which is the arrangement the installed command meets.
 
-**The argument surface is a contract with a person, not with a client.** It is
+The argument surface is a contract with a person, not with a client. It is
 what somebody types at 2am when nothing else works, so the cases here are the
 ones a person gets wrong: no arguments, a name with nothing to say, and
 `--status` with a stray positional after it.

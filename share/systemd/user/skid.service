@@ -4,23 +4,22 @@ Documentation=file://%h/.projects/skid/docs/PROJECT.md
 Requires=skid.socket
 After=skid.socket
 
-# Chosen, where these were systemd's defaults of 5 in 10s. Ten attempts over two
-# minutes: long enough that a slow-failing loop latches instead of running for
-# ever, short enough that a permanent fault is off and visible rather than
-# burning restarts.
+# Chosen over systemd's defaults of 5 in 10s. Ten attempts over two minutes:
+# long enough that a slow-failing loop latches instead of running for ever,
+# short enough that a permanent fault is off and visible and not burning
+# restarts.
 #
-# The default was worse than it looks and in a way worth writing down. It
-# latches on FAST failures and not on slow ones, so an import error stops after
-# 7 seconds while the spaCy episode restarted 76 times without ever tripping it,
-# each attempt outliving the 10 second window. Widening the interval is what
-# makes the slow case latch too.
+# The default latches on FAST failures and not on slow ones, so an import error
+# stops after 7 seconds while a missing spaCy model restarted the service 76
+# times without ever tripping it, each attempt outliving the 10 second window.
+# Widening the interval is what makes the slow case latch too.
 #
 # Latching is deliberate. `systemctl --user status skid.service` says failed,
 # and `reset-failed` clears it once the cause is fixed.
 #
 # This section and not the service one: systemd moved these in v229 and IGNORES
 # them there with a warning, while `systemd-analyze verify` still exits 0.
-# Measured 2026-08-28 by writing them in the wrong place and reading the output.
+# Checked by writing them in the wrong place and reading the output.
 StartLimitIntervalSec=120
 StartLimitBurst=10
 
@@ -45,7 +44,7 @@ RestartSec=1
 # process, which Restart= already handles.
 #
 # 120s, and not tuned to clip length. A clip can legitimately play for 77
-# seconds (measured 2026-08-28, 1196 characters) and that does not bound this,
+# seconds (1196 characters, measured) and that does not bound this,
 # because playback pings. What it must clear is one generation step: about 30
 # seconds for the longest clip the player's own 300s ceiling admits.
 WatchdogSec=120

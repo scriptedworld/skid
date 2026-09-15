@@ -1,22 +1,14 @@
 """skid-mcp, the MCP server, against the real service over a real request.
 
-**Nothing here is scripted or stood in for.** The tools are the ones a client
+Nothing here is scripted or stood in for. The tools are the ones a client
 calls, the backend is `httpx` over a WSGI transport, and behind it is the actual
 Flask app over an actual `Service`. Flask being WSGI is what makes that possible
 without a socket: the request goes through the same code a socket would reach.
 
-The previous version of this file could not do that. It tested a byte-forwarder
-against a hand-written service that scripted 404s, because the thing under test
-was session recovery and a session is a thing you have to break on purpose. There
-is no session now, so there is nothing to script.
-
-**What is gone, and deliberately.** Nine tests covered `Session._id`,
-`_handshake`, `_lost` and `_reinitialize`: replaying a handshake, retrying once,
-carrying the new session and not the dead one, and refusing to replay for
-anything but a 404. All of it was recovery from a session the service forgot,
-and no session exists on either side now. Their requirement, FR-5.3, is covered
-here by the case that actually remains: a service that cannot be reached fails
-the call instead of hanging it.
+There is no session, so there is nothing to script: session recovery is a thing
+you have to break on purpose to test, and no session exists on either side.
+FR-5.3 is covered here by the case that remains, a service that cannot be
+reached failing the call instead of hanging it.
 """
 
 from __future__ import annotations
@@ -50,7 +42,7 @@ def _call(server: Any, tool: str, **arguments: Any) -> Any:
 
 # COVERS: FR-5.2 | positive
 def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None:
-    """The protocol stops here now, so this is where the tool surface lives.
+    """The protocol stops here, so this is where the tool surface lives.
 
     Asserted as the whole set against `skid_contract.tools`, so a tool added to the
     routes and not to this process is caught, and so is the reverse. That pair
@@ -75,11 +67,10 @@ def test_a_tool_call_reaches_the_service_and_returns_its_answer(
 def test_a_call_is_executed_once(server: Any, service: Service) -> None:
     """Nothing is ever replayed, because there is no session to lose.
 
-    The old shim retried a request when the service said the session was gone,
-    which was safe only because a 404 arrived before dispatch. That invariant
-    was guarded by a docstring, and a later `_lost` admitting a 503 would have
-    made the machine say the same thing twice. Removing the session removes the
-    invariant, and this asserts the property it was protecting.
+    A shim that retries when the service says the session is gone is safe only
+    while a 404 arrives before dispatch, and admitting a 503 would make the
+    machine say the same thing twice. With no session there is no retry, and
+    this asserts the property that invariant protected.
     """
     _call(server, "speak", name="silo", messages=["once"])
 

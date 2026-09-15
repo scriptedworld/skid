@@ -4,8 +4,8 @@ skid worked on one machine and was reproducible on none, because every step was
 run by hand. This is those steps as data: a plan of commands that can be printed
 before it is run and asserted against in a test without touching the machine.
 
-**It runs before skid is installed, so it imports nothing but the standard
-library and nothing from its own package.** The first step is what puts `skid`
+It runs before skid is installed, so it imports nothing but the standard
+library and nothing from its own package. The first step is what puts `skid`
 on PATH, so an installer that needed skid installed could not perform it:
 
     python3 packages/skid/src/skid/install.py    from a fresh checkout
@@ -14,7 +14,7 @@ on PATH, so an installer that needed skid installed could not perform it:
 Both reach this file. The first is the one that works on a machine that has
 never seen skid.
 
-**What it writes, all of it inside the user's own home:**
+What it writes, all of it inside the user's own home:
 
     ~/.local/share/uv/tools/skid/         the service's environment, uv's to manage
     ~/.local/share/uv/tools/skid-mcp/     the MCP shim's environment, likewise
@@ -23,7 +23,7 @@ never seen skid.
     ~/.config/systemd/user/               skid.socket and skid.service
     ~/.claude.json                        the MCP registration, via `claude mcp`
 
-**Two tool environments, because skid is two installables.** The service carries
+Two tool environments, because skid is two installables. The service carries
 kokoro and torch and the shim carries httpx and mcp, so replacing one does not
 rebuild the other and a service restart no longer disturbs the MCP side.
 `docs/DECISIONS/the-socket-is-the-package-boundary.md`.
@@ -32,7 +32,7 @@ Nothing needs root and nothing is written outside `$HOME`, which is the property
 that makes an installer for this service an ordinary thing to run rather than
 something to read carefully first. Read it carefully anyway.
 
-**Run against a machine that already has skid, it says so and asks.** Answering
+Run against a machine that already has skid, it says so and asks. Answering
 yes reinstalls, which means the registration is removed and added rather than
 left alone: `claude mcp add` refuses a name that is taken and does not update
 it, so an entry pointing at some other checkout survives every re-run that only
@@ -60,7 +60,7 @@ SERVER_NAME = "skid"
 ALREADY_EXISTS = "already exists"
 """What `claude mcp add` says when the name is taken.
 
-It exits 1 in that case, measured 2026-08-28, so the exit status alone cannot
+It exits 1 in that case, so the exit status alone cannot
 tell an installer re-run from a real failure and the message has to be read.
 """
 
@@ -103,8 +103,8 @@ class Paths:
     """The two tool environments, which are separate on purpose.
 
     skid is three distributions and two of them install as tools, so that
-    replacing the service does not rebuild the MCP shim. Measured 2026-09-07:
-    the service's environment is 1.3 GB and the shim's is 33 MB, and reinstalling
+    replacing the service does not rebuild the MCP shim. The service's
+    environment measures 1.3 GB and the shim's 33 MB, and reinstalling
     the service leaves the shim's environment byte-for-byte identical.
 
     Two fields rather than one directory holding both, because uv owns the layout
@@ -137,7 +137,7 @@ class Paths:
 def _unit_checks(source: Path) -> list[Step]:
     """Ask systemd to accept each unit, before either is copied (FR-9.6).
 
-    **These run after the tool is installed and before the units are written.**
+    These run after the tool is installed and before the units are written.
     `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
     `systemd-analyze verify` fails on a command that is not there, so a check
     placed before the tool install cannot pass on a machine that has never had
@@ -180,7 +180,7 @@ def _unit_copies(source: Path, destination: Path) -> list[Step]:
 def registration_is_current(config: Path) -> bool:
     """Whether the MCP client already launches skid the way this install wants.
 
-    **The registration names a command on PATH, not a checkout.** It is
+    The registration names a command on PATH, not a checkout. It is
     `{"type": "stdio", "command": "skid-mcp"}`, and `~/.local/bin/skid-mcp` is a
     symlink into the tool environment that `uv tool install` re-points. So an
     entry in this shape is already correct for whichever checkout was just
@@ -227,7 +227,7 @@ def _register() -> Step:
 def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     """The commands that take a checkout to a running socket, in order.
 
-    **Two tool installs and not one.** skid is three distributions split by which
+    Two tool installs and not one. skid is three distributions split by which
     side of the socket a module sits on, and the two that carry console scripts
     install separately so that replacing the service does not rebuild the MCP
     shim. The service goes first because `skid.service` names `~/.local/bin/skid`
@@ -245,8 +245,8 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     refuses a name that is taken and does not update it, so an entry pointing at
     the wrong command survives every re-run that only adds (FR-9.11).
 
-    **Both steps are skipped when the entry is already the one this install
-    would write.** FR-9.11 asks that the registration name the checkout being
+    Both steps are skipped when the entry is already the one this install
+    would write. FR-9.11 asks that the registration name the checkout being
     installed, and an entry reading `command: skid-mcp` does that for every
     checkout, because the name resolves through a symlink the tool install
     re-points. Re-registering it would change no bytes and would cost every
@@ -409,7 +409,7 @@ def spacy_model_present(paths: Paths) -> bool:
     stops the next one, and it is a question about the installed environment
     rather than about the checkout, so the tool's own interpreter answers it.
 
-    **The service's environment and not the shim's.** kokoro is the service's
+    The service's environment and not the shim's. kokoro is the service's
     dependency alone, so the shim has no spaCy model and is not supposed to.
     Asking the wrong interpreter would report a broken install on every machine.
     """

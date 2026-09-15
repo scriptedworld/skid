@@ -27,10 +27,9 @@ classifiers = [
 # a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
 # measurement and says to retire the row rather than edit this in place.
 requires-python = ">=3.12,<3.13"
-# THE SERVICE SIDE OF THE SOCKET AND NOTHING ELSE. `httpx` and `mcp` left when
-# this package split from `skid-mcp`: nothing the service imports reaches
-# either, and `tests/test_declarations.py` asserts that per package now rather
-# than asserting it once for a tree that held both sides.
+# THE SERVICE SIDE OF THE SOCKET AND NOTHING ELSE. No `httpx` and no `mcp`:
+# nothing the service imports reaches either, and `tests/test_declarations.py`
+# asserts the imports per package.
 dependencies = [
     # kokoro's English path needs this spaCy model and will try to DOWNLOAD it
     # at runtime if it is absent, using pip or uv. Under systemd neither is on
@@ -44,15 +43,14 @@ dependencies = [
     # nvidia-cusparselt-cu13, nvidia-nccl-cu13, nvidia-nvshmem-cu13 and triton,
     # which is 4.1 GB of a 5.7 GB environment.
     #
-    # None of it runs here. Measured 2026-09-07: torch reports the NVIDIA driver
-    # too old, found version 12040, and falls back to CPU, so the environment
-    # was carrying a CUDA stack it could not use even once.
+    # None of it runs here. torch reports the NVIDIA driver too old, found
+    # version 12040, and falls back to CPU, so the default wheel carries a CUDA
+    # stack this machine cannot use even once.
     "torch",
     # The config and the spool are read, written and validated through wrench,
-    # which is the ecosystem's one answer for structured files. It replaced
-    # tomlkit, which was here to preserve comments in a file a person edits;
-    # `docs/config.sample.yaml` does that job now, so the live file needs no
-    # comments and can be emitted canonically.
+    # which is the ecosystem's one answer for structured files. Comments for a
+    # file a person edits live in `docs/config.sample.yaml`, so the live file
+    # needs none and can be emitted canonically.
     "wrench",
     # Six plain HTTP routes on the socket systemd hands this process.
     #
@@ -82,10 +80,9 @@ skid-install = "skid.install:main"
 # wrench is not on a package registry, so it is named by git URL. uv takes one
 # as readily as a registry name, which is what lets a standalone clone install.
 #
-# Not editable. wrench used to resolve its schemas by walking up from __file__,
-# which forced an editable install, and a PEP 660 import hook is something mypy
-# cannot follow, so wrench's py.typed was invisible and every import of it was
-# an error. wrench carries its schemas as generated source now.
+# Not editable. mypy cannot follow a PEP 660 import hook, so under an editable
+# install wrench's py.typed is invisible and every import of it is an error.
+# wrench carries its schemas as generated source, so nothing forces editable.
 #
 # To develop against a local wrench, override the source rather than editing
 # this line:

@@ -72,7 +72,7 @@ def test_two_clips_never_overlap(tmp_path: Path) -> None:
     player process is never running twice at once, which the recording script
     reports by timestamping its start and its end.
 
-    **Three threads rather than `play_all`, and that is the whole test.**
+    Three threads rather than `play_all`, and that is the whole test.
     `play_all` is a loop in one thread, so the alternation it produces holds
     whether or not a lock exists: this test asserted it that way and passed
     against a `Player` with `self._lock` removed entirely. Concurrent callers
@@ -141,7 +141,7 @@ def test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it(
     the lock while its audio is still going. skid cannot detect that, and this
     test asserts the limit rather than a guarantee skid does not provide.
 
-    **The background job must detach its output as well.** skid captures the
+    The background job must detach its output as well. skid captures the
     player's streams, and a child that keeps the stdout pipe open holds the wait
     open with it, so a naively backgrounded player does not overlap after all.
     That accident is not the guarantee FR-1.8 says skid lacks: a real player

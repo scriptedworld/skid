@@ -1,17 +1,16 @@
 """A submission: what one is, and what it refuses to be.
 
-`SubmissionQueue` used to live here and was deleted on 2026-08-28. FR-4.8 made
-the queue durable, so the queue is a directory now and `Spool` is it; keeping an
-in-memory one beside it would have been two queues, which is the bug rather than
-the belt and braces.
+FR-4.8 makes the queue durable, so the queue is a directory and `Spool` is it.
+An in-memory queue beside it would be two queues, which is a bug and not belt
+and braces.
 
-Its tests moved rather than went. `test_spool.py` covers the queue properties
-FR-7.2 and FR-4.3 against the thing that is actually the queue, and what remains
-here is the part that was never about queueing: a submission validating itself.
+`test_spool.py` covers the queue properties FR-7.2 and FR-4.3 against the thing
+that is actually the queue. What is here is the part that is not about
+queueing: a submission validating itself.
 
-Leaving the class in would have been worse than deleting it. Nothing but its own
-tests used it, so the suite would have gone on passing over code no running skid
-could reach, which is the vacuous pass `docs/PROJECT.md` warns about.
+A class nothing but its own tests used would let the suite go on passing over
+code no running skid can reach, which is the vacuous pass `docs/PROJECT.md`
+warns about.
 """
 
 import pytest

@@ -55,8 +55,8 @@ class Player:
     def playing_since(self) -> float | None:
         """When the current clip started, by the monotonic clock, or None.
 
-        A clip legitimately takes tens of seconds: measured 2026-08-28, 1196
-        characters produced 76.9 seconds of audio. So playback in progress is
+        A clip legitimately takes tens of seconds: 1196 characters measured
+        76.9 seconds of audio. So playback in progress is
         health rather than a stall, and the watchdog needs to be able to tell
         the difference. `self._timeout` is what bounds it (FR-1.9), which is why
         this can be trusted without a second bound over the top of it.

@@ -12,15 +12,14 @@
 # reasoning and the measurements.
 #
 # There is no [project] table here. A bare `uv run` at a virtual workspace root
-# installs every member, verified 2026-09-07 from a cold start with no lock file
-# and no virtualenv, so `just test` and the gate's `uv run coverage run` reach
+# installs every member, verified from a cold start with no lock file and no
+# virtualenv, so `just test` and the gate's `uv run coverage run` reach
 # all three packages with no flag added.
 [tool.uv.workspace]
 members = ["packages/*"]
 
-# Declared 2026-08-28, having never been. pytest was in the virtualenv because
-# somebody installed it rather than because this file asked for it, so `uv sync`
-# removed it and a fresh clone could never have run the suite at all.
+# Declared, because a tool that is only in the virtualenv because somebody
+# installed it is removed by `uv sync`, and a fresh clone cannot run the suite.
 #
 # THE WHOLE QUALITY TOOLCHAIN, not just pytest. The list is the `requires:`
 # block of `bolt.python-std-quality.yaml` verbatim, so the gate and a local run
@@ -117,7 +116,7 @@ ignore_missing_imports = true
 # WHY bin/ IS EXCLUDED EVERYWHERE BELOW, and why it is scoping rather than
 # silencing. bin/ holds nothing skid wrote. It is two symlinks into
 # toolbox/bin/, adopted because the common jig resolves its checkers against
-# {config_dir}, which is this directory. Measured 2026-08-27: with them linked
+# {config_dir}, which is this directory. With them linked
 # and no exclusion, `mypy .` and `pylint --recursive=y .` fail skid's gate on
 # toolbox's source, every finding in test-traceability.py or
 # suppression-register.py.
@@ -132,7 +131,7 @@ extend-exclude = ["bin"]
 
 [tool.ruff.lint.isort]
 # Stated rather than inferred, because the inference is not stable across
-# invocations. Measured 2026-08-28 with ruff 0.16.3: `ruff check .` treated
+# invocations. With ruff 0.16.3, `ruff check .` treated
 # `skid` as third-party and passed, while the same command with any
 # `--extend-exclude` treated it as first-party and reported three I001s. The
 # flag's value did not matter; naming `bin`, which is what pyproject already
@@ -149,10 +148,10 @@ known-first-party = ["skid", "skid_mcp", "skid_contract"]
 [tool.pylint.MASTER]
 # .venv is here for a different reason from bin/. The jig runs
 # `pylint --recursive=y .`, which walks the virtualenv, and astroid recurses to
-# death inside torch's generated modules: measured 2026-08-27, pylint over src
-# and tests takes 1.8s, and over `.` it had not finished after 900s and was
-# emitting a RecursionError traceback. So this is not tidiness, it is the
-# difference between a gate that runs and one that never returns.
+# death inside torch's generated modules. Pylint over src and tests takes 1.8s;
+# over `.` it had not finished after 900s and was emitting a RecursionError
+# traceback. This is the difference between a gate that runs and one that never
+# returns.
 ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*', '^adapters/.*', '^\.ephemera/.*']
 
 # The same split mypy's `python_executable` answers. pylint run from PATH is a

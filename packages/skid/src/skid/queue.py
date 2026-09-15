@@ -5,9 +5,8 @@ handled whole rather than a message at a time, which is what stops two callers
 interleaving into one stream a listener has to untangle, and `Spool` is what
 keeps them in order.
 
-**The queue used to be here and is a directory now.** FR-4.8 made it durable, so
-`skid.spool.Spool` is the queue and an in-memory one beside it would be two
-queues disagreeing rather than one working.
+The queue itself is a directory. FR-4.8 makes it durable, so `skid.spool.Spool`
+is the queue, and an in-memory one beside it would be two queues disagreeing.
 """
 
 from __future__ import annotations

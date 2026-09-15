@@ -4,7 +4,7 @@ Nothing streams to a device from in here. A file is produced and handed on,
 which is what lets generation run ahead of playback without either waiting on
 the other.
 
-**The stdlib `wave` module writes the file.** kokoro returns float samples and
+The stdlib `wave` module writes the file. kokoro returns float samples and
 this scales them to signed 16-bit; that conversion is the whole of what sits
 between the engine and the file. Using `soundfile` would be importing libsndfile,
 which is an audio library, and skid does not have one.
@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 
 SAMPLE_RATE = 24000
-"""Measured 2026-08-27: kokoro 0.9.4 returns 24 kHz mono."""
+"""kokoro 0.9.4 returns 24 kHz mono, measured."""
 
 VOICES = frozenset(
     [
@@ -129,7 +129,7 @@ class Generator:
     A pipeline is built on first use and kept, so a second message does not pay
     model start-up. That is what the backend exists for.
 
-    **One model, several phonemisers.** Pipelines are cached per code rather
+    One model, several phonemisers. Pipelines are cached per code rather
     than dropped on a change, because assignment under FR-10.2 moves between
     voices constantly and rebuilding on every switch would pay start-up on most
     submissions. The model is the expensive part and is built once: the first

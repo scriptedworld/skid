@@ -3,26 +3,23 @@
 A setting changed through a tool is written back here, so a restart keeps it and
 a person reading the file sees what is in use.
 
-**YAML, read and written by wrench against a schema.** Every structured file in
-the ecosystem is YAML, and skid was the outlier: it chose TOML 83 minutes before
-that was recorded, so it predates the decision rather than having ignored it.
+YAML, read and written by wrench against a schema, like every structured file
+in the ecosystem.
 
-**Nothing preserves comments any more, and that is the change rather than a
-regression.** `tomlkit` was here because the file is one a person owns and edits,
-and a parse-and-re-emit would discard what they wrote around the values. What
-that argument was really protecting is the place a reason can live, and
-`docs/config.sample.yaml` is that place now: the live file carries values and
-the sample carries the explanations. So the live file is emitted canonically,
-which is quoted keys and sorted names, and FR-7.8's comment clause is retired.
+Nothing preserves comments in the live file. The file is one a person owns and
+edits, and a parse-and-re-emit discards what they wrote around the values, so
+the reasons live in `docs/config.sample.yaml` instead: the live file carries
+values and the sample carries the explanations. The live file is emitted
+canonically, with quoted keys and sorted names, and FR-7.8's comment clause is
+retired.
 
-**Order still matters and still survives**, FR-8.4. A YAML list keeps its order
-in the decoded structure, so the substitution set round-trips in file order
-without anything preserving formatting. That row lost its reason for naming the
-file and none of its substance.
+Order still matters and survives, FR-8.4. A YAML list keeps its order in the
+decoded structure, so the substitution set round-trips in file order without
+anything preserving formatting.
 
 A missing file is not an error. A file that is present and malformed is, because
-defaulting past it would silently discard the record it failed to parse, and now
-the message says which key and why rather than only that it would not parse.
+defaulting past it would silently discard the record it failed to parse. The
+message says which key failed and why.
 """
 
 from __future__ import annotations
@@ -46,7 +43,7 @@ DEFAULT_WINDOW_SECONDS = 30
 DEFAULT_EXPIRY_SECONDS = 300
 """Five minutes, FR-4.9. How long a queued submission stays worth speaking.
 
-A PREFERENCE rather than a measurement: a judgement about how long a summary
+Chosen by preference and not measured: a judgement about how long a summary
 stays current, not a property of the machine. Being ten times the greeting
 window is a coincidence, since the two answer different questions and neither
 constrains the other.
@@ -103,7 +100,7 @@ def _voices_from(document: dict[str, Any]) -> list[VoiceChoice]:
     FR-8.4 keeps the substitution order: a list a person wrote means what its
     order says.
 
-    **The alias check is here rather than in the schema**, FR-10.8. JSON Schema
+    The alias check is here rather than in the schema, FR-10.8. JSON Schema
     compares whole entries for uniqueness, so two rows sharing an alias and
     differing in voice pass it. Naming the offender is the point: an ambiguous
     alias is one nothing about either row looks wrong for.
@@ -129,7 +126,7 @@ def _voices_from(document: dict[str, Any]) -> list[VoiceChoice]:
 def load_config(path: Path | None = None) -> Config:
     """Read the config, or return the defaults if there is no file.
 
-    **A missing file and an unreadable one are different**, FR-6.4. wrench says
+    A missing file and an unreadable one are different, FR-6.4. wrench says
     which: `ReadError` covers both, so the absence is checked first and anything
     else that fails to read is a real fault and is raised.
 
@@ -207,7 +204,7 @@ def _as_document(config: Config) -> dict[str, object]:
 def save_config(config: Config, path: Path | None = None) -> None:
     """Write the config, validated on the way out as well as the way in.
 
-    **Validated on write is the half worth having.** A tool that stored a shape
+    Validated on write is the half worth having. A tool that stored a shape
     the schema refuses would produce a file skid could never read again, and the
     caller would be told the write succeeded. Checking the document before it
     reaches the disk means a bug in skid fails where a bad file would.

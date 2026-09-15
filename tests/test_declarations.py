@@ -55,23 +55,20 @@ THIRD_PARTY = {
     "skid_mcp": {"httpx", "mcp"},
     "skid_contract": set[str](),
 }
-"""Every non-stdlib package each side of the socket imports. Measured 2026-09-07.
+"""Every non-stdlib package each side of the socket imports, as measured.
 
-Written out rather than counted, because which names are in it is the whole
-point. Not one is an audio library, and the only route from skid to a device is
-the `subprocess` call in `player.py`.
+Written out and not counted, because which names are in it is the whole point.
+Not one is an audio library, and the only route from skid to a device is the
+`subprocess` call in `player.py`.
 
-**Stated per package, which is what the split bought.** It used to be one set
-over a tree holding both sides, so `mcp` sat beside `kokoro` in a single
-assertion and nothing could tell you which process loaded which. Now the shim's
-row says httpx and mcp and stops, and it fails the day something on the client
-side of the socket reaches for the model.
+Stated per package. One set over a tree holding both sides would put `mcp`
+beside `kokoro` in a single assertion, and nothing could tell you which process
+loaded which. The shim's row says httpx and mcp and stops, and it fails the day
+something on the client side of the socket reaches for the model.
 
-**`uvicorn` and `starlette` left when the MCP server moved into the stdio
-script**, and `flask` and `waitress` arrived in their place. This test is what
-noticed: the swap was made in `main.py` and the suite failed here, which is the
-row doing its job on a change nobody wrote it for. It did the same again when
-`tomlkit` left and `wrench` arrived with the config becoming YAML.
+The set also catches a swapped dependency on a change nobody wrote it for: a
+server library replaced in `main.py`, or a config library replaced in
+`config.py`, fails here until the row is updated.
 
 `skid_contract` imports `typing` and nothing else, so its set is empty and that
 emptiness is the property: a dependency added to the contract lands in both
@@ -100,8 +97,8 @@ ML_STACK = {"torch", "transformers", "numpy"}
 def _pyproject(package: str) -> dict[str, Any]:
     """One package's own `pyproject.toml`, parsed.
 
-    Named rather than defaulted, because the root file is a workspace root now
-    and declares no `[project]` table at all. A helper that fell back to it
+    Named and not defaulted, because the root file is a workspace root and
+    declares no `[project]` table at all. A helper that fell back to it
     would raise `KeyError` on every row below and read as a broken test rather
     than as a question asked of the wrong file.
     """
@@ -216,7 +213,7 @@ def test_the_licence_is_declared_and_matches_the_file_beside_it() -> None:
     is not either being absent. It is the two disagreeing, which is the state
     that looks fine from whichever one you happen to read.
 
-    Asserted for every package, because there are three declarations now and one
+    Asserted for every package, because there are three declarations and one
     file. Three chances to disagree with it is the reason to check all three
     rather than the reason to check the one somebody remembers.
     """
@@ -254,9 +251,9 @@ def test_skid_runs_only_where_kokoro_does() -> None:
     rather than tested. What FR-1.7 requires is a containment, and the outer
     range belongs to somebody else and moves without warning.
 
-    **This is a tripwire on what kokoro DECLARES, which is not the same as what
-    kokoro SUPPORTS.** Told first-hand 2026-08-28: kokoro runs fine on 3.13 and
-    3.14 and has simply not had a release since, so `<3.13` is stale packaging
+    This is a tripwire on what kokoro DECLARES, which is not the same as what
+    kokoro SUPPORTS. kokoro is reported first-hand to run fine on 3.13 and 3.14,
+    and has simply not had a release since those arrived, so `<3.13` is stale packaging
     metadata rather than a real ceiling. The declaration is still what a
     resolver enforces, so it is still what skid has to sit inside to install at
     all, and it is still the thing that moves when the situation changes.
@@ -265,7 +262,7 @@ def test_skid_runs_only_where_kokoro_does() -> None:
     FR-1.7 names that as the day to retire the row rather than edit the version
     in place, so what skid was pinned to stays legible.
 
-    **Every package and not only the one that depends on kokoro.** The shim does
+    Every package and not only the one that depends on kokoro. The shim does
     not import kokoro and could widen its pin without anything breaking, right
     up until the two packages resolve to different interpreters and the contract
     they share is installed twice into environments that cannot both import it.

@@ -5,36 +5,33 @@ this process is where the protocol belongs. It holds the six tool schemas and
 the dispatch; the service holds the model, the queue and the config, and what
 crosses the socket between them is plain HTTP.
 
-**It holds nothing that survives a call.** No model, no queue, no config, and
-now no session either. Every client that starts one is talking to the same
-service, which is the point: a stdio server per client would load kokoro per
-client (FR-5.1).
+It holds nothing that survives a call: no model, no queue, no config and no
+session. Every client that starts one is talking to the same service, so kokoro
+loads once; a stdio server per client would load it per client (FR-5.1).
 
-**The session is what used to be here, and removing it is why this file was
-rewritten.** MCP over HTTP puts a session id in the service's memory. A restart
-forgot it, the service answered every later request `404 Session not found` with
-a null id, and a JSON-RPC client cannot match that to the request it is waiting
-on, so it waited until something outside gave up. Measured 2026-08-28: a call
-left to run its course was aborted by the MCP client's own backstop after
-**1800 seconds** carrying no diagnosis.
+There is no MCP session because MCP over HTTP puts a session id in the service's
+memory, and a restart forgets it. The service then answers every later request
+`404 Session not found` with a null id, which a JSON-RPC client cannot match to
+the request it is waiting on, so it waits until something outside gives up. A
+call left to run its course was aborted by the MCP client's own backstop after
+1800 seconds, carrying no diagnosis. Caching the handshake and replaying it
+(`de3abb5`, `40eea92`) recovered from that; holding no session id on either side
+leaves nothing to go stale, and a restart costs a refused connection for as long
+as the service takes to come back.
 
-`de3abb5` and `40eea92` recovered from that by caching the handshake and
-replaying it. This removes the thing being recovered from: no session id exists
-on either side, so nothing can go stale, and a restart costs a connection refused
-for as long as the service takes to come back.
+That also removes the replay and the invariant it rested on, which only a
+docstring guarded: the retry was safe only because `404` arrived before
+dispatch, and admitting a `503` would have made the machine speak twice. There
+is no quiet reconnection that could hide a changed tool surface. The service
+needs no MCP SDK imports, one of which was there only because the SDK answers
+421 on an unknown Host header over a socket no browser can reach.
+`docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md` has the
+history.
 
-**What went with it.** The replay, and the invariant it rested on that nothing
-but a docstring guarded: the retry was safe only because `404` arrived before
-dispatch, and admitting a `503` would have made the machine speak twice. Also
-the quiet reconnection that could hide a changed tool surface, since there is no
-reconnection. And two SDK imports left the service, one of them there only
-because the SDK answers 421 on an unknown Host header over a socket no browser
-can reach.
-
-**A call fails rather than hangs, which is FR-5.3 and is now nearly free.** A
-service that is absent, refusing or slow produces an httpx error or a status,
-and either becomes a tool error naming the socket. There is no state in which
-this process is waiting on something it cannot describe.
+A call fails instead of hanging (FR-5.3). A service that is absent, refusing or
+slow produces an httpx error or a status, and either becomes a tool error naming
+the socket. There is no state in which this process is waiting on something it
+cannot describe.
 """
 
 from __future__ import annotations
@@ -54,9 +51,8 @@ HOST = "http://localhost"
 TIMEOUT = 300.0
 """Long enough to cover a cold start that loads the model.
 
-It bounds a request rather than a session now, so a slow answer is the only
-thing it can be waiting for. Under the old arrangement this was also the window
-in which a wedged session looked like slow work.
+It bounds a single request, and no session, so a slow answer is the only thing
+it can be waiting for.
 """
 
 

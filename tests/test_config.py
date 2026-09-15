@@ -4,11 +4,9 @@ The write tests are the ones worth having. FR-7.1 and FR-7.8 make this file the
 record, and the obligation that comes with that is writing into a file somebody
 owns and edits, so the ordering in it is not ours to discard.
 
-**The comment half of that obligation is retired**, 2026-08-28, with the move
-from TOML to YAML. `docs/config.sample.yaml` is where a reason lives now, and
-the live file is emitted canonically. `test_writing_preserves_comments` went
-with it; what replaced it asserts the thing that still has to be true, which is
-that a person's ordering survives a write.
+Preserving comments is not part of that obligation. `docs/config.sample.yaml`
+is where a reason lives, and the live file is emitted canonically. What has to
+be true is that a person's ordering survives a write.
 """
 
 from pathlib import Path
@@ -90,10 +88,8 @@ def test_the_first_write_creates_the_file(tmp_path: Path) -> None:
 def test_a_written_config_reads_back_as_what_was_written(tmp_path: Path) -> None:
     """The record is only a record if skid can read its own writing.
 
-    What this replaced asserted that a comment survived a write, which was
-    `tomlkit`'s job and is retired. The obligation that outlived it is smaller
-    and more important: a value set through a tool has to be there on the next
-    start, whatever the file looks like in between.
+    A value set through a tool has to be there on the next start, whatever the
+    file looks like in between.
     """
     path = tmp_path / "config.yaml"
     written = Config(voice="af_bella", expiry_seconds=42, greeting_window_seconds=7)
@@ -150,9 +146,9 @@ def test_a_malformed_config_is_an_error_and_is_not_replaced(tmp_path: Path) -> N
 def test_a_config_of_the_wrong_shape_says_which_key_is_wrong(tmp_path: Path) -> None:
     """The schema's whole return: a message naming the key, not "will not parse".
 
-    `greeting_window_seconds: thirty` used to load, because nothing checked the
-    type, and then failed somewhere downstream where the config was long out of
-    sight. The message now carries the path into the document.
+    Without a type check `greeting_window_seconds: thirty` loads, and then fails
+    somewhere downstream where the config is long out of sight. The message
+    carries the path into the document.
     """
     path = _write(tmp_path / "config.yaml", "greeting_window_seconds: thirty\n")
 
@@ -162,11 +158,11 @@ def test_a_config_of_the_wrong_shape_says_which_key_is_wrong(tmp_path: Path) -> 
 
 # COVERS: FR-6.4 | negative
 def test_a_misspelt_key_is_refused_rather_than_ignored(tmp_path: Path) -> None:
-    """A deliberate behaviour change, and the reason the schema is worth having.
+    """Deliberate, and the main reason the config has a schema.
 
-    `voce: af_bella` used to load fine and do nothing. The only symptom was skid
-    speaking in the wrong voice, with a config file in front of you that appears
-    to say otherwise. It is refused by name now.
+    Unrefused, `voce: af_bella` loads fine and does nothing. The only symptom is
+    skid speaking in the wrong voice, with a config file in front of you that
+    appears to say otherwise. It is refused by name.
     """
     path = _write(tmp_path / "config.yaml", "voce: af_bella\n")
 

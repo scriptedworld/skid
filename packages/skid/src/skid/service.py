@@ -1,7 +1,7 @@
 """The units composed: queue, greeting, substitution, generation, playback.
 
 The order is the whole of this module, and one part of it is not obvious. The
-greeting is **generated** with the rest of a submission and **decided** when the
+greeting is generated with the rest of a submission and decided when the
 first clip is about to play. Deciding it at queue time would satisfy every row
 and still announce a name that had been talking continuously since, because an
 unbounded queue can put minutes between queueing and speech.
@@ -170,15 +170,15 @@ class Service:
     def start(self) -> None:
         """Begin serving. Idempotent enough to call once.
 
-        **Both directories are made owner-only, and the log's is the one that
-        needs it.** `mkdir(mode=...)` does nothing to a directory that already
-        exists, which is why the mode is set separately: measured 2026-08-28,
-        the live clips directory was 0775 and `~/.local/state/skid` was 0775.
+        Both directories are made owner-only, and the log's is the one that
+        needs it. `mkdir(mode=...)` does nothing to a directory that already
+        exists, which is why the mode is set separately. Without it the live
+        clips directory and `~/.local/state/skid` both came out 0775.
 
         The clips directory sits inside systemd's own 0700 runtime directory, so
-        FR-5.4 held there by accident. The log directory has no such parent, and
-        the log records the text a caller submitted whenever generation fails,
-        so it was readable by any local user.
+        FR-5.4 would hold there by accident. The log directory has no such
+        parent, and the log records the text a caller submitted whenever
+        generation fails, so it would be readable by any local user.
         """
         for directory in (self._workspace.work_dir, self._workspace.log_path.parent):
             directory.mkdir(parents=True, exist_ok=True)
@@ -222,7 +222,7 @@ class Service:
     def submit(self, name: str, messages: list[str]) -> None:
         """Queue an array. Returns once it is on disk, not once it is heard.
 
-        **The write is the promise.** FR-4.5 says this returns when the work is
+        The write is the promise. FR-4.5 says this returns when the work is
         queued, and FR-4.8 makes queued mean durable, so the entry is on disk
         before the caller is told yes. What goes on `_incoming` afterwards is a
         wakeup and carries nothing: the spool is the queue.
@@ -243,7 +243,7 @@ class Service:
     def is_progressing(self, now: float, grace: float = PROGRESS_GRACE) -> bool:
         """Whether the serve loop is working or waiting, rather than stuck.
 
-        **Progress, not liveness.** A timer on a thread that is always alive
+        Progress, not liveness. A timer on a thread that is always alive
         proves the timer runs. What the watchdog needs to know is that the loop
         in `_serve` is not wedged, and there are three ways for it to be fine:
 
@@ -252,8 +252,8 @@ class Service:
             recent      it stepped within `grace`
 
         Generation is the only step that takes real time without touching any of
-        the first two, which is what `grace` covers. Measured 2026-08-28: 1196
-        characters generated in 10.9 seconds, and a clip long enough to reach
+        the first two, which is what `grace` covers. 1196 characters measured
+        10.9 seconds of generation, and a clip long enough to reach
         the player's own 300s ceiling is about 1950 characters and roughly 30
         seconds of generation. The default is twice that.
 
@@ -286,7 +286,7 @@ class Service:
         start would give the tool route effect and the file route none, which is
         two routes that do not agree.
 
-        **Assignments are rebuilt only when the shortlist itself changed.** Every
+        Assignments are rebuilt only when the shortlist itself changed. Every
         `set_voice` call rewrites the config and lands here, and rebuilding
         unconditionally would take every name's voice away whenever anybody
         touched an unrelated setting. Comparing the lists is enough because
@@ -324,7 +324,7 @@ class Service:
     def _apply_voice(self, name: str) -> None:
         """Point the generator at the voice `name` speaks in, FR-10.2.
 
-        **This cannot be allowed to raise.** It runs at the top of the generation
+        This cannot be allowed to raise. It runs at the top of the generation
         thread, and that thread signals the end of its work by putting STOP on
         the queue the player is blocked reading. An exception here would skip the
         STOP and leave playback waiting on a queue nothing will ever fill, which
@@ -421,7 +421,7 @@ class Service:
         already holding work and nobody sends a wakeup per entry for it. So the
         loop drains rather than taking one and waiting again.
 
-        **The entry is removed when the attempt ends, however it ends.** A
+        The entry is removed when the attempt ends, however it ends. A
         failure drops the submission, which is what makes a poison entry
         impossible: an entry removed only on success would be retried forever
         and everything behind it would wait.

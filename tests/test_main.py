@@ -3,11 +3,10 @@
 Nothing here starts a service. `someone_is_listening` is a question about a
 path, so these tests make real unix sockets in `tmp_path` and ask about them.
 
-**The bug this is written against.** Run by hand, skid unlinked whatever was at
-the socket path and bound its own. Under socket activation that takes the path
-away from systemd, which goes on believing it owns a socket nobody can reach.
-Measured 2026-08-28: a by-hand instance started at 00:54 was still resident at
-03:18 holding 1.73 GB, listening on an inode the path no longer resolved to,
+The bug this is written against: run by hand, skid unlinked whatever was at the
+socket path and bound its own. Under socket activation that takes the path away
+from systemd, which goes on believing it owns a socket nobody can reach. A
+by-hand instance started at 00:54 was still resident at 03:18 holding 1.73 GB, listening on an inode the path no longer resolved to,
 reachable by nobody and reported by nothing.
 """
 
@@ -50,8 +49,8 @@ def test_a_path_with_nothing_there_is_free(tmp_path: Path) -> None:
 def test_a_socket_someone_is_listening_on_is_not_free(tmp_path: Path) -> None:
     """A live server owns its path, and skid must not bind over it.
 
-    This is the case that cost 1.73 GB and two hours: the old code unlinked
-    exactly this and carried on.
+    This is the case that cost 1.73 GB and two hours, when skid unlinked exactly
+    this and carried on.
     """
     path = tmp_path / "skid.sock"
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as held:
@@ -96,7 +95,7 @@ def test_the_runtime_directory_is_owner_only_however_it_was_left(
 
     `mkdir(mode=...)` does nothing to a directory that already exists, and the
     service makes its clips directory inside this one, so whichever ran first
-    would decide the mode. Measured 2026-08-28 before the chmod existed: 0775.
+    would decide the mode. Without the chmod it came out 0775.
     This starts from a wrong mode on purpose, because starting from absent
     would pass either way.
     """
@@ -181,8 +180,8 @@ def test_readiness_reaches_the_socket_systemd_named(
 ) -> None:
     """READY=1 arrives on a real datagram socket at NOTIFY_SOCKET.
 
-    A real socket is bound here rather than the send being intercepted: the
-    thing worth knowing is that the datagram arrives at the path systemd named,
+    A real socket is bound here and the send is not intercepted: what matters
+    is that the datagram arrives at the path systemd named,
     and only an actual socket can answer that.
     """
     address = tmp_path / "notify.sock"
@@ -304,7 +303,7 @@ def test_building_warms_the_model_and_returns_a_servable_app(
 ) -> None:
     """`build` produces a started service and an app, with the model already loaded.
 
-    **Slow and real.** This loads kokoro, which is the point: FR-5.1 is that a
+    Slow and real. This loads kokoro, which is the point: FR-5.1 is that a
     backend holds the model warm so a message does not pay start-up, and a test
     that skipped the load would assert the opposite of the requirement.
 
@@ -332,7 +331,7 @@ def test_the_watchdog_pings_only_while_the_service_is_getting_somewhere(
 ) -> None:
     """A ping is withheld, not timed, and an idle service still counts as healthy.
 
-    **Withholding is the whole mechanism.** A thread that pinged
+    Withholding is the whole mechanism. A thread that pinged
     unconditionally would prove only that the thread runs, which is the failure
     the watchdog exists to detect, so `Service.is_progressing` is what decides.
 
@@ -371,7 +370,7 @@ def test_the_watchdog_pings_only_while_the_service_is_getting_somewhere(
 #
 # `is_progressing` is false only when the loop is not idle, nothing is playing,
 # AND the last step was longer ago than PROGRESS_GRACE. A stopped service does
-# not qualify: measured 2026-09-07, `service.start()` then `service.stop()`
+# not qualify: `service.start()` then `service.stop()`
 # still reports progressing, because idle is set and idle is health.
 #
 # Reaching it needs a genuinely wedged serve loop. The two ways to fake one are

@@ -4,11 +4,11 @@ The same shape as `greeting.py`: a table holding what happened, and decisions
 that take the time from the caller rather than reading a clock. That is what
 lets a test drive six hours in a few lines without sleeping through them.
 
-**The table is memory only**, FR-10.9. Losing it costs one reassignment per
+The table is memory only, FR-10.9. Losing it costs one reassignment per
 name, and every voice on the shortlist was chosen by ear, so no entry is a worse
 outcome than any other.
 
-**Two windows exist and they are not the same window.** `greeting.QuietTable`
+Two windows exist and they are not the same window. `greeting.QuietTable`
 holds thirty seconds and decides whether a name is announced; this holds six
 hours and decides whether a name keeps its voice. Both happen to be measured
 from the end of a clip, which is a coincidence rather than a shared mechanism,
@@ -23,8 +23,8 @@ from dataclasses import dataclass
 DEFAULT_WINDOW_SECONDS = 6 * 60 * 60
 """Six hours, FR-10.5.
 
-A PREFERENCE. Nothing measured produced it: it is a bet about how long a quiet
-session is still a session. Being wrong short takes a voice off a name that is
+Chosen by preference, and nothing measured produced it: it is a bet about how
+long a quiet session is still a session. Being wrong short takes a voice off a name that is
 still working, which is audible; being wrong long leaves a voice unavailable,
 which is not.
 """

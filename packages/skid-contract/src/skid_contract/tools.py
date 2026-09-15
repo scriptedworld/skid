@@ -1,12 +1,12 @@
 """The tool surface, named once so two components cannot disagree about it.
 
-After the MCP server moved into the stdio script, the script owns the tool
-schemas and the service owns the implementations. That split is worth having,
-because it takes the session state a restart invalidates out of the picture
-entirely, but it introduces a failure mode that did not exist when one module
-held both: a tool added on one side and not the other.
+The MCP server lives in the stdio script, so the script owns the tool schemas
+and the service owns the implementations. The split takes the session state a
+restart invalidates out of the picture entirely, and it introduces a failure
+mode that one module holding both could not have: a tool added on one side and
+not the other.
 
-**This is the one declaration, and both sides derive from it.** The script builds
+This is the one declaration, and both sides derive from it. The script builds
 its requests from these routes and the service registers exactly these paths, so
 the set cannot drift. `tests/test_routes.py` asserts the two agree, which is what
 turns "cannot drift" from an intention into something that fails.
@@ -80,7 +80,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "list_substitutions": {"type": "object", "properties": {}},
     "status": {"type": "object", "properties": {}},
 }
-"""What each tool takes. **Enforced, not merely advertised.**
+"""What each tool takes. Enforced, not merely advertised.
 
 `routes.py` compiles these with wrench and validates every incoming call against
 them, so a request that does not match is refused with a message naming the
@@ -88,11 +88,10 @@ field. The same documents are what `tools/list` publishes, which is what makes
 the advertisement honest: a client is told the contract that will actually be
 applied to it.
 
-An earlier version of this only published them, and hand-written checks in the
-operations did the real work. That is two statements of one contract with
-nothing keeping them together, which is the drift this module exists to prevent.
+Publishing them while hand-written checks in the operations did the real work
+would be two statements of one contract with nothing keeping them together.
 
-**`additionalProperties` is deliberately not set.** A key skid does not know is
+`additionalProperties` is deliberately not set. A key skid does not know is
 ignored here, where in the config file it is refused. The difference is who is
 harmed: an unknown config key is a typo that silently keeps a default and leaves
 a person staring at a file that appears to say otherwise, while an unknown

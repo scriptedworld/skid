@@ -1,6 +1,6 @@
 """The durable queue: a directory of submissions, taken in name order.
 
-**What is durable is the text, not the audio.** A submission is written here at
+What is durable is the text, not the audio. A submission is written here at
 `submit()`, before the call returns, which is what gives FR-4.5's promise
 something behind it. Clips stay a cache elsewhere and may be deleted freely,
 because losing one costs regeneration time rather than data.
@@ -9,7 +9,7 @@ A spool of generated audio would not do. It protects only work already
 generated, and the window this exists to close is the one between the call
 returning yes and the first clip existing.
 
-**Order is the sequence in the filename, never the file's timestamp.** Creation
+Order is the sequence in the filename, never the file's timestamp. Creation
 time is generation order, which matches submission order today only because one
 submission is handled at a time, and would diverge silently the moment two are
 prepared at once. FR-4.3 and FR-4.4 both rest on this.
@@ -18,13 +18,13 @@ prepared at once. FR-4.3 and FR-4.4 both rest on this.
     taken/000042-silo.json    being spoken right now
     000043-wrench.json.tmp    half written, removed at start-up
 
-**Written to a temporary name and renamed into place**, so a file at its final
+Written to a temporary name and renamed into place, so a file at its final
 name is a whole file. A `kill -9` mid-write leaves a `.tmp` rather than a
-truncated entry that parses to nonsense and blocks everything behind it. That is
-wrench's FR-6.3 now rather than hand-rolled here; the `.tmp` handling on the
+truncated entry that parses to nonsense and blocks everything behind it. wrench's
+FR-6.3 does the write; the `.tmp` handling on the
 reading side stays, because entries written by an older skid may still be there.
 
-**Taken means moved, not copied.** An entry lives under `taken/` while it is
+Taken means moved, not copied. An entry lives under `taken/` while it is
 being spoken and is removed when the attempt ends, however it ends. Anything
 still there at start-up was interrupted by a crash, and is discarded rather than
 replayed: FR-4.4 makes a submission indivisible, so there is no honest place to
@@ -55,9 +55,9 @@ SUFFIX = ".json"
 PARTIAL = ".tmp"
 
 DEFAULT_TTL_SECONDS = 300.0
-"""Five minutes, FR-4.9, and a PREFERENCE rather than a measurement.
+"""Five minutes, FR-4.9, chosen by preference; nothing measured produced it.
 
-A judgement about how long a summary stays worth hearing. Ten times the greeting
+It is a judgement about how long a summary stays worth hearing. Ten times the greeting
 window is a coincidence: the two answer different questions and neither
 constrains the other.
 """
@@ -144,10 +144,10 @@ class Spool:
         a submission, and one nothing can parse takes the same path rather than
         blocking everything behind it forever.
 
-        **A disk error is not a poison entry, and this used to treat them the
-        same.** The old catch-all took `OSError` alongside four shape errors, so
-        a permissions problem or a bad sector read as "this file is nonsense,
-        discard it" and the submission was dropped silently. wrench separates
+        A disk error is not a poison entry. A catch-all taking `OSError`
+        alongside the shape errors would read a permissions problem or a bad
+        sector as "this file is nonsense, discard it" and drop the submission
+        silently. wrench separates
         them: `ParseError` and `ValidationError` are the file being wrong, which
         is this method's business, and `ReadError` is the disk, which is not,
         and is raised so the caller records a failure a person can act on.
@@ -216,11 +216,11 @@ class Spool:
 
         Three kinds, and only the first is a submission somebody was promised:
 
-        - **interrupted**, found under `taken/`, dropped rather than replayed
-        - **partial**, a `.tmp` from a write that did not finish, which was
+        - interrupted, found under `taken/`, dropped rather than replayed
+        - partial, a `.tmp` from a write that did not finish, which was
           never a whole entry and was never acknowledged
-        - **unreadable**, an entry at a real name that will not parse
-        - **expired**, which aged out while the service was down
+        - unreadable, an entry at a real name that will not parse
+        - expired, which aged out while the service was down
 
         The last one is why this takes a clock. Downtime counts toward the
         window: a service that was away for ten minutes must not come back and

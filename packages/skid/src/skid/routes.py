@@ -4,11 +4,11 @@ The protocol lives in `skid-mcp`, and what normally crosses the socket is plain
 HTTP with no session, no handshake and nothing cached on either side. There is
 therefore nothing for a restart to invalidate, which is why the split exists.
 
-**The operations are plain functions and both surfaces call them.** A Flask
+The operations are plain functions and both surfaces call them. A Flask
 route and the compatibility endpoint below dispatch to the same callable, so
 they cannot answer differently. Only the shape of the answer differs.
 
-**Validation stays here, with the thing being written.** A voice kokoro does not
+Validation stays here, with the thing being written. A voice kokoro does not
 have, or a regex that does not compile, is refused before anything reaches the
 config file, because the file outlives every restart and an accepted bad value
 is a permanent fault.
@@ -47,17 +47,16 @@ ACCEPTED = 202
 """What a notification gets, since JSON-RPC forbids answering one."""
 
 LEGACY_ENDPOINT = "/mcp"
-"""Where the MCP server used to be, and still answers for an older shim.
+"""The path an older shim speaks MCP to, answered so that shim can still speak.
 
-**Deleting it took the machine silent for hours, which is why it does real work
-now rather than returning an error.** A `skid-mcp` from before 2026-08-28 speaks
-MCP to this path. First there was nothing here, so Flask answered 404 with an
-HTML page, which is not a JSON-RPC message and left every client waiting on a
-reply it could not match. Then it answered a JSON-RPC error, which unblocked the
-callers and still left them unable to speak, because only the person holding the
-session can restart it to pick up a new shim.
+A `skid-mcp` from before 2026-08-28 speaks MCP to this path. With nothing here,
+Flask answers 404 with an HTML page, which is not a JSON-RPC message and leaves
+every client waiting on a reply it cannot match; that took the machine silent
+for hours. A JSON-RPC error unblocks the callers and still leaves them unable to
+speak, because only the person holding the session can restart it to pick up a
+new shim. `docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md`.
 
-So it serves MCP, **statelessly**. No session id is issued or expected, which is
+So it serves MCP, statelessly. No session id is issued or expected, which is
 what makes this safe: the wedge that task 40 removed was session state going
 stale, and there is none here to go stale.
 

@@ -5,18 +5,17 @@ That is the point: a file skid wrote is checked against the same document a file
 a person wrote is checked against, so an encoder bug and a typo fail the same
 way and say the same thing.
 
-**Dicts in a module, not files beside it.** wrench reads its own shipped schemas
+Dicts in a module, not files beside it. wrench reads its own shipped schemas
 from its repository root and states as a constraint that the pack must be
-installed editable because of it. That is a real cost and it is worth not
-repeating: a dict in the source is in the wheel, in the editable install and in
-the tool environment, and no path resolution can lose it.
+installed editable because of it. skid avoids that cost: a dict in the source is
+in the wheel, in the editable install and in the tool environment, and no path
+resolution can lose it.
 
-**`additionalProperties: false` on the config is a deliberate behaviour
-change.** A key skid does not know used to load and do nothing, so `voce:
-af_bella` silently kept the default voice and the only symptom was the wrong
-voice. It is now refused by name. FR-6.4 is untouched: a *missing* config is
-still not an error, and a malformed one still raises, which is the shape the
-change was asked to keep.
+`additionalProperties: false` on the config is deliberate. A key skid does not
+know would otherwise load and do nothing, so `voce: af_bella` would silently keep
+the default voice and the only symptom would be the wrong voice. It is refused
+by name. FR-6.4 still holds: a *missing* config is not an error, and a malformed
+one raises.
 """
 
 from __future__ import annotations
@@ -93,11 +92,11 @@ spoken, which looks exactly like skid being broken.
 kokoro's to say, `generation.VOICES` holds them, and the tool refuses an unknown
 one where the caller is still present to be told (FR-6.5).
 
-**`voice` and `voices` are different settings and both stand.** `voice` is the
+`voice` and `voices` are different settings and both stand. `voice` is the
 one setting FR-6.1 to FR-6.3 reach and is what a caller gets when no shortlist
 is configured. `voices` is the pool assignment draws from under FR-10.1, and an
 absent or empty one means nobody is assigned anything and `voice` speaks for
-everybody, which is exactly how skid behaved before.
+everybody.
 
 `assignment_window_seconds` has a floor of 1 rather than 0. Zero would expire
 every assignment before the next submission arrived, so a name would be given a
@@ -124,8 +123,7 @@ where a file can be checked against it. `minItems: 1` and the `minLength` on the
 name are that constructor's two rules, so a hand-edited entry fails at the file
 rather than raising from a dataclass three frames later.
 
-`queued_at` is required rather than defaulted. It used to fall back to 0.0,
-which reads as the epoch and makes an entry infinitely expired, so an entry
-missing it was silently discarded as too old instead of being reported as
-malformed.
+`queued_at` is required and has no default. A fallback of 0.0 reads as the
+epoch and makes an entry infinitely expired, so an entry missing it would be
+silently discarded as too old instead of being reported as malformed.
 """

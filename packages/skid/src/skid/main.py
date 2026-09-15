@@ -5,22 +5,21 @@ first connection, and restarts it if it dies, so there is no start protocol
 here: no lock file, no stale-path handling, no readiness race between clients.
 
 Run without systemd it binds a socket itself, which is for trying it by hand
-rather than the way it is meant to run. **It refuses if something is already
-listening there**, because the by-hand path used to unlink whatever it found and
-bind over it, which silently takes the socket away from systemd and leaves two
-resident models with only one of them reachable.
+and is not the way it is meant to run. It refuses if something is already
+listening there. Unlinking whatever it found and binding over it would silently
+take the socket away from systemd and leave two resident models with only one
+of them reachable.
 
-**Both paths now say 0600 on the socket itself.** Under systemd the unit sets
+Both paths put 0600 on the socket itself. Under systemd the unit sets
 `SocketMode=0600`. Run by hand, skid binds the socket and chmods it, which it
 can do because it owns the bind: waitress is handed an already-listening socket
-rather than a path. The previous arrangement let uvicorn create the socket and
-chmod it to 0666, so owner-only access rested entirely on the 0700 directory
-above it (FR-5.4).
+and not a path. Letting the server create the socket would leave it 0666, with
+owner-only access resting entirely on the 0700 directory above it (FR-5.4).
 
-**What crosses this socket is plain HTTP, not MCP.** The protocol lives in
+What crosses this socket is plain HTTP, not MCP. The protocol lives in
 `skid-mcp`, so nothing here holds a session and a restart invalidates nothing.
-Two SDK imports left with it, one of them present only because the MCP SDK
-answers 421 to an unknown Host header over a socket no browser can reach.
+The service needs no MCP SDK imports, one of which would be present only because
+the SDK answers 421 to an unknown Host header over a socket no browser can reach.
 """
 
 from __future__ import annotations
@@ -57,8 +56,8 @@ def ensure_runtime_dir() -> Path:
 
     `mkdir(mode=...)` does nothing to a directory that already exists, and the
     service creates its clips directory inside this one, so whichever ran first
-    would decide the mode. Measured 2026-08-28 before this existed: the
-    directory came out 0775 and the socket 0666, and only systemd's own 0700
+    would decide the mode. Without this the directory came out 0775 and the
+    socket 0666, and only systemd's own 0700
     runtime directory above it kept FR-5.4 true.
     """
     path = runtime_dir()
@@ -112,7 +111,7 @@ def notify(message: bytes) -> None:
 def keep_pinging(service: Service, interval: float) -> None:
     """Ping while the service is getting somewhere, and stop when it is not.
 
-    **Not a timer.** Withholding the ping is the whole mechanism: a thread that
+    Not a timer. Withholding the ping is the whole mechanism: a thread that
     pings unconditionally proves only that the thread runs, which is the failure
     this is supposed to detect. `Service.is_progressing` is what decides, and it
     counts idle and playback as health.
@@ -131,13 +130,13 @@ def notify_ready() -> None:
 def someone_is_listening(path: Path) -> bool:
     """Whether a live server already holds this socket, as opposed to a stale file.
 
-    Run by hand, skid used to unlink whatever was at the path and bind its own.
-    Under socket activation that **takes the path away from systemd**, which goes
-    on believing it owns a socket nobody can reach, and the by-hand process
-    becomes the service without anything saying so.
+    Unlinking whatever is at the path and binding over it, under socket
+    activation, takes the path away from systemd, which goes on believing it
+    owns a socket nobody can reach, and the by-hand process becomes the service
+    without anything saying so.
 
-    Measured 2026-08-28: a by-hand instance started at 00:54 was still resident
-    at 03:18, holding 1.73 GB and listening on an inode the path no longer
+    A by-hand instance that did this, started at 00:54, was still resident at
+    03:18, holding 1.73 GB and listening on an inode the path no longer
     resolved to. Nothing could reach it and nothing reported it.
 
     Connecting is the only honest test. A socket file that refuses a connection

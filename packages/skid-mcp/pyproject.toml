@@ -8,9 +8,8 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 requires-python = ">=3.12,<3.13"
-# THE WHOLE LIST, AND ITS SHORTNESS IS THE REASON THIS PACKAGE EXISTS. Measured
-# 2026-09-07: this environment is 33 MB where the one it was split out of is
-# 1.3 GB, because nothing here reaches kokoro, torch, spacy or generation.
+# THE WHOLE LIST, AND ITS SHORTNESS IS THE REASON THIS PACKAGE EXISTS. This
+# environment measures 33 MB where the service's is 1.3 GB, because nothing here reaches kokoro, torch, spacy or generation.
 #
 # `client.py` imports os, pathlib, typing, httpx, mcp.server.mcpserver and the
 # contract. `say.py` imports argparse, json, sys and client. That is all of it,
@@ -36,7 +35,7 @@ skid-say = "skid_mcp.say:main"
 # `workspace = true` and not a path, because uv refuses a path source naming
 # something that is already a workspace member. `uv tool install --editable` on
 # this directory discovers the workspace root and resolves it anyway, so the
-# package still installs standalone. Measured 2026-09-07.
+# package still installs standalone; that was checked, not assumed.
 [tool.uv.sources]
 skid-contract = { workspace = true }
 

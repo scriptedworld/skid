@@ -9,11 +9,9 @@ alternative is a test that writes into the real `~/.config/systemd/user`, and a
 test suite that can break the machine it runs on is worse than one that checks
 less.
 
-**It got stricter on 2026-08-28.** One test did run `systemd-analyze verify` on
-the unit files. That check was right and it was in the wrong place: it only ever
-ran on the machine the suite ran on, and it made this file the only test module
-shelling out. It is a step in the install plan now, so it runs on whichever
-machine is being installed to, and this file asserts the command instead.
+`systemd-analyze verify` on the unit files is a step in the install plan, so it
+runs on whichever machine is being installed to and this file asserts the
+command. Run from a test, it would only ever check the machine the suite ran on.
 
 One test does cause a command to run.
 `test_an_environment_without_the_model_cannot_start` calls
@@ -94,7 +92,7 @@ CURRENT_REGISTRATION = (
 )
 """A client config holding exactly what this installer would write.
 
-Taken from the live `~/.claude.json` on 2026-09-07 rather than invented, so a
+Copied from a live `~/.claude.json` and not invented, so a
 test asserting that this shape is left alone is asserting against the real one.
 """
 
@@ -131,12 +129,11 @@ def test_the_installer_checks_each_unit_before_writing_it(
     """systemd is asked to accept a unit before anything is copied.
 
     A unit file is data, and a typo in one is not found until the day it is
-    loaded. This test used to run `systemd-analyze` itself, which put the check
-    in the wrong place twice over: it only ever ran on the machine the suite ran
-    on, and it made the test the only thing shelling out.
+    loaded. Running `systemd-analyze` from the test would only check the machine
+    the suite ran on, and would make the test the only thing shelling out.
 
-    Moving it into the plan checks the units on whichever machine is being
-    installed to, and lets this assert the command rather than run it.
+    In the plan it checks the units on whichever machine is being installed to,
+    and this asserts the command without running it.
     """
     plan = _argvs(install_plan(_paths(tmp_path)))
     source = str(CHECKOUT / "share" / "systemd" / "user" / unit)
@@ -153,15 +150,14 @@ def test_the_units_are_checked_before_the_first_thing_is_written(
     Installing one leaves a machine that looks installed and cannot start, and
     the order is the whole content of the guard, so it is asserted as order.
 
-    **Measured against the copies, not against every command.** This once
-    asserted the checks came before the first command of any kind, which read
-    as the stronger guarantee and was not one this installer could keep:
-    `skid.service` names `~/.local/bin/skid` in `ExecStart` and
-    `systemd-analyze verify` fails on a command that is not there, so the check
-    could only pass on a machine some earlier install had already put that
-    binary on. It verified a stale binary, and on a clean machine the installer
-    stopped dead. Ordered after `uv tool install`, it verifies the executable
-    this run just produced, and still precedes every copy.
+    Measured against the copies, not against every command. Checks before the
+    first command of any kind reads as the stronger guarantee and is not one this
+    installer can keep: `skid.service` names `~/.local/bin/skid` in `ExecStart`
+    and `systemd-analyze verify` fails on a command that is not there, so the
+    check could only pass on a machine some earlier install had already put that
+    binary on. It would verify a stale binary, and on a clean machine the
+    installer would stop dead. Ordered after `uv tool install`, it verifies the
+    executable this run just produced, and still precedes every copy.
     """
     plan = _argvs(install_plan(_paths(tmp_path)))
     last_check = max(i for i, argv in enumerate(plan) if argv[0] == "systemd-analyze")
@@ -220,9 +216,9 @@ def test_the_service_declares_a_watchdog() -> None:
 def test_the_start_limit_is_chosen_and_in_the_section_systemd_reads() -> None:
     """Both halves matter, and the second is why this asserts a position.
 
-    systemd moved `StartLimitIntervalSec` to `[Unit]` in v229 and **ignores it
+    systemd moved `StartLimitIntervalSec` to `[Unit]` in v229 and ignores it
     in `[Service]` with a warning while `systemd-analyze verify` still exits
-    0**. Measured 2026-08-28 by writing it in the wrong section: the exit status
+    0. Writing it in the wrong section showed it: the exit status
     said the unit was fine and the setting was being dropped. Asserting only
     that the key appears somewhere would pass against exactly that mistake.
     """
@@ -239,7 +235,7 @@ def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
     This is the list `docs/PROJECT.md` promised an installer would run. Asserting
     it as data is what stops the two documents drifting apart silently.
 
-    **Two tool installs, and the second is the MCP shim.** skid is three
+    Two tool installs, and the second is the MCP shim. skid is three
     distributions split by which side of the socket a module sits on, and the two
     carrying console scripts install separately so that replacing the service
     does not rebuild the shim. The next assertion pins which directory each one
@@ -328,7 +324,7 @@ def test_the_plan_starts_the_socket_and_not_the_service(tmp_path: Path) -> None:
 def test_registering_tolerates_a_name_that_is_already_taken(tmp_path: Path) -> None:
     """`claude mcp add` exits 1 on an existing name, so a re-run must read the message.
 
-    Measured 2026-08-28 against an isolated HOME: the first add exits 0, and a
+    Measured against an isolated HOME: the first add exits 0, and a
     second exits 1 saying the server already exists. Without the tolerated
     message, running the installer twice would report a failure.
     """
@@ -376,8 +372,8 @@ def test_uninstalling_disables_before_it_removes_the_files(tmp_path: Path) -> No
 def test_uninstalling_reverses_everything_the_install_created(tmp_path: Path) -> None:
     """Each thing the install adds has something in the uninstall that removes it.
 
-    **Both tool environments, asserted as whole commands rather than as a
-    substring.** The install creates two, and `uv tool uninstall skid` is a
+    Both tool environments, asserted as whole commands rather than as a
+    substring. The install creates two, and `uv tool uninstall skid` is a
     prefix of `uv tool uninstall skid-mcp`, so a containment check on the shorter
     string passes against a plan that removes only the shim and leaves 1.3 GB of
     service behind. Asked of the argv tuples, which cannot be a prefix of each
@@ -405,7 +401,7 @@ def test_a_machine_without_the_tools_is_told_before_anything_is_written() -> Non
 def test_a_reinstall_unregisters_before_it_registers(tmp_path: Path) -> None:
     """`claude mcp add` will not replace an entry, so a reinstall removes first.
 
-    Measured 2026-08-28 in an isolated HOME: add against a taken name exits 1
+    Measured in an isolated HOME: add against a taken name exits 1
     and leaves the existing entry untouched, whatever command it points at. So
     an installer that only ever adds cannot re-point a registration, and every
     re-run against a moved checkout would leave the old one in place.
@@ -590,21 +586,21 @@ def test_nothing_is_verified_against_a_binary_the_install_has_not_made_yet(
 ) -> None:
     """The tool is installed before any step that needs it to exist.
 
-    FR-9.14 is discharged above by reading the import set, and the import set
-    was always clean. It did not catch this, because the requirement is about
-    the plan running on a machine that has never had skid, and the plan can
-    fail that while importing nothing.
+    FR-9.14 is discharged above by reading the import set, and a clean import
+    set does not catch this, because the requirement is about the plan running
+    on a machine that has never had skid, and the plan can fail that while
+    importing nothing.
 
     `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
-    `systemd-analyze verify` refuses a command that is not there. Measured
-    2026-09-07 by uninstalling the tool and running the installer:
+    `systemd-analyze verify` refuses a command that is not there. Uninstalling
+    the tool and running an installer that verified first printed:
 
         FAILED (1): skid.service: Command /home/ancient/.local/bin/skid is not
         executable: No such file or directory
 
-    The installer stopped there and installed nothing. It had only ever passed
-    because a previous install had left that binary behind, which also means it
-    was verifying a stale binary rather than the one being installed.
+    That installer stopped there and installed nothing. It had only passed
+    because a previous install had left that binary behind, so it was verifying
+    a stale binary and not the one being installed.
     """
     plan = _argvs(install_plan(_paths(tmp_path)))
 
@@ -723,9 +719,9 @@ def test_every_path_named_is_one_this_run_would_touch(
 ) -> None:
     """The report names the paths from `Paths`, not from the real home.
 
-    It used to print `Path.home() / '.claude.json'` while the plan read the
-    registration from `paths.client_config`, so a run pointed at a temporary
-    directory reported a file it had not touched.
+    Printing `Path.home() / '.claude.json'` while the plan reads the
+    registration from `paths.client_config` would make a run pointed at a
+    temporary directory report a file it had not touched.
     """
     paths = _paths(tmp_path)
 
@@ -773,7 +769,7 @@ def test_an_install_stops_before_writing_when_a_tool_is_missing(
 ) -> None:
     """A machine without the tools is told, and nothing is written.
 
-    **PATH is the boundary, so PATH is what the test moves.** `missing_tools`
+    PATH is the boundary, so PATH is what the test moves. `missing_tools`
     asks `shutil.which`, which reads PATH and nothing else, so emptying it is
     the honest way to be a machine without uv. Replacing `missing_tools` with a
     function returning `["uv"]` would assert that `install` believes whatever it
@@ -859,7 +855,7 @@ def test_main_routes_uninstall_away_from_install(
 ) -> None:
     """`--uninstall` reaches the removal plan and `--dry-run` alone reaches the install.
 
-    **Both routes are taken for real, under `--dry-run`.** Neither function is
+    Both routes are taken for real, under `--dry-run`. Neither function is
     replaced: a dry run prints its plan and executes nothing, so the two can be
     told apart by what they print, and the thing under test is the routing
     rather than a pair of stand-ins agreeing with the test.
