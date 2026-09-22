@@ -1,4 +1,4 @@
-# THE WORKSPACE ROOT, AND IT DECLARES NO DISTRIBUTION OF ITS OWN.
+# The workspace root, and it declares no distribution of its own.
 #
 # skid is three packages split by which side of the socket a module sits on:
 #
@@ -21,7 +21,7 @@ members = ["packages/*"]
 # Declared, because a tool that is only in the virtualenv because somebody
 # installed it is removed by `uv sync`, and a fresh clone cannot run the suite.
 #
-# THE WHOLE QUALITY TOOLCHAIN, not just pytest. The list is the `requires:`
+# The whole quality toolchain, not just pytest. The list is the `requires:`
 # block of `bolt.python-std-quality.yaml` verbatim, so the gate and a local run
 # reach for the same set.
 #
@@ -32,7 +32,7 @@ members = ["packages/*"]
 # interpreter the code actually uses. `types` reports 30 phantom errors from
 # PATH and one real one from the venv, which is the whole argument.
 #
-# IT SITS AT THE ROOT AND NOT IN A PACKAGE, because there is one suite over all
+# It sits at the root and not in a package, because there is one suite over all
 # three packages and one set of checkers judging them together.
 #
 # Filed against the jig.
@@ -58,7 +58,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q --strict-markers"
 
-# THREE IMPORT PACKAGES NAMED, NOT ONE, AND COUNTING THEM IS THE CHECK.
+# Three import packages named, not one, and counting them is the check.
 #
 # The split could have kept every module importable as `skid.x` by making the
 # three distributions share one PEP 420 namespace package, which works in every
@@ -98,7 +98,7 @@ python_executable = ".venv/bin/python"
 # kokoro ships no `py.typed` and publishes no stub package, so mypy reports
 # `import-untyped` for it and stops describing skid.
 #
-# AN OVERRIDE RATHER THAN A STUB PACKAGE, which is the opposite of the choice
+# An override and not a stub package, which is the opposite of the choice
 # made for waitress a few lines above, and the difference is that there is no
 # stub package to install. `types-waitress` exists; nothing equivalent exists
 # for kokoro, and writing one here would be this repository maintaining a
@@ -113,8 +113,8 @@ python_executable = ".venv/bin/python"
 module = ["kokoro.*"]
 ignore_missing_imports = true
 
-# WHY bin/ IS EXCLUDED EVERYWHERE BELOW, and why it is scoping rather than
-# silencing. bin/ holds nothing skid wrote. It is two symlinks into
+# Why bin/ is excluded everywhere below, and why that is scoping and not
+# silencing. bin/ holds nothing skid wrote. It is symlinks into
 # toolbox/bin/, adopted because the common jig resolves its checkers against
 # {config_dir}, which is this directory. With them linked
 # and no exclusion, `mypy .` and `pylint --recursive=y .` fail skid's gate on
@@ -140,7 +140,7 @@ extend-exclude = ["bin"]
 # So the gate and a bare local run disagreed about the same tree, and the gate
 # was the one that was right. Declaring it makes the answer the same either way.
 #
-# ALL THREE PACKAGES, because first-party is a property of this repository and
+# All three packages, because first-party is a property of this repository and
 # not of a distribution. Naming only `skid` would sort the other two as
 # third-party and the two runs would disagree again.
 known-first-party = ["skid", "skid_mcp", "skid_contract"]

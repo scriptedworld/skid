@@ -4,8 +4,8 @@
 |---|---|---|
 | FR-1.7 | skid runs on a Python version kokoro supports. Today that is **Python 3.12 only**. | [D] |
 
-Derived from FR-1.1 and measured 2026-08-27. A requirement to generate speech
-with kokoro is a requirement to run where kokoro runs.
+Derived from FR-1.1. A requirement to generate speech with kokoro is a
+requirement to run where kokoro runs.
 
     curl -sS https://pypi.org/pypi/kokoro/json    requires_python <3.13,>=3.10
 

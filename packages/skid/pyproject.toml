@@ -27,7 +27,7 @@ classifiers = [
 # a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
 # measurement and says to retire the row rather than edit this in place.
 requires-python = ">=3.12,<3.13"
-# THE SERVICE SIDE OF THE SOCKET AND NOTHING ELSE. No `httpx` and no `mcp`:
+# The service side of the socket and nothing else. No `httpx` and no `mcp`:
 # nothing the service imports reaches either, and `tests/test_declarations.py`
 # asserts the imports per package.
 dependencies = [
@@ -37,7 +37,7 @@ dependencies = [
     # Declared rather than fetched: a service must not need a package installer.
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "kokoro>=0.9.4",
-    # DECLARED ONLY TO CHOOSE THE BUILD. kokoro brings torch whether this line
+    # Declared only to choose the build. kokoro brings torch whether this line
     # is here or not; naming it is what lets `tool.uv.sources` point it at the
     # CPU index. The default Linux wheel hard-depends on nvidia-cudnn-cu13,
     # nvidia-cusparselt-cu13, nvidia-nccl-cu13, nvidia-nvshmem-cu13 and triton,
@@ -71,7 +71,7 @@ skid = "skid.main:main"
 # `python3 packages/skid/src/skid/install.py` is the documented first run. Both
 # are this file.
 #
-# IT INSTALLS BOTH TOOLS AND SHIPS WITH ONE OF THEM. The installer belongs to
+# It installs both tools and ships with one of them. The installer belongs to
 # neither side of the socket, and it lives here because the service is the thing
 # that has to be installed and started, and because giving it a package of its
 # own would mean a third tool install to obtain the installer.

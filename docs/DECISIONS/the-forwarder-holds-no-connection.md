@@ -77,5 +77,5 @@ the service is shared and other callers were using it.
 
 That measurement does not change this decision. It changes how the current
 behaviour is described, and it is worth taking before anybody writes the
-forwarder, because it establishes what the forwarder is fixing rather than
+forwarder, because it establishes what the forwarder is fixing instead of
 assuming it.

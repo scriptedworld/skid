@@ -562,7 +562,7 @@ inspection and `Adjustments` is where it is visible.
 
 skid is installed with `uv tool install`, so it gets its own environment and its
 own pinned interpreter instead of depending on whatever `python3` means on the
-machine. That is what makes FR-1.7's pin hold in practice rather than only in
+machine. That is what makes FR-1.7's pin hold in practice and not only in
 `pyproject.toml`.
 
 The installer also writes the two systemd user units and reloads the daemon.

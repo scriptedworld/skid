@@ -71,7 +71,7 @@ it.
         tests/                      one suite, at the root, unchanged in shape
         share/ docs/ just/ bin/     unchanged
 
-Sibling projects in one repository is the established shape here rather than a
+Sibling projects in one repository is the established shape here, not a
 new pattern. wrench holds `go/`, `python/` and `rust/` that way, and skid already
 consumes it so:
 
@@ -265,7 +265,7 @@ A service reinstall stops touching the shim. Measured by fingerprinting every
 path and mtime under the shim's tool environment, running
 `uv tool install --editable --reinstall` on the service, and fingerprinting
 again. The two hashes are equal. This one was measured on the prototype in
-`.ephemera/split-proposal/proto` rather than on the real packages, because doing
+`.ephemera/split-proposal/proto` and not on the real packages, because doing
 it for real means reinstalling the running service.
 
 A contract edit still reaches both running tools without a reinstall. Both

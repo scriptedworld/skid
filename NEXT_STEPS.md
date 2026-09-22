@@ -87,7 +87,7 @@ covered.
 
 Nobody has yet heard skid mispronounce anything in ordinary use. The whole
 substitution surface, the first-match-wins ordering, the literal and regex
-split, and file order being load-bearing, was designed from argument rather than
+split, and file order being load-bearing, was designed from argument and not
 from a case that came up.
 
 Treat those as settled by reasoning, not by evidence. The first real

@@ -8,8 +8,9 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 requires-python = ">=3.12,<3.13"
-# THE WHOLE LIST, AND ITS SHORTNESS IS THE REASON THIS PACKAGE EXISTS. This
-# environment measures 33 MB where the service's is 1.3 GB, because nothing here reaches kokoro, torch, spacy or generation.
+# The whole list, and its shortness is the reason this package exists. This
+# environment measures 33 MB where the service's is 1.3 GB, because nothing
+# here reaches kokoro, torch, spacy or generation.
 #
 # `client.py` imports os, pathlib, typing, httpx, mcp.server.mcpserver and the
 # contract. `say.py` imports argparse, json, sys and client. That is all of it,
@@ -21,7 +22,7 @@ dependencies = [
     "skid-contract",
 ]
 
-# BOTH SCRIPTS ARE CLIENTS OF THE SOCKET, WHICH IS WHY THEY SHARE A PACKAGE.
+# Both scripts are clients of the socket, which is why they share a package.
 # `skid-say` is not an MCP thing, so the distribution's name is narrower than
 # what it holds. The name stays because it is already on PATH, in the MCP
 # registration and in every document; the socket is the interface and MCP is one

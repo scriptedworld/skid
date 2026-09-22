@@ -7,7 +7,7 @@
 # skid writes to this file when a setting is changed through an MCP tool, so it
 # is a file both you and skid edit.
 #
-# THIS FILE IS WHERE THE REASONS LIVE. skid rewrites the live config
+# This file is where the reasons live. skid rewrites the live config
 # canonically, with every key quoted and sorted, so comments you put there do
 # not survive a tool call. Keep your notes here and copy values across.
 #
@@ -20,8 +20,8 @@ voice: af_heart
 
 # The shortlist skid assigns from, one voice per name that speaks.
 #
-# EMPTY MEANS OFF. With no entries here nobody is assigned anything and `voice`
-# above speaks for everybody, which is how skid behaved before this existed.
+# Empty means off. With no entries here nobody is assigned anything and `voice`
+# above speaks for everybody.
 #
 # alias is what a person calls the voice. It is never spoken: skid announces the
 # name of the calling agent, not this. It only has to be distinguishable on the
@@ -68,7 +68,7 @@ expiry_seconds: 300
 # Pronunciation substitutions, applied on the way to the engine only: they
 # change nothing you submitted and nothing the log records.
 #
-# ORDER IN THIS FILE IS THE ORDER THEY ARE TRIED. Substitution is one
+# Order in this file is the order they are tried. Substitution is one
 # left-to-right pass over the text, and at each position the first entry that
 # matches there wins; the scan then resumes after what the replacement produced,
 # so no entry sees another's output. Reordering them means editing this file.

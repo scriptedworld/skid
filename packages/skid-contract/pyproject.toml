@@ -17,7 +17,7 @@ classifiers = [
 # Matched to the service's pin rather than widened, because a resolver picking
 # an interpreter for this package must pick one the other two can also use.
 requires-python = ">=3.12,<3.13"
-# NOTHING, AND THAT IS THE POINT OF THE PACKAGE. The contract is what both sides
+# Nothing, and that is the point of the package. The contract is what both sides
 # of the socket derive from, so it must be installable into either side without
 # bringing the other side's weight with it. A dependency added here lands in the
 # MCP shim's environment and in the service's, so it is added deliberately or

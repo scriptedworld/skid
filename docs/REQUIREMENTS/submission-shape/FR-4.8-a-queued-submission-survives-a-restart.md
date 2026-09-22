@@ -39,14 +39,14 @@ discarded with a line in the log.
 ## Order is by name, not by time
 
 Entries carry a monotonic sequence in the filename and are taken in
-lexicographic order. Creation time would be generation order rather than
+lexicographic order. Creation time would be generation order and not
 submission order, which happens to match today only because one submission is
 handled at a time, and would diverge the moment two are prepared at once. FR-4.3
 and FR-4.4 both depend on this and would break silently and only under load.
 
 The entry is written to a temporary name and renamed into place, so a file at
 its final name is a whole file. A `kill -9` mid-write leaves a temporary that
-start-up removes rather than a truncated entry that parses to nonsense.
+start-up removes, not a truncated entry that parses to nonsense.
 
 ## Restart, not reboot
 

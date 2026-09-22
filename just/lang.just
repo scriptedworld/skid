@@ -1,6 +1,6 @@
 # The Python half for skid.
 #
-# EVERY RECIPE RUNS THROUGH uv, AND THAT IS LOAD-BEARING RATHER THAN A HABIT.
+# Every recipe runs through uv, and that is load-bearing, not a habit.
 # skid pins `requires-python = ">=3.12,<3.13"` because kokoro declares
 # `<3.13,>=3.10`, while `python3` on this machine is 3.14.7. So a bare `pytest`
 # or `mypy` runs against an interpreter that cannot import this project's
@@ -14,7 +14,7 @@
 # the exception: those run bolt, which invokes the checkers from PATH by design,
 # and changing that is toolbox's to do rather than this file's.
 #
-# NOTHING HERE IS BUILT OR DEPLOYED. skid installs as console scripts into the
+# Nothing here is built or deployed. skid installs as console scripts into the
 # environment, so clean has nothing dangerous to remove. The four entry points
 # are skid, skid-mcp, skid-say and skid-install.
 
@@ -28,7 +28,7 @@ checks:
 test:
     uv run pytest
 
-# COVERAGE IS MEASURED AND NOT ENFORCED, which is the jig's state rather than a
+# Coverage is measured and not enforced, which is the jig's state and not a
 # choice made here: bolt.python-std-quality.yaml produces coverage.xml and its
 # own footer says the per-file threshold waits on an adapter that reads
 # Cobertura XML. An aggregate is refused there, per hard rule 5.
@@ -56,7 +56,7 @@ format:
 build:
     @echo "build: python needs no build step; see dist"
 
-# ALL THREE PACKAGES. The root declares no [project], so a bare `uv build` here
+# All three packages. The root declares no [project], so a bare `uv build` here
 # has nothing to build; `--all-packages` walks the workspace members instead.
 
 # whatever this language distributes

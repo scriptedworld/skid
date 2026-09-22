@@ -7,7 +7,7 @@
 #
 # `requirements` defaults to REQUIREMENTS.md, the retired single-file layout.
 # skid holds requirements as a directory, so the check is pointed at where they
-# actually live. THIS IS NOT SILENCING THE CHECK: the wrong move would be
+# actually live. This does not silence the check: the wrong move would be
 # concatenating the tree into a file to feed the checker a default it expects.
 #
 # `suppressions` defaults to SUPPRESSIONS at the run root. skid's register is

@@ -73,7 +73,7 @@ A timeout naming the service distinguishes all three from a call that failed on
 its own merits, which matters because FR-4.7's log lives inside skid and is
 exactly what a caller cannot reach when this fires.
 
-## Why it is a row rather than a line of spec, twice over
+## Why it is a row and not a line of spec, twice over
 
 It was a line of spec, at `fd42bdf`: "the backend is unreachable, which
 `skid-mcp` returns as a tool error rather than hanging". Rewriting that section

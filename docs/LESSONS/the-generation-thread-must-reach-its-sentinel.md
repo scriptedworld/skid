@@ -13,7 +13,7 @@ the top of `_generate_into`, and it calls `Generator.set_voice`, which raises
 
 Nothing in the type system or the tests would have caught it. The failure
 needs a config a person hand-edited, so no test that builds its own config
-reaches it, and a hang reads as a slow test rather than as a defect.
+reaches it, and a hang reads as a slow test, not as a defect.
 
 ## What to do
 
