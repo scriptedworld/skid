@@ -44,4 +44,4 @@ a player that breaks FR-1.4, and FR-1.8 a player that breaks FR-2.1. A setting
 whose effect is silence is a different thing from a setting whose effect is
 disliked.
 
-Raised by the spec review at `fd42bdf`.
+Raised by the spec review at `a0751af`.

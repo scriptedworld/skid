@@ -17,4 +17,4 @@ produces exactly the outcome of no report at all.
 Both halves are needed. A person debugging silence reads a log. An agent cannot
 read a log as part of its own work, so it needs to be able to ask.
 
-Raised by the spec review at `fd42bdf`.
+Raised by the spec review at `a0751af`.

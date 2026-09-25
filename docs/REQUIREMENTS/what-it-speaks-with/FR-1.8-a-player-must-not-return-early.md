@@ -17,4 +17,4 @@ does not try. It is stated for the same reason FR-7.5 already states the other
 one: `aplay` is signed off as the user's choice to break FR-1.4 with. Nothing had
 signed off breaking FR-2.1, so it read as impossible rather than as permitted.
 
-Raised by the spec review at `fd42bdf`.
+Raised by the spec review at `a0751af`.

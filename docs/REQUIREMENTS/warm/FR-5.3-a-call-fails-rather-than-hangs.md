@@ -75,11 +75,11 @@ exactly what a caller cannot reach when this fires.
 
 ## Why it is a row and not a line of spec, twice over
 
-It was a line of spec, at `fd42bdf`: "the backend is unreachable, which
+It was a line of spec, at `a0751af`: "the backend is unreachable, which
 `skid-mcp` returns as a tool error rather than hanging". Rewriting that section
 dropped it, and no requirement noticed, because none existed.
 
-    git show fd42bdf:docs/SPEC.md | grep -c unreachable    1
+    git show a0751af:docs/SPEC.md | grep -c unreachable    1
     grep -c unreachable docs/SPEC.md                       0    (before this row)
 
 It is the same failure FR-4.4

@@ -15,7 +15,7 @@ memory, and a restart forgets it. The service then answers every later request
 the request it is waiting on, so it waits until something outside gives up. A
 call left to run its course was aborted by the MCP client's own backstop after
 1800 seconds, carrying no diagnosis. Caching the handshake and replaying it
-(`de3abb5`, `40eea92`) recovered from that; holding no session id on either side
+(`23f15d8`, `60c0946`) recovered from that; holding no session id on either side
 leaves nothing to go stale, and a restart costs a refused connection for as long
 as the service takes to come back.
 

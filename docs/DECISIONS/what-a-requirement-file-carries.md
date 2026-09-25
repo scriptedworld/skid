@@ -15,7 +15,7 @@ What follows is skid's own part rather than the general rule:
 
 - The `## Retired` record lives in `docs/REQUIREMENTS/README.md`, under a
   `## Retired` heading carrying the id, the date, what absorbed it and why it
-  went. skid retired FR-2.2 at `884b0cd`, so this answers the promoted
+  went. skid retired FR-2.2 at `ed9ee97`, so this answers the promoted
   decision's open question, where that record lives once `REQUIREMENTS.md` is
   gone, by having done it.
 

@@ -11,5 +11,5 @@ The choice is stated as a requirement rather than left in the spec because it is
 audible. Thirty seconds of state is not worth a file, and the cost of losing it
 is one greeting that a listener would have heard anyway on any other day.
 
-Raised by the spec review at `fd42bdf`, as the fifth property the reverse trace
+Raised by the spec review at `a0751af`, as the fifth property the reverse trace
 turned up.

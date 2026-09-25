@@ -38,7 +38,7 @@ old. Only the person holding a session can restart it, so "fail cleanly" left
 every agent mute until a human intervened.
 
 The endpoint had to do the work, not report that it could not. It serves MCP
-statelessly now, `8a05249`.
+statelessly now, `cae925d`.
 
 ## What to take from it
 

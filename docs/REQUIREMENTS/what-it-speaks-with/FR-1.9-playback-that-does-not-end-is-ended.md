@@ -18,4 +18,4 @@ or the sound server restarting under a running player.
 The bound is longer than any clip skid produces, so it is a stuck-process
 detector rather than a playback policy.
 
-Raised by the spec review at `fd42bdf`.
+Raised by the spec review at `a0751af`.

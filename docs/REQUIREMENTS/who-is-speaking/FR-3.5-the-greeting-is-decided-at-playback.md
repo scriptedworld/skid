@@ -25,4 +25,4 @@ made. `docs/SPEC.md` resolves that by generating the greeting as a clip of its
 own, which keeps the lookahead unbounded and makes the decision a choice about
 whether to play a clip that already exists.
 
-Raised by the spec review at `fd42bdf`.
+Raised by the spec review at `a0751af`.
