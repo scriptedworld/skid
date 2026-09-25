@@ -88,9 +88,11 @@ The bounds are the ones a wrong value makes invisible rather than loud. A
 one is a typo. An `expiry_seconds` of 0 discards every submission before it is
 spoken, which looks exactly like skid being broken.
 
-`voice` is only checked for being a non-empty string here. Which voices exist is
-kokoro's to say, `generation.VOICES` holds them, and the tool refuses an unknown
-one where the caller is still present to be told (FR-6.5).
+`voice` is only checked for being a non-empty string here. Which voices render is
+the `voices` shortlist's to say under FR-10.1, and the tool refuses one outside
+it where the caller is still present to be told (FR-6.5). `generation.VOICES` is
+the fallback where no shortlist is configured, and it is the weaker claim: it
+says what kokoro has, not what this machine can speak.
 
 `voice` and `voices` are different settings and both stand. `voice` is the
 one setting FR-6.1 to FR-6.3 reach and is what a caller gets when no shortlist

@@ -73,6 +73,34 @@ class Config:
     assignment_window_seconds: int = DEFAULT_ASSIGNMENT_WINDOW_SECONDS
 
 
+def renderable_voices(config: Config) -> frozenset[str]:
+    """The voice ids the shortlist declares, which is what renders on this machine.
+
+    Empty when no shortlist is configured, and a caller reads that as "the config
+    makes no claim" rather than as "nothing renders". FR-10.1 makes the shortlist
+    the statement of what is available here, and it is a statement about this
+    machine where `generation.VOICES` is a statement about kokoro.
+    """
+    return frozenset(choice.voice for choice in config.voices)
+
+
+def pipeline_for(config: Config, voice: str) -> str | None:
+    """The pipeline the shortlist declares for `voice`, or None if it names none.
+
+    FR-10.7 makes `(voice, pipeline)` the pair that has to render, so a voice
+    accepted because the shortlist lists it has to be spoken through the pipeline
+    that entry declares. Inferring one from the voice id's first letter instead
+    would reach a phonemiser the entry was written to avoid.
+
+    File order decides where two entries name one voice, matching how the
+    shortlist is read everywhere else.
+    """
+    for choice in config.voices:
+        if choice.voice == voice:
+            return choice.pipeline
+    return None
+
+
 def _substitutions_from(document: dict[str, Any]) -> list[Substitution]:
     """Read the substitution entries in the order the file lists them.
 

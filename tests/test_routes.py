@@ -17,7 +17,8 @@ from typing import Any
 
 from flask.testing import FlaskClient
 
-from skid.config import load_config
+from skid.assignment import VoiceChoice
+from skid.config import Config, load_config, pipeline_for, save_config
 from skid.routes import LEGACY_ENDPOINT
 from skid.service import Service
 from skid_contract.tools import ERROR, RESULT, ROUTES
@@ -91,6 +92,59 @@ def test_an_unknown_voice_is_refused_and_nothing_is_written(
     assert response.status_code == 400
     assert "af-typo" in response.get_json()[ERROR]
     assert not config_path.exists()
+
+
+# COVERS: FR-6.5 | negative
+def test_a_voice_this_machine_cannot_speak_is_refused(
+    client: FlaskClient, config_path: Path
+) -> None:
+    """A real kokoro voice that does not render here is the dangerous case.
+
+    `jf_alpha` is one of kokoro's 54 and needs a misaki language pack that is not
+    installed, so a membership test against `generation.VOICES` accepts it. Then
+    every submission fails: the caller was told yes, the setting survives a
+    restart, and recovering means hand-editing the file.
+
+    The shortlist is what states which voices render here, FR-10.1, so it is what
+    the refusal is measured against. A typo and a real-but-mute voice reach the
+    caller the same way, which is the point: both would silence skid.
+    """
+    save_config(
+        Config(voice="af_bella", voices=[VoiceChoice(alias="Carol", voice="af_bella")]),
+        config_path,
+    )
+
+    response = client.post(ROUTES["set_voice"][1], json={"voice": "jf_alpha"})
+
+    assert response.status_code == 400
+    assert "jf_alpha" in response.get_json()[ERROR]
+    assert load_config(config_path).voice == "af_bella"
+
+
+# COVERS: FR-10.7 | property
+def test_a_voice_is_spoken_through_the_pipeline_its_entry_declares(
+    config_path: Path,
+) -> None:
+    """Accepting a voice because the shortlist lists it settles its pipeline too.
+
+    FR-10.7 makes `(voice, pipeline)` the renderable pair, so the entry that
+    justified accepting the voice is the entry that says how to speak it.
+    Inferring a pipeline from the voice id's first letter instead would reach the
+    phonemiser the entry was written to avoid, and `if_sara` under `i` is exactly
+    that case: on the shortlist through `a`, and a missing language pack through
+    its own letter.
+    """
+    save_config(
+        Config(
+            voice="if_sara",
+            voices=[VoiceChoice(alias="Ivy", voice="if_sara", pipeline="a")],
+        ),
+        config_path,
+    )
+    config = load_config(config_path)
+
+    assert pipeline_for(config, "if_sara") == "a"
+    assert pipeline_for(config, "af_bella") is None
 
 
 # COVERS: FR-8.1 | positive

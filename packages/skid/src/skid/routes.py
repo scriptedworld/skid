@@ -24,7 +24,7 @@ from typing import Any
 import wrench
 from flask import Flask, Response, jsonify, request
 
-from skid.config import load_config, save_config
+from skid.config import load_config, renderable_voices, save_config
 from skid.generation import VOICES
 from skid.service import Service
 from skid.substitution import Kind, Substitution
@@ -101,15 +101,35 @@ def _speech_operations(
         return f"queued {len(messages)} message(s) for {name}"
 
     def set_voice(body: dict[str, Any]) -> str:
-        """Change the voice, refusing one kokoro does not have.
+        """Change the voice, refusing one that would not render here, FR-6.5.
 
-        Which voices exist is kokoro's to say and not a schema's, so this check
-        stays here where the list lives.
+        Kokoro knowing a voice is not the same as this machine being able to
+        speak it. Thirteen of the 54 need a misaki language pack that is not
+        installed, so they pass a membership test against `generation.VOICES`,
+        persist, and then every submission fails silently: the caller has already
+        been told its message was queued, and the setting survives a restart.
+
+        The config's shortlist is the statement of what renders here, FR-10.1,
+        and it is checked first because it is the narrower and truer claim. It is
+        a claim about this machine where kokoro's list is a claim about kokoro,
+        so it tracks a language pack being installed or removed.
+
+        Falling back to kokoro's list where no shortlist is configured keeps the
+        check no weaker than it was. That leaves the original hole open on a
+        machine that configures nothing, which nothing here can close without
+        building a pipeline inside a tool call.
         """
         voice = str(body["voice"])
-        if voice not in VOICES:
-            raise Refused(f"unknown voice: {voice!r}")
         config = load_config(config_path)
+        usable = renderable_voices(config)
+        if usable:
+            if voice not in usable:
+                raise Refused(
+                    f"voice {voice!r} is not one this machine speaks; "
+                    "the voices list in the config names the ones it does"
+                )
+        elif voice not in VOICES:
+            raise Refused(f"unknown voice: {voice!r}")
         config.voice = voice
         save_config(config, config_path)
         return f"voice is now {voice}"

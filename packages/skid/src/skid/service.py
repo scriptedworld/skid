@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from skid.assignment import Assignments
-from skid.config import Config, load_config
+from skid.config import Config, load_config, pipeline_for
 from skid.generation import GenerationFailed, Generator
 from skid.greeting import QuietTable, greeting_for, should_greet
 from skid.player import PlaybackFailed, Player
@@ -307,7 +307,9 @@ class Service:
             self._record_failure(f"config not reloaded: {exc}")
             return
         self._parts.player = Player(command=self._config.player)
-        self._parts.generator.set_voice(self._config.voice)
+        self._parts.generator.set_voice(
+            self._config.voice, pipeline_for(self._config, self._config.voice)
+        )
         if self._parts.assignments.choices != self._config.voices:
             self._parts.assignments = Assignments(self._config.voices)
 
@@ -342,7 +344,9 @@ class Service:
             window=float(self._config.assignment_window_seconds),
         )
         wanted = self._config.voice if choice is None else choice.voice
-        pipeline = None if choice is None else choice.pipeline
+        pipeline = (
+            pipeline_for(self._config, wanted) if choice is None else choice.pipeline
+        )
         try:
             self._parts.generator.set_voice(wanted, pipeline)
         except ValueError as exc:
