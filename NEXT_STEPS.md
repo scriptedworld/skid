@@ -16,40 +16,24 @@ nobody has chosen for. And **the choice becomes settable over MCP**, which
 `set_voice` cannot express today: it takes a voice and no name, so it changes
 the default for everybody instead of one caller's voice.
 
-## Open: the MCP server becomes a thin proxy
+## Open where nothing is configured: a voice that cannot render
 
-The MCP path holds a connection to the backend, so the client and the service
-have to agree about lifetime. The plan is **a very thin executable that passes
-the submission to the service and exits**, holding nothing.
+`set_voice` measures a voice against the shortlist, which FR-10.1 makes the
+statement of what renders on this machine, so the thirteen of kokoro's 54 that
+need an uninstalled misaki language pack are refused with the caller still there
+to be told. FR-10.7's pair is carried too: a voice accepted because the shortlist
+lists it is spoken through the pipeline that entry declares.
 
-That is the shape `skid-say` already has, and the reason it cannot fall out of
-step with the service behind it. The MCP entry point should be the same thing
-with a different front door.
-
-## The known defect: a voice that is named but cannot render
-
-`set_voice` checks the submitted name against kokoro's list of 54 and nothing
-else, then persists it. Whether a voice actually renders on a given machine is
-not checked, so a name that is in the list and fails to produce audio is
-accepted, written to the config, and then every submission fails silently: the
-caller has already been told its message was queued, and the setting survives a
-restart. Recovering means editing `~/.config/skid/config.yaml` by hand.
-
-Thirteen of the 54 are in that state on a standard install, and which thirteen
-is known. The five Japanese voices need `pyopenjtalk` and the eight Chinese
-voices need `ordered-set`, which arrive only with misaki's `ja` and `zh` extras.
-kokoro depends on misaki with the English extra alone, so neither package is in
-`uv.lock` and neither is installed. The other 41 render.
-
-That is FR-6.5 unmet, on a row that has a test citing it. The automatic
-assignment path cannot reach one of these, because the shortlist in the config
-was chosen from voices that produced a sample; the exposed tool can.
+What is open is the machine that configures no shortlist. The check falls back to
+kokoro's list there, which is no weaker than it was and no stronger, and closing
+it would mean building a pipeline inside a tool call. FR-6.5 records that.
 
 ## Planned: an MCP forwarder that holds no connection
 
 The largest outstanding piece of work, and it is not started. A new MCP
 forwarder passes each call straight through to the backend and keeps nothing
-open between calls.
+open between calls, which is the shape `skid-say` already has and the reason it
+cannot fall out of step with the service behind it.
 
 The reason is restarts, not speed. The backend is socket-activated and
 systemd restarts it, so a client holding a long-lived connection turns a clean
