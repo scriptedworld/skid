@@ -127,6 +127,40 @@ A `/clear` is enough and a full restart is not needed. That a clear is what
 respawns the shim is inferred from the correlation, not observed; one
 wedged session clearing and then calling `status()` would settle it.
 
+### Playing where somebody is listening
+
+skid plays on the machine it runs on. Where that machine is not the one the
+person is sitting at, every clip is generated, played and logged as a success
+into an empty room, and nothing in `status` or the log can tell you.
+
+Here skid runs on lazlo and the person connects from oslo. oslo's `ssh` config
+forwards its PipeWire socket over the connection it holds open anyway:
+
+    RemoteForward /run/user/1000/pulse-oslo /run/user/1000/pulse/native
+    StreamLocalBindUnlink yes
+
+and the service points `paplay` at that socket, in a drop-in at
+`~/.config/systemd/user/skid.service.d/pulse-oslo.conf`:
+
+    Environment=PULSE_SERVER=unix:/run/user/1000/pulse-oslo
+
+So the player stays `paplay {file}` and skid opens no connection of its own.
+
+The socket exists only while oslo is connected, and `paplay` then fails fast
+with a connection refused, which is the honest answer: nobody is listening when
+nobody is connected.
+
+A player that opens its own `ssh` per clip was tried first and is the wrong
+shape. It pays a handshake a sentence, and it hangs: the remote `paplay` exits
+while the local `ssh` sits in `unix_stream_read_generic` holding the pipes skid
+reads, so FR-1.9's timeout kills it at 300 seconds and the caller has long since
+been told yes.
+
+**Nothing here measures whether a person heard anything**, and the four-way set
+above is the reason to expect that. A drained queue, an empty `recent_failures`
+and a `RUNNING` sink each answer a narrower question than the one that matters.
+Asking somebody is still the only test.
+
 ### The legacy protocol route
 
 `/mcp` serves the MCP protocol to a `skid-mcp` that predates the move into the
