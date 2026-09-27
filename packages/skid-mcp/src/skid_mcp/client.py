@@ -42,6 +42,7 @@ from typing import Any, Self
 
 import httpx
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from skid_contract.tools import ERROR, RESULT, method_and_path
 
@@ -63,12 +64,23 @@ def socket_path() -> Path:
     return root / "skid" / "skid.sock"
 
 
-class Unreachable(Exception):
+class Unreachable(ToolError):
     """The service could not be reached, or refused what was asked.
 
     One exception for both because a caller can act on neither: the tool failed
-    and the message says why. The SDK turns it into a tool error carrying the
-    calling request's own id, which is what a client can match.
+    and the message says why.
+
+    It subclasses the SDK's `ToolError` so that the message survives to the
+    caller. The SDK reports an anticipated failure by keeping its text after an
+    `Error executing tool <name>` prefix, and turns anything else into
+    `UnexpectedToolError`, which deliberately carries nothing from the exception.
+    Raised as a plain `Exception` this read `Error executing tool speak` and the
+    agent learned only that something went wrong.
+
+    That matters because the shim exists so the service can be restarted without
+    taking the tools away from a running agent. A shim that stays up and says
+    nothing useful is only half of that: the caller needs to know the service is
+    down rather than its own arguments being wrong.
     """
 
 
@@ -157,8 +169,10 @@ def _speech_tools(server: MCPServer, backend: Backend) -> None:
     def set_voice(voice: str) -> str:
         """Change the voice, and write it to the config file.
 
-        Refuses a voice kokoro does not have rather than storing it, because a
-        stored bad voice fails every later submission and survives a restart.
+        Refuses a voice this machine cannot speak rather than storing it, because
+        a stored bad voice fails every later submission and survives a restart.
+        The config's voices list is what states which ones render here, so a real
+        kokoro voice needing an uninstalled language pack is refused too.
         """
         return str(backend.call("set_voice", voice=voice))
 
