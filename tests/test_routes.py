@@ -19,9 +19,8 @@ from flask.testing import FlaskClient
 
 from skid.assignment import VoiceChoice
 from skid.config import Config, load_config, pipeline_for, save_config
-from skid.routes import LEGACY_ENDPOINT
 from skid.service import Service
-from skid_contract.tools import ERROR, MESSAGE_CHARS, RESULT, ROUTES
+from skid_contract.tools import ERROR, MESSAGE_CHARS, RESULT, ROUTES, SCHEMAS
 
 
 def _result(response: Any) -> Any:
@@ -43,11 +42,6 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
 
     Asserted as equality in both directions, so an orphaned route is caught as
     well as an unreachable tool.
-
-    `LEGACY_ENDPOINT` is subtracted rather than added to `ROUTES`, because it is
-    not a tool and nothing should build a request from it. It is named here so
-    that removing it, which is expected once no old shim is running, makes this
-    test the thing that notices.
     """
     declared = set(ROUTES.values())
     served = {
@@ -57,7 +51,7 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
         if method in ("GET", "POST") and not str(rule).startswith("/static")
     }
 
-    assert served - {("POST", LEGACY_ENDPOINT)} == declared
+    assert served == declared
 
 
 # COVERS: FR-4.5 | positive
@@ -312,19 +306,13 @@ def test_a_call_that_does_not_match_its_schema_is_refused_by_field(
 
 # COVERS: FR-5.2 | property
 def test_the_published_schema_is_the_enforced_one(client: FlaskClient) -> None:
-    """What `tools/list` advertises is what a call is held to, not a copy of it.
+    """What the contract declares is what a call is held to, not a copy of it.
 
-    Asserted by taking the schema the endpoint publishes and sending something
-    that violates it, so the two cannot drift apart without this failing.
+    `test_client.py` holds what `skid-mcp` publishes equal to `SCHEMAS`. This
+    sends something `SCHEMAS` forbids, so the service cannot enforce a different
+    schema from the one a client was shown without one of the two failing.
     """
-    published = {
-        tool["name"]: tool["inputSchema"]
-        for tool in client.post(
-            LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
-        ).get_json()["result"]["tools"]
-    }
-
-    assert "voice" in published["set_voice"]["required"]
+    assert "voice" in SCHEMAS["set_voice"]["required"]
 
     refused = client.post(ROUTES["set_voice"][1], json={})
 
@@ -336,107 +324,3 @@ def test_the_published_schema_is_the_enforced_one(client: FlaskClient) -> None:
 def test_a_missing_config_is_not_an_error(client: FlaskClient) -> None:
     """Reading the set before anything has written one answers empty, not 500."""
     assert _result(client.get(ROUTES["list_substitutions"][1])) == []
-
-
-# COVERS: FR-5.3 | regression
-def test_an_old_shim_can_still_speak(client: FlaskClient, service: Service) -> None:
-    """The case that took the machine silent for hours, closed properly.
-
-    A `skid-mcp` from before the move posts MCP to `/mcp`. Deleting the endpoint
-    left Flask answering 404 with an HTML page, which is not a JSON-RPC message,
-    so every client waited on a reply it could not match: measured on the live
-    socket, a call still outstanding at 120 seconds. Answering a JSON-RPC error
-    unblocked them and still left them mute, because only the person holding a
-    session can restart it to pick up a new shim.
-
-    So the endpoint does the work. This asserts the whole path an old shim takes:
-    a `tools/call` reaching the service, running, and coming back in MCP's shape
-    with the caller's own id on it.
-    """
-    answer = client.post(
-        LEGACY_ENDPOINT,
-        json={
-            "jsonrpc": "2.0",
-            "id": 7,
-            "method": "tools/call",
-            "params": {
-                "name": "speak",
-                "arguments": {"name": "silo", "messages": ["heard again"]},
-            },
-        },
-    ).get_json()
-
-    assert answer["id"] == 7
-    assert "queued 1 message(s) for silo" in answer["result"]["content"][0]["text"]
-    assert service.status()["pending"] == 1
-
-
-# COVERS: FR-5.3 | property
-def test_the_legacy_endpoint_holds_no_session(client: FlaskClient) -> None:
-    """Statelessness is what makes serving the old protocol safe to keep.
-
-    The wedge task 40 removed was a session id going stale in the service's
-    memory. Reinstating MCP here would reinstate that too if it issued one, so
-    it issues none and expects none: no `mcp-session-id` header out, and a call
-    carrying a stale one works anyway.
-    """
-    first = client.post(
-        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
-    )
-    with_a_dead_session = client.post(
-        LEGACY_ENDPOINT,
-        json={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {"name": "status", "arguments": {}},
-        },
-        headers={"mcp-session-id": "disowned-000000000000000000000000"},
-    )
-
-    assert "mcp-session-id" not in {key.lower() for key, _ in first.headers}
-    assert with_a_dead_session.get_json()["id"] == 2
-    assert "error" not in with_a_dead_session.get_json()
-
-
-# COVERS: FR-5.2 | property
-def test_the_legacy_tool_list_matches_the_declared_set(client: FlaskClient) -> None:
-    """An old shim asking what exists gets the same six, not a stale list."""
-    listed = client.post(
-        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "id": 3, "method": "tools/list"}
-    ).get_json()["result"]["tools"]
-
-    assert {tool["name"] for tool in listed} == set(ROUTES)
-    assert all(tool["inputSchema"] for tool in listed)
-
-
-# COVERS: FR-6.5 | negative
-def test_a_refusal_reaches_an_old_shim_as_a_tool_error(client: FlaskClient) -> None:
-    """A bad value fails the call and says why, rather than failing the transport.
-
-    `isError` rather than a JSON-RPC error, because the call was dispatched and
-    the tool refused. A protocol-level error would say the request was malformed,
-    which it was not.
-    """
-    answer = client.post(
-        LEGACY_ENDPOINT,
-        json={
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "tools/call",
-            "params": {"name": "set_voice", "arguments": {"voice": "af-typo"}},
-        },
-    ).get_json()
-
-    assert answer["result"]["isError"] is True
-    assert "af-typo" in answer["result"]["content"][0]["text"]
-
-
-# COVERS: FR-5.3 | edge
-def test_an_old_shims_notification_gets_no_reply(client: FlaskClient) -> None:
-    """Nothing is waiting on a notification, and JSON-RPC forbids answering one."""
-    response = client.post(
-        LEGACY_ENDPOINT, json={"jsonrpc": "2.0", "method": "notifications/initialized"}
-    )
-
-    assert response.status_code == 202

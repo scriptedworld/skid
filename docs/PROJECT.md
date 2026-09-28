@@ -170,19 +170,18 @@ above is the reason to expect that. A drained queue, an empty `recent_failures`
 and a `RUNNING` sink each answer a narrower question than the one that matters.
 Asking somebody is still the only test.
 
-### The legacy protocol route
+### Removing a route a client calls
 
-`/mcp` serves the MCP protocol to a `skid-mcp` that predates the move into the
-stdio script, and holds no session. It answers `initialize`, `tools/list`,
-`tools/call` and `ping`, returns a JSON-RPC method-not-found for anything else,
-and returns 202 to a notification, which has no id and which JSON-RPC forbids
-answering. The tools it publishes come from `skid_contract.tools`, so it cannot
-drift.
+Every session's shim lives as long as the session, and only a person can restart
+one, so a route a running shim posts to cannot simply go. Flask answers a missing
+route with an HTML 404, which a JSON-RPC client cannot match to its request, and
+it waits. Before removing one, check the start time of every running shim
+against the deploy that stopped it calling that route:
 
-Deleting it once reintroduced the hang it had removed. An old client posted
-there, Flask answered 404 with an HTML page, and an HTML page is no more
-matchable to a pending request than the null session id had been, so the client
-waited. Retire it once no client old enough to need it is running.
+    for p in $(pgrep -f skid-mcp); do ps -o pid=,lstart= -p $p; done
+
+Inside the sandbox `pgrep` sees only its own pid namespace and finds nothing,
+which reads exactly like a quiet machine.
 `docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md`.
 
 ## The gate

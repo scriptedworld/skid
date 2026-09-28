@@ -1,12 +1,8 @@
-"""The service's HTTP surface: six operations, reached two ways.
+"""The service's HTTP surface: six operations, one route each.
 
-The protocol lives in `skid-mcp`, and what normally crosses the socket is plain
-HTTP with no session, no handshake and nothing cached on either side. There is
+The protocol lives in `skid-mcp`, and what crosses the socket is plain HTTP
+with no session, no handshake and nothing cached on either side. There is
 therefore nothing for a restart to invalidate, which is why the split exists.
-
-The operations are plain functions and both surfaces call them. A Flask
-route and the compatibility endpoint below dispatch to the same callable, so
-they cannot answer differently. Only the shape of the answer differs.
 
 Validation stays here, with the thing being written. A voice kokoro does not
 have, or a regex that does not compile, is refused before anything reaches the
@@ -16,7 +12,6 @@ is a permanent fault.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -42,37 +37,6 @@ decides what a valid structure is and says so the same way.
 
 BAD_REQUEST = 400
 """What a value this service refuses to store comes back as."""
-
-ACCEPTED = 202
-"""What a notification gets, since JSON-RPC forbids answering one."""
-
-LEGACY_ENDPOINT = "/mcp"
-"""The path an older shim speaks MCP to, answered so that shim can still speak.
-
-A `skid-mcp` from before 2026-08-28 speaks MCP to this path. With nothing here,
-Flask answers 404 with an HTML page, which is not a JSON-RPC message and leaves
-every client waiting on a reply it cannot match; that took the machine silent
-for hours. A JSON-RPC error unblocks the callers and still leaves them unable to
-speak, because only the person holding the session can restart it to pick up a
-new shim. `docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md`.
-
-So it serves MCP, statelessly. No session id is issued or expected, which is
-what makes this safe: the wedge that task 40 removed was session state going
-stale, and there is none here to go stale.
-
-*Discharges FR-5.3 across the version boundary.*
-
-Retire it once `pgrep -af skid-mcp` shows nothing predating the move. It is not
-in `ROUTES` because it is not a tool, and `tests/test_routes.py` subtracts it by
-name so removing it is a change something notices.
-"""
-
-METHOD_NOT_FOUND = -32601
-INVALID_PARAMS = -32602
-"""JSON-RPC's codes for a method this does not provide and arguments it refuses."""
-
-PROTOCOL_VERSION = "2024-11-05"
-"""What to answer an `initialize` that names no version of its own."""
 
 
 class Refused(Exception):
@@ -254,31 +218,6 @@ def _body() -> dict[str, Any]:
     return found if isinstance(found, dict) else {}
 
 
-def _as_text(value: Any) -> str:
-    """One content block's text, for a tool result crossing the MCP endpoint."""
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, indent=2, sort_keys=True)
-
-
-def _reply(request_id: Any, result: Any) -> dict[str, Any]:
-    """A JSON-RPC result carrying the id its caller is waiting on."""
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-
-def _failure(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    """A JSON-RPC error carrying the id its caller is waiting on.
-
-    The id is the whole point. An error with a null id, or an HTML page, is not
-    an answer to anything the client asked, and it waits rather than failing.
-    """
-    return {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "error": {"code": code, "message": message},
-    }
-
-
 def build_app(service: Service, config_path: Path) -> Flask:
     """Build the HTTP app over a running service.
 
@@ -305,84 +244,4 @@ def build_app(service: Service, config_path: Path) -> Flask:
     for tool, (method, path) in ROUTES.items():
         app.add_url_rule(path, view_func=route_for(tool), methods=[method])
 
-    _legacy_mcp_route(app, operations)
     return app
-
-
-def _tool_call(
-    operations: dict[str, Callable[[dict[str, Any]], Any]],
-    request_id: Any,
-    params: dict[str, Any],
-) -> dict[str, Any]:
-    """Run one tool for an older shim and answer in MCP's own shape."""
-    name = str(params.get("name", ""))
-    if name not in operations:
-        return _failure(request_id, METHOD_NOT_FOUND, f"no such tool: {name}")
-    try:
-        answer = operations[name](params.get("arguments") or {})
-    except Refused as exc:
-        return _reply(
-            request_id,
-            {"content": [{"type": "text", "text": str(exc)}], "isError": True},
-        )
-    return _reply(request_id, {"content": [{"type": "text", "text": _as_text(answer)}]})
-
-
-def _tools_listing(
-    operations: dict[str, Callable[[dict[str, Any]], Any]],
-) -> dict[str, Any]:
-    """The tool surface an older shim asks for, derived from `skid_contract.tools`."""
-    return {
-        "tools": [
-            {
-                "name": tool,
-                "description": (operations[tool].__doc__ or "").strip(),
-                "inputSchema": SCHEMAS[tool],
-            }
-            for tool in ROUTES
-        ]
-    }
-
-
-def _legacy_mcp_route(
-    app: Flask, operations: dict[str, Callable[[dict[str, Any]], Any]]
-) -> None:
-    """Serve MCP to a shim that predates the move, holding no session.
-
-    Retire this once nothing predating the move is running. The drift test in
-    `tests/test_routes.py` names the route, so removing it is noticed.
-    """
-
-    @app.post(LEGACY_ENDPOINT)
-    def legacy_mcp() -> Response | tuple[Response, int]:
-        """Answer one JSON-RPC request, or accept a notification.
-
-        A notification has no id and gets 202, because JSON-RPC forbids
-        answering one and nothing is waiting on it.
-        """
-        body = _body()
-        request_id = body.get("id")
-        method = str(body.get("method", ""))
-        if request_id is None:
-            return jsonify({}), ACCEPTED
-
-        if method == "initialize":
-            asked = (body.get("params") or {}).get("protocolVersion")
-            return jsonify(
-                _reply(
-                    request_id,
-                    {
-                        "protocolVersion": str(asked or PROTOCOL_VERSION),
-                        "capabilities": {"tools": {}},
-                        "serverInfo": {"name": "skid", "version": "0.1.0"},
-                    },
-                )
-            )
-        if method == "tools/list":
-            return jsonify(_reply(request_id, _tools_listing(operations)))
-        if method == "tools/call":
-            params = body.get("params") or {}
-            return jsonify(_tool_call(operations, request_id, params))
-        if method == "ping":
-            return jsonify(_reply(request_id, {}))
-        return jsonify(_failure(request_id, METHOD_NOT_FOUND, f"unsupported: {method}"))

@@ -11,9 +11,9 @@ its requests from these routes and the service registers exactly these paths, so
 the set cannot drift. `tests/test_routes.py` asserts the two agree, which is what
 turns "cannot drift" from an intention into something that fails.
 
-Schemas stay with the decorated functions in `client.py` rather than being
-restated here. A JSON schema written twice is the drift this module exists to
-prevent, and the SDK derives one from the signature that is already there.
+The argument schemas are here too, for the service to enforce. `client.py`
+publishes its own, derived by the SDK from the decorated functions, and a test
+holds the two equal.
 
 Nothing here imports `mcp`, `flask` or `skid.service`. It is read by the script,
 which has the SDK and no service, and by the service, which has neither the SDK
@@ -104,12 +104,8 @@ SCHEMAS: dict[str, dict[str, Any]] = {
 
 `routes.py` compiles these with wrench and validates every incoming call against
 them, so a request that does not match is refused with a message naming the
-field. The same documents are what `tools/list` publishes, which is what makes
-the advertisement honest: a client is told the contract that will actually be
-applied to it.
-
-Publishing them while hand-written checks in the operations did the real work
-would be two statements of one contract with nothing keeping them together.
+field. Hand-written checks in the operations would be a second statement of the
+contract with nothing keeping it in step with the first.
 
 `additionalProperties` is deliberately not set. A key skid does not know is
 ignored here, where in the config file it is refused. The difference is who is
@@ -119,12 +115,10 @@ argument is a client sending a field skid has no use for, and refusing it breaks
 a caller to no purpose. `test_the_substitution_set_is_global` depends on this,
 sending `name` to prove the set is not scoped by it.
 
-`skid-mcp` still derives its own schemas from function signatures through the
-SDK, so the surface is stated twice while that is true.
-`tests/test_client.py` asserts the two agree on names, required fields and
-property names; titles and the SDK's generated wrapper name mean nothing to a
-caller and are not compared. The duplication goes when the shim stops being an
-MCP server and becomes a forwarder.
+`skid-mcp` derives the schemas it publishes from function signatures through the
+SDK, so the surface is stated twice. `tests/test_client.py` asserts the two agree
+on names, required fields and property names; titles and the SDK's generated
+wrapper name mean nothing to a caller and are not compared.
 """
 
 RESULT = "result"

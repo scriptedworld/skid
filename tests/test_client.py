@@ -131,10 +131,9 @@ def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> N
     """Two statements of the tool surface, asserted to agree.
 
     `skid-mcp` derives its schemas from function signatures through the SDK,
-    which is the right source and the one a current client sees.
-    `skid_contract.tools.SCHEMAS` states them again for the compatibility endpoint,
-    because the service answers an older shim's `tools/list` and has no SDK to
-    derive anything with.
+    which is the right source and the one a client sees.
+    `skid_contract.tools.SCHEMAS` states them again for the service to enforce,
+    because the service has no SDK to derive anything with.
 
     Two statements is exactly the drift `skid_contract.tools` exists to prevent, so they
     are compared on what a caller can act on: the tool names, the required

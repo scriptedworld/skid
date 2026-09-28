@@ -90,19 +90,6 @@ bound, capping the message, and accepting the truncation. An essay is not
 something anyone sends by accident often, and nothing else depends on the
 answer. The watchdog does not: playback pings regardless of clip length.
 
-## The legacy protocol route
-
-`/mcp` serves the MCP protocol statelessly, for clients built before the
-protocol moved into the stdio script. It looks like dead code and is not.
-Deleting it once reintroduced the exact hang it had been removing, because a
-client that gets an HTML 404 where it expected a JSON-RPC message waits rather
-than failing. `docs/LESSONS/deleting-an-endpoint-recreated-the-bug-it-removed.md`
-is the write-up.
-
-It can go once no client old enough to need it is still running. A drift test in
-`tests/test_routes.py` names the route, so removing it is a change something
-notices.
-
 ## Two entry points are barely covered
 
 The package sits at 78 percent, and `main.py` and `install.py` are most of the

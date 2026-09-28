@@ -65,9 +65,13 @@ and was wrong within a minute of the restart. The trace was of the code I had
 just deleted; the path that actually ran was Flask's default 404 handler, which
 I had not looked at because it was not code anybody wrote.
 
-## Still true
+## How it ended
 
-`/mcp` is a compatibility route with a stated end, `routes.LEGACY_ENDPOINT`.
-Retiring it waits on the check above rather than on a date. Doing it during a
-quiet spell is the same
-mistake: nobody running a shim is not the same as nobody able to.
+`/mcp` was retired once the check above showed every running shim starting a
+month after the move. A quiet spell would not have been evidence: nobody running
+a shim is not the same as nobody able to.
+
+The check nearly read as a quiet spell anyway. Run inside the sandbox, `pgrep`
+sees only the sandbox's own pid namespace and lists nothing but itself, so a
+machine with eleven shims reads as a machine with none. Run it outside, and
+count what it found before trusting what it did not.
