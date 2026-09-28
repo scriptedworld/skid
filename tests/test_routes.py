@@ -21,7 +21,7 @@ from skid.assignment import VoiceChoice
 from skid.config import Config, load_config, pipeline_for, save_config
 from skid.routes import LEGACY_ENDPOINT
 from skid.service import Service
-from skid_contract.tools import ERROR, RESULT, ROUTES
+from skid_contract.tools import ERROR, MESSAGE_CHARS, RESULT, ROUTES
 
 
 def _result(response: Any) -> Any:
@@ -64,6 +64,43 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
 def test_speak_returns_when_the_work_is_queued(client: FlaskClient) -> None:
     """The caller is told yes at queue time, which is what FR-4.5 requires."""
     response = client.post(ROUTES["speak"][1], json={"name": "silo", "messages": ["a"]})
+
+    assert _result(response) == "queued 1 message(s) for silo"
+
+
+# COVERS: FR-4.10 | negative
+def test_a_message_longer_than_a_paragraph_is_refused(
+    client: FlaskClient, service: Service
+) -> None:
+    """The caller is told, because FR-4.5 has otherwise already told it yes.
+
+    A message becomes one clip and FR-1.9 kills a player at 300 seconds, so at
+    about 15.5 characters per second of audio a message over roughly 4,660
+    characters was cut off mid-sentence with nobody told. The refusal has to
+    reach the caller rather than the log, which is the same argument FR-6.5 makes
+    about a voice that would silence skid.
+    """
+    response = client.post(
+        ROUTES["speak"][1],
+        json={"name": "silo", "messages": ["a" * (MESSAGE_CHARS + 1)]},
+    )
+
+    assert response.status_code == 400
+    assert service.status()["pending"] == 0
+
+
+# COVERS: FR-4.10 | edge
+def test_a_message_at_the_limit_is_accepted(client: FlaskClient) -> None:
+    """The bound is inclusive, so the limit itself is a legal message.
+
+    Asserted because an off-by-one here refuses a caller that did exactly what
+    the requirement told it to, and the failure looks like the limit being wrong
+    rather than the comparison.
+    """
+    response = client.post(
+        ROUTES["speak"][1],
+        json={"name": "silo", "messages": ["a" * MESSAGE_CHARS]},
+    )
 
     assert _result(response) == "queued 1 message(s) for silo"
 

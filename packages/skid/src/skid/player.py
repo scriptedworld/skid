@@ -20,10 +20,15 @@ from time import monotonic
 DEFAULT_TIMEOUT = 300.0
 """Seconds a player may run before it is killed. A stuck-process detector.
 
-It does not clear every clip skid can produce. At about 15.5 characters per
-second of audio this is roughly 4,660 characters, and nothing caps a message at
-submission, so a longer one is cut off mid-sentence. Whether that is the right
-ceiling is open.
+It clears every clip skid will produce, and does so because of a limit elsewhere
+rather than because 300 is generous. At about 15.5 characters per second of audio
+this admits roughly 4,660 characters, and FR-4.10 refuses a message over
+`skid_contract.MESSAGE_CHARS`, which is 1000, so the longest legal clip is about
+65 seconds and the margin is four and a half.
+
+Raising this is the wrong lever for a message that will not fit. Every second
+added is a second a genuinely stuck player holds the machine silent, which is
+what this exists to bound, so the cap moves instead.
 """
 
 

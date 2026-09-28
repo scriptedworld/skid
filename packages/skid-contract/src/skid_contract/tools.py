@@ -24,6 +24,26 @@ from __future__ import annotations
 
 from typing import Any
 
+MESSAGE_CHARS = 1000
+"""Characters one message may carry, refused above it.
+
+A message becomes one clip, and a clip is what the player's own bound applies
+to. At about 15.5 characters per second of audio this is roughly 65 seconds of
+speech, inside `player.DEFAULT_TIMEOUT` of 300 seconds with a margin of four and
+a half, so a message that passes here cannot be the one that gets cut off.
+
+The quantity is characters of a single message, not of a submission. An array is
+spoken as one submission and may be as long as the caller likes; each element is
+its own clip and each is bounded.
+
+Chosen rather than measured. The intent is that a caller sends a paragraph at a
+time, and four paragraphs are four messages or four calls, so this is set high
+enough to pass any real paragraph and low enough to refuse a wall of text. A
+number derived from the timeout instead would be about 4,660, which is the point
+at which speech is silently truncated, and setting a limit at the failure it
+exists to prevent leaves no margin at all.
+"""
+
 ROUTES: dict[str, tuple[str, str]] = {
     "speak": ("POST", "/speak"),
     "set_voice": ("POST", "/voice"),
@@ -49,7 +69,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "name": {"type": "string", "minLength": 1},
             "messages": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {"type": "string", "maxLength": MESSAGE_CHARS},
                 "minItems": 1,
             },
         },
