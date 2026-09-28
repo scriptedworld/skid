@@ -150,6 +150,15 @@ The socket exists only while oslo is connected, and `paplay` then fails fast
 with a connection refused, which is the honest answer: nobody is listening when
 nobody is connected.
 
+**The drop-in is in dotfiles and the forward is not.** `dotfiles` carries
+`config/systemd/user/skid.service.d/pulse-oslo.conf`, so the lazlo half survives
+a rebuild. The `RemoteForward` lives in oslo's own `~/.ssh/config`, which nothing
+tracks, so rebuilding oslo restores a skid that runs, queues, reports success and
+is silent. That is the same symptom that went unnoticed for weeks, so check for
+the socket before hunting anything else:
+
+    ls -l /run/user/1000/pulse-oslo
+
 A player that opens its own `ssh` per clip was tried first and is the wrong
 shape. It pays a handshake a sentence, and it hangs: the remote `paplay` exits
 while the local `ssh` sits in `unix_stream_read_generic` holding the pipes skid
