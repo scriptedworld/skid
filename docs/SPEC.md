@@ -568,7 +568,7 @@ The installer also writes the two systemd user units and reloads the daemon.
 Those units are what own the socket and the lifetime, so an install that skipped
 them would leave a service nothing starts.
 
-Nothing about this is built yet.
+`packages/skid/src/skid/install.py` is the installer, run as `skid-install`.
 
 Linux only in the first pass, and the systemd dependence makes that sharper than
 it was: the platform-specific surface is now the player command and the
