@@ -40,7 +40,7 @@ def _call(server: Any, tool: str, **arguments: Any) -> Any:
     return asyncio.run(server.call_tool(tool, arguments))
 
 
-# COVERS: FR-5.2 | positive
+# COVERS FR-5.2 | positive
 def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None:
     """The protocol stops here, so this is where the tool surface lives.
 
@@ -53,7 +53,7 @@ def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None
     assert names == set(ROUTES)
 
 
-# COVERS: FR-5.2 | positive
+# COVERS FR-5.2 | positive
 def test_a_tool_call_reaches_the_service_and_returns_its_answer(
     server: Any, service: Service
 ) -> None:
@@ -63,7 +63,7 @@ def test_a_tool_call_reaches_the_service_and_returns_its_answer(
     assert service.status()["pending"] == 1
 
 
-# COVERS: FR-4.4 | property
+# COVERS FR-4.4 | property
 def test_a_call_is_executed_once(server: Any, service: Service) -> None:
     """Nothing is ever replayed, because there is no session to lose.
 
@@ -77,7 +77,7 @@ def test_a_call_is_executed_once(server: Any, service: Service) -> None:
     assert service.status()["pending"] == 1
 
 
-# COVERS: FR-5.3 | negative
+# COVERS FR-5.3 | negative
 def test_an_unreachable_service_fails_the_call_rather_than_hanging() -> None:
     """The failure FR-5.3 names, against a socket nothing is listening on.
 
@@ -93,7 +93,7 @@ def test_an_unreachable_service_fails_the_call_rather_than_hanging() -> None:
             backend.call("status")
 
 
-# COVERS: FR-5.3 | negative
+# COVERS FR-5.3 | negative
 def test_a_refusal_carries_the_services_own_reason(backend: Backend) -> None:
     """A value the service will not store fails the call and says why.
 
@@ -107,7 +107,7 @@ def test_a_refusal_carries_the_services_own_reason(backend: Backend) -> None:
         backend.call("set_voice", voice="af-typo")
 
 
-# COVERS: FR-6.5 | negative
+# COVERS FR-6.5 | negative
 def test_an_unknown_voice_fails_the_call(server: Any, config_path: Path) -> None:
     """The tool call is the last moment the caller is present to be told."""
     with pytest.raises(Exception, match="set_voice"):
@@ -116,7 +116,7 @@ def test_an_unknown_voice_fails_the_call(server: Any, config_path: Path) -> None
     assert not config_path.exists()
 
 
-# COVERS: FR-6.1 | positive
+# COVERS FR-6.1 | positive
 def test_setting_the_voice_through_the_tool_reaches_the_config(
     server: Any, config_path: Path
 ) -> None:
@@ -126,7 +126,7 @@ def test_setting_the_voice_through_the_tool_reaches_the_config(
     assert load_config(config_path).voice == "af_bella"
 
 
-# COVERS: FR-5.2 | property
+# COVERS FR-5.2 | property
 def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> None:
     """Two statements of the tool surface, asserted to agree.
 
@@ -152,7 +152,7 @@ def test_the_declared_schemas_match_the_ones_a_client_is_given(server: Any) -> N
         ), name
 
 
-# COVERS: FR-7.9 | property
+# COVERS FR-7.9 | property
 def test_the_substitution_set_is_global(server: Any) -> None:
     """No name scopes the set: a correction any caller makes helps every caller."""
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
@@ -161,7 +161,7 @@ def test_the_substitution_set_is_global(server: Any) -> None:
     assert "name" not in schema.get("properties", {})
 
 
-# COVERS: FR-8.1 | positive
+# COVERS FR-8.1 | positive
 def test_a_substitution_is_declared_through_the_tool(
     server: Any, config_path: Path
 ) -> None:
@@ -178,7 +178,7 @@ def test_a_substitution_is_declared_through_the_tool(
     assert [(e.pattern, e.replacement) for e in entries] == [("kokoro", "koh koh roh")]
 
 
-# COVERS: FR-4.7 | positive
+# COVERS FR-4.7 | positive
 def test_status_reports_what_a_caller_cannot_log(server: Any) -> None:
     """speak returned at queue time, so status is how a caller learns anything."""
     reported = _call(server, "status")

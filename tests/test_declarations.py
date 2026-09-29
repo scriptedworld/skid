@@ -153,7 +153,7 @@ def _minor_versions() -> list[Version]:
     return [Version(f"3.{minor}") for minor in range(8, 30)]
 
 
-# COVERS: FR-1.5 | property
+# COVERS FR-1.5 | property
 @pytest.mark.parametrize("package", sorted(PACKAGES))
 def test_skid_imports_no_audio_library(package: str) -> None:
     """The output path is a file and a subprocess, asserted at the import set.
@@ -180,7 +180,7 @@ def test_skid_imports_no_audio_library(package: str) -> None:
     assert third_party == THIRD_PARTY[package]
 
 
-# COVERS: FR-5.2 | property
+# COVERS FR-5.2 | property
 @pytest.mark.parametrize("package", sorted(PACKAGES))
 def test_neither_side_of_the_socket_imports_the_other(package: str) -> None:
     """The split is a property of the import graph, not of the directory names.
@@ -200,7 +200,7 @@ def test_neither_side_of_the_socket_imports_the_other(package: str) -> None:
     assert edges - {package} == ALLOWED_EDGES[package]
 
 
-# COVERS: FR-1.6 | property
+# COVERS FR-1.6 | property
 def test_the_licence_is_declared_and_matches_the_file_beside_it() -> None:
     """A licence has two halves and only one of them was here.
 
@@ -225,7 +225,7 @@ def test_the_licence_is_declared_and_matches_the_file_beside_it() -> None:
         assert _pyproject(package)["project"]["license"] == "Apache-2.0", package
 
 
-# COVERS: FR-1.6 | property
+# COVERS FR-1.6 | property
 def test_linux_is_declared_rather_than_intended() -> None:
     """Scope that only a document states is scope nothing can check.
 
@@ -243,7 +243,7 @@ def test_linux_is_declared_rather_than_intended() -> None:
         assert "Operating System :: POSIX :: Linux" in classifiers, package
 
 
-# COVERS: FR-1.7 | property
+# COVERS FR-1.7 | property
 def test_skid_runs_only_where_kokoro_does() -> None:
     """skid's interpreter range sits inside kokoro's, read from kokoro itself.
 
@@ -277,7 +277,7 @@ def test_skid_runs_only_where_kokoro_does() -> None:
         assert [v for v in allowed if v not in kokoro_range] == [], package
 
 
-# COVERS: FR-7.6 | property
+# COVERS FR-7.6 | property
 def test_kokoro_is_still_a_python_project() -> None:
     """A decision row is tested by asserting its premise, not its consequence.
 

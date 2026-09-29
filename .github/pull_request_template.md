@@ -13,7 +13,7 @@ a docs pass, says so instead.
 
 - [ ] `.venv/bin/python -m pytest -o addopts= -q` passes, and the count is
       stated below
-- [ ] every new test carries a `# COVERS: FR-x.y | kind` mark naming a row that
+- [ ] every new test carries a `# COVERS FR-x.y | kind` mark naming a row that
       exists
 - [ ] `.venv/bin/python -m ruff check .` is clean
 - [ ] `.venv/bin/python -m mypy src tests` reports nothing new beyond kokoro's

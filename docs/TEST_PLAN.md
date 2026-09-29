@@ -8,7 +8,7 @@ awkward to test, the awkwardness is named and the row is not skipped.
 
 Every test carries its marker directly above it:
 
-    # COVERS: FR-4.3 | positive
+    # COVERS FR-4.3 | positive
 
 ## Two seams that make this testable without a mock
 

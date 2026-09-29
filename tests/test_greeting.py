@@ -13,7 +13,7 @@ from skid.greeting import QuietTable, greeting_for, should_greet
 WINDOW = 30.0
 
 
-# COVERS: FR-3.2 | positive
+# COVERS FR-3.2 | positive
 def test_a_name_not_heard_recently_is_greeted() -> None:
     """The first thing heard from a name in a while announces itself."""
     table = QuietTable()
@@ -21,13 +21,13 @@ def test_a_name_not_heard_recently_is_greeted() -> None:
     assert should_greet(table, "silo", now=1000.0, window=WINDOW) is True
 
 
-# COVERS: FR-3.2 | positive
+# COVERS FR-3.2 | positive
 def test_the_greeting_names_the_speaker() -> None:
     """A listener learns who is talking without the message saying so."""
     assert greeting_for("silo") == "Hi, silo here."
 
 
-# COVERS: FR-3.3 | positive
+# COVERS FR-3.3 | positive
 def test_a_name_heard_moments_ago_is_not_greeted() -> None:
     """The prefix identifies a speaker, not a message."""
     table = QuietTable()
@@ -36,7 +36,7 @@ def test_a_name_heard_moments_ago_is_not_greeted() -> None:
     assert should_greet(table, "silo", now=1005.0, window=WINDOW) is False
 
 
-# COVERS: FR-7.4 | edge
+# COVERS FR-7.4 | edge
 def test_the_window_boundary_is_the_window_itself() -> None:
     """Exactly at the window the name is still quiet; past it, it is not.
 
@@ -51,7 +51,7 @@ def test_the_window_boundary_is_the_window_itself() -> None:
     assert should_greet(table, "silo", now=1030.1, window=WINDOW) is True
 
 
-# COVERS: FR-3.2 | property
+# COVERS FR-3.2 | property
 def test_the_window_is_per_name() -> None:
     """One agent talking continuously does not suppress another's announcement."""
     table = QuietTable()
@@ -61,7 +61,7 @@ def test_the_window_is_per_name() -> None:
     assert should_greet(table, "wrench", now=1005.0, window=WINDOW) is True
 
 
-# COVERS: FR-7.4 | regression
+# COVERS FR-7.4 | regression
 def test_the_clock_is_the_end_of_speech_not_the_submission() -> None:
     """The table records when a clip finished, which is what a listener heard.
 
@@ -75,7 +75,7 @@ def test_the_clock_is_the_end_of_speech_not_the_submission() -> None:
     assert should_greet(table, "silo", now=1210.0, window=WINDOW) is False
 
 
-# COVERS: FR-3.6 | positive
+# COVERS FR-3.6 | positive
 def test_a_fresh_table_greets_everyone() -> None:
     """The table is memory only, so a restart costs one greeting per name.
 
@@ -88,7 +88,7 @@ def test_a_fresh_table_greets_everyone() -> None:
     assert should_greet(QuietTable(), "silo", now=1005.0, window=WINDOW) is True
 
 
-# COVERS: FR-3.4 | positive
+# COVERS FR-3.4 | positive
 def test_a_shorter_window_greets_sooner() -> None:
     """The window is configurable, and the decision honours whatever it is."""
     table = QuietTable()
@@ -101,7 +101,7 @@ def test_a_shorter_window_greets_sooner() -> None:
     assert should_greet(table, "silo", now=1005.0, window=10.0) is False
 
 
-# COVERS: FR-3.1 | negative
+# COVERS FR-3.1 | negative
 def test_an_empty_name_is_refused() -> None:
     """A name identifies the submitting engine, so there has to be one."""
     with pytest.raises(ValueError):

@@ -18,7 +18,7 @@ import pytest
 from skid.queue import Submission
 
 
-# COVERS: FR-4.1 | positive
+# COVERS FR-4.1 | positive
 def test_text_arrives_as_an_array() -> None:
     """A submission carries a list of messages, not one string."""
     submission = Submission(name="silo", messages=["one", "two"])
@@ -26,7 +26,7 @@ def test_text_arrives_as_an_array() -> None:
     assert submission.messages == ["one", "two"]
 
 
-# COVERS: FR-4.3 | positive
+# COVERS FR-4.3 | positive
 def test_the_messages_of_a_submission_keep_their_order() -> None:
     """Order within a submission is the caller's, and nothing reorders it."""
     submission = Submission(name="silo", messages=["first", "second", "third"])
@@ -34,7 +34,7 @@ def test_the_messages_of_a_submission_keep_their_order() -> None:
     assert submission.messages == ["first", "second", "third"]
 
 
-# COVERS: FR-4.1 | edge
+# COVERS FR-4.1 | edge
 def test_an_array_of_one_is_not_a_special_case() -> None:
     """The common call is one message, and it takes the same path as ten."""
     submission = Submission(name="silo", messages=["alone"])
@@ -42,14 +42,14 @@ def test_an_array_of_one_is_not_a_special_case() -> None:
     assert submission.messages == ["alone"]
 
 
-# COVERS: FR-3.1 | negative
+# COVERS FR-3.1 | negative
 def test_a_submission_without_a_name_is_refused() -> None:
     """Every submission carries the name of the engine that sent it."""
     with pytest.raises(ValueError):
         Submission(name="   ", messages=["one"])
 
 
-# COVERS: FR-4.1 | negative
+# COVERS FR-4.1 | negative
 def test_a_submission_saying_nothing_is_refused() -> None:
     """An empty array is a caller mistake, so it is refused and nothing is queued."""
     with pytest.raises(ValueError):

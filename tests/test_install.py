@@ -120,7 +120,7 @@ def _section(unit: str, heading: str) -> str:
     return "\n".join(lines[start : rest[0]] if rest else lines[start:])
 
 
-# COVERS: FR-9.6 | positive
+# COVERS FR-9.6 | positive
 @pytest.mark.parametrize("unit", UNITS)
 def test_the_installer_checks_each_unit_before_writing_it(
     unit: str, tmp_path: Path
@@ -140,7 +140,7 @@ def test_the_installer_checks_each_unit_before_writing_it(
     assert ("systemd-analyze", "--user", "verify", source) in plan
 
 
-# COVERS: FR-9.6 | property
+# COVERS FR-9.6 | property
 def test_the_units_are_checked_before_the_first_thing_is_written(
     tmp_path: Path,
 ) -> None:
@@ -165,7 +165,7 @@ def test_the_units_are_checked_before_the_first_thing_is_written(
     assert last_check < first_copy
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_the_socket_is_owner_only() -> None:
     """The socket unit declares 0600, which is the whole of skid's access control.
 
@@ -180,7 +180,7 @@ def test_the_socket_is_owner_only() -> None:
     assert "SocketMode=0600" in socket
 
 
-# COVERS: FR-5.3 | property
+# COVERS FR-5.3 | property
 def test_the_service_is_notify_so_active_means_answerable() -> None:
     """systemd is told the model is warm, not merely that the process started.
 
@@ -196,7 +196,7 @@ def test_the_service_is_notify_so_active_means_answerable() -> None:
     assert "Type=notify" in service
 
 
-# COVERS: FR-5.3 | property
+# COVERS FR-5.3 | property
 def test_the_service_declares_a_watchdog() -> None:
     """A process can be running and not answering, and this is what notices.
 
@@ -211,7 +211,7 @@ def test_the_service_declares_a_watchdog() -> None:
     assert "WatchdogSec=" in service
 
 
-# COVERS: FR-5.3 | property
+# COVERS FR-5.3 | property
 def test_the_start_limit_is_chosen_and_in_the_section_systemd_reads() -> None:
     """Both halves matter, and the second is why this asserts a position.
 
@@ -227,7 +227,7 @@ def test_the_start_limit_is_chosen_and_in_the_section_systemd_reads() -> None:
     assert "StartLimitBurst=" in unit_section
 
 
-# COVERS: FR-9.1 | positive
+# COVERS FR-9.1 | positive
 def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
     """The documented sequence, in order, with the units checked then copied.
 
@@ -257,7 +257,7 @@ def test_the_install_plan_is_the_sequence_it_owes(tmp_path: Path) -> None:
     ]
 
 
-# COVERS: FR-9.1 | property
+# COVERS FR-9.1 | property
 def test_each_tool_is_installed_from_its_own_package(tmp_path: Path) -> None:
     """Two tool installs, naming the two package directories, service first.
 
@@ -293,7 +293,7 @@ def test_each_tool_is_installed_from_its_own_package(tmp_path: Path) -> None:
     assert installs == [str(packages / "skid"), str(packages / "skid-mcp")]
 
 
-# COVERS: FR-9.3 | positive
+# COVERS FR-9.3 | positive
 def test_the_plan_copies_both_units_into_the_given_directory(tmp_path: Path) -> None:
     """Both unit files are copied, and to where Paths says rather than to home."""
     paths = _paths(tmp_path)
@@ -305,7 +305,7 @@ def test_the_plan_copies_both_units_into_the_given_directory(tmp_path: Path) -> 
     assert destinations == [str(paths.units / unit) for unit in UNITS]
 
 
-# COVERS: FR-9.7 | positive
+# COVERS FR-9.7 | positive
 def test_the_plan_starts_the_socket_and_not_the_service(tmp_path: Path) -> None:
     """Socket activation means the first connection starts the service.
 
@@ -319,7 +319,7 @@ def test_the_plan_starts_the_socket_and_not_the_service(tmp_path: Path) -> None:
     assert not any("skid.service" in argv for argv in plan)
 
 
-# COVERS: FR-9.10 | positive
+# COVERS FR-9.10 | positive
 def test_registering_tolerates_a_name_that_is_already_taken(tmp_path: Path) -> None:
     """`claude mcp add` exits 1 on an existing name, so a re-run must read the message.
 
@@ -337,7 +337,7 @@ def test_registering_tolerates_a_name_that_is_already_taken(tmp_path: Path) -> N
     assert add[0].tolerate == ALREADY_EXISTS
 
 
-# COVERS: FR-9.8 | property
+# COVERS FR-9.8 | property
 def test_verification_never_connects() -> None:
     """Checking the install must not be what starts the service.
 
@@ -350,7 +350,7 @@ def test_verification_never_connects() -> None:
     ]
 
 
-# COVERS: FR-9.13 | property
+# COVERS FR-9.13 | property
 def test_uninstalling_disables_before_it_removes_the_files(tmp_path: Path) -> None:
     """systemd cannot disable a unit whose file has gone, and leaves the symlink.
 
@@ -367,7 +367,7 @@ def test_uninstalling_disables_before_it_removes_the_files(tmp_path: Path) -> No
     assert disable < remove
 
 
-# COVERS: FR-9.13 | positive
+# COVERS FR-9.13 | positive
 def test_uninstalling_reverses_everything_the_install_created(tmp_path: Path) -> None:
     """Each thing the install adds has something in the uninstall that removes it.
 
@@ -389,14 +389,14 @@ def test_uninstalling_reverses_everything_the_install_created(tmp_path: Path) ->
         assert str(paths.units / unit) in undone
 
 
-# COVERS: FR-9.5 | negative
+# COVERS FR-9.5 | negative
 def test_a_machine_without_the_tools_is_told_before_anything_is_written() -> None:
     """A missing `uv` is found first, not halfway through with units copied."""
     assert missing_tools(("definitely-not-a-command",)) == ["definitely-not-a-command"]
     assert missing_tools(("sh",)) == []
 
 
-# COVERS: FR-9.11 | positive
+# COVERS FR-9.11 | positive
 def test_a_reinstall_unregisters_before_it_registers(tmp_path: Path) -> None:
     """`claude mcp add` will not replace an entry, so a reinstall removes first.
 
@@ -413,7 +413,7 @@ def test_a_reinstall_unregisters_before_it_registers(tmp_path: Path) -> None:
     )
 
 
-# COVERS: FR-9.11 | negative
+# COVERS FR-9.11 | negative
 def test_a_first_install_does_not_remove_a_registration_it_never_made(
     tmp_path: Path,
 ) -> None:
@@ -423,7 +423,7 @@ def test_a_first_install_does_not_remove_a_registration_it_never_made(
     assert ("claude", "mcp", "remove") not in verbs
 
 
-# COVERS: FR-9.10 | property
+# COVERS FR-9.10 | property
 def test_both_registration_steps_tolerate_the_state_they_wanted(tmp_path: Path) -> None:
     """Removing what is absent and adding what is present are both exit 1.
 
@@ -438,7 +438,7 @@ def test_both_registration_steps_tolerate_the_state_they_wanted(tmp_path: Path) 
     assert by_verb[("claude", "mcp", "add")].tolerate == ALREADY_EXISTS
 
 
-# COVERS: FR-9.8 | property
+# COVERS FR-9.8 | property
 def test_an_existing_install_is_found_from_the_filesystem_alone(tmp_path: Path) -> None:
     """What is already here is read off disk, never by asking the MCP client.
 
@@ -467,7 +467,7 @@ def test_an_existing_install_is_found_from_the_filesystem_alone(tmp_path: Path) 
     ]
 
 
-# COVERS: FR-9.12 | edge
+# COVERS FR-9.12 | edge
 def test_no_terminal_to_ask_on_is_taken_as_no(monkeypatch: pytest.MonkeyPatch) -> None:
     """A script that did not say yes has not said yes.
 
@@ -480,7 +480,7 @@ def test_no_terminal_to_ask_on_is_taken_as_no(monkeypatch: pytest.MonkeyPatch) -
     assert confirmed("Reinstall?", assume_yes=True) is True
 
 
-# COVERS: FR-9.2 | property
+# COVERS FR-9.2 | property
 def test_a_dry_run_shows_every_step_and_performs_none(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -498,7 +498,7 @@ def test_a_dry_run_shows_every_step_and_performs_none(
     assert f"touch {trace}" in capsys.readouterr().out
 
 
-# COVERS: FR-9.4 | positive
+# COVERS FR-9.4 | positive
 def test_every_path_an_install_changed_is_named(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -523,7 +523,7 @@ def test_every_path_an_install_changed_is_named(
     assert ".claude.json" in said
 
 
-# COVERS: FR-9.9 | negative
+# COVERS FR-9.9 | negative
 def test_an_environment_without_the_model_cannot_start(tmp_path: Path) -> None:
     """A socket that comes up says nothing about whether the service can run.
 
@@ -551,7 +551,7 @@ def test_an_environment_without_the_model_cannot_start(tmp_path: Path) -> None:
     assert spacy_model_present(paths) is True
 
 
-# COVERS: FR-9.14 | property
+# COVERS FR-9.14 | property
 def test_the_installer_imports_nothing_it_installs() -> None:
     """The first step of the plan is what puts skid on PATH.
 
@@ -578,7 +578,7 @@ def test_the_installer_imports_nothing_it_installs() -> None:
     )
 
 
-# COVERS: FR-9.14 | regression
+# COVERS FR-9.14 | regression
 def test_nothing_is_verified_against_a_binary_the_install_has_not_made_yet(
     tmp_path: Path,
 ) -> None:
@@ -611,7 +611,7 @@ def test_nothing_is_verified_against_a_binary_the_install_has_not_made_yet(
             assert installs_tool, "a unit is verified before skid is on PATH"
 
 
-# COVERS: FR-9.11 | positive
+# COVERS FR-9.11 | positive
 def test_a_registration_already_in_the_wanted_shape_is_left_alone(
     tmp_path: Path,
 ) -> None:
@@ -629,7 +629,7 @@ def test_a_registration_already_in_the_wanted_shape_is_left_alone(
     assert ("claude", "mcp") not in verbs
 
 
-# COVERS: FR-9.11 | negative
+# COVERS FR-9.11 | negative
 @pytest.mark.parametrize(
     ("name", "config"),
     [
@@ -660,7 +660,7 @@ def test_a_registration_that_is_not_the_wanted_one_is_rewritten(
     assert ("claude", "mcp", "add") in verbs, name
 
 
-# COVERS: FR-9.11 | edge
+# COVERS FR-9.11 | edge
 def test_a_first_install_registers_without_removing(tmp_path: Path) -> None:
     """There is nothing to remove on a machine that has never registered skid."""
     verbs = [argv[:3] for argv in _argvs(install_plan(_paths(tmp_path)))]
@@ -669,7 +669,7 @@ def test_a_first_install_registers_without_removing(tmp_path: Path) -> None:
     assert ("claude", "mcp", "add") in verbs
 
 
-# COVERS: FR-9.11 | property
+# COVERS FR-9.11 | property
 def test_reading_the_registration_never_runs_the_client(tmp_path: Path) -> None:
     """The decision is read from the file, never from `claude mcp get`.
 
@@ -695,7 +695,7 @@ def test_reading_the_registration_never_runs_the_client(tmp_path: Path) -> None:
     assert "claude" not in body
 
 
-# COVERS: FR-9.11 | edge
+# COVERS FR-9.11 | edge
 def test_an_unreadable_client_config_registers_rather_than_assuming(
     tmp_path: Path,
 ) -> None:
@@ -711,7 +711,7 @@ def test_an_unreadable_client_config_registers_rather_than_assuming(
     assert registration_is_current(unreadable) is False
 
 
-# COVERS: FR-9.4 | positive
+# COVERS FR-9.4 | positive
 def test_every_path_named_is_one_this_run_would_touch(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -733,7 +733,7 @@ def test_every_path_named_is_one_this_run_would_touch(
     assert str(Path.home() / ".claude.json") not in printed
 
 
-# COVERS: FR-9.2 | property
+# COVERS FR-9.2 | property
 def test_a_dry_run_runs_none_of_the_commands(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -748,7 +748,7 @@ def test_a_dry_run_runs_none_of_the_commands(
     assert "definitely-not-a-command" in capsys.readouterr().out
 
 
-# COVERS: FR-9.12 | positive
+# COVERS FR-9.12 | positive
 def test_the_reinstall_question_is_answered_by_yes(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -759,7 +759,7 @@ def test_the_reinstall_question_is_answered_by_yes(
     assert "/somewhere/skid.socket" in capsys.readouterr().out
 
 
-# COVERS: FR-9.5 | negative
+# COVERS FR-9.5 | negative
 def test_an_install_stops_before_writing_when_a_tool_is_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -782,7 +782,7 @@ def test_an_install_stops_before_writing_when_a_tool_is_missing(
     assert not (tmp_path / "systemd").exists()
 
 
-# COVERS: FR-9.12 | negative
+# COVERS FR-9.12 | negative
 def test_a_reinstall_with_no_terminal_to_ask_on_changes_nothing(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -807,7 +807,7 @@ def test_a_reinstall_with_no_terminal_to_ask_on_changes_nothing(
     assert not (paths.units / "skid.service").exists()
 
 
-# COVERS: FR-9.2 | positive
+# COVERS FR-9.2 | positive
 def test_a_dry_run_install_writes_nothing_and_says_so(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -823,7 +823,7 @@ def test_a_dry_run_install_writes_nothing_and_says_so(
     assert not paths.units.exists()
 
 
-# COVERS: FR-9.13 | positive
+# COVERS FR-9.13 | positive
 def test_a_dry_run_uninstall_writes_nothing_and_says_so(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -836,7 +836,7 @@ def test_a_dry_run_uninstall_writes_nothing_and_says_so(
     assert "uv tool uninstall" in printed
 
 
-# COVERS: FR-9.2 | positive
+# COVERS FR-9.2 | positive
 def test_the_options_this_installer_has(capsys: pytest.CaptureFixture[str]) -> None:
     """Three flags, and defaults that change nothing without being asked."""
     default = parse([])
@@ -847,7 +847,7 @@ def test_the_options_this_installer_has(capsys: pytest.CaptureFixture[str]) -> N
     assert parse(["--yes"]).yes is True
 
 
-# COVERS: FR-9.13 | property
+# COVERS FR-9.13 | property
 def test_main_routes_uninstall_away_from_install(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -870,13 +870,13 @@ def test_main_routes_uninstall_away_from_install(
     assert "Removing skid" not in installing
 
 
-# COVERS: FR-9.10 | positive
+# COVERS FR-9.10 | positive
 def test_a_step_that_exits_clean_has_succeeded() -> None:
     """Run for real against a command that does nothing and exits 0."""
     assert run(Step(says="does nothing", argv=("true",))) is True
 
 
-# COVERS: FR-9.10 | positive
+# COVERS FR-9.10 | positive
 def test_a_step_that_finds_the_state_it_wanted_has_succeeded(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -898,7 +898,7 @@ def test_a_step_that_finds_the_state_it_wanted_has_succeeded(
     assert "already so" in capsys.readouterr().out
 
 
-# COVERS: FR-9.10 | negative
+# COVERS FR-9.10 | negative
 def test_a_step_that_fails_for_another_reason_is_a_failure(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -913,7 +913,7 @@ def test_a_step_that_fails_for_another_reason_is_a_failure(
     assert "FAILED (3)" in capsys.readouterr().err
 
 
-# COVERS: FR-9.1 | negative
+# COVERS FR-9.1 | negative
 def test_performing_stops_at_the_first_step_that_fails(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -931,7 +931,7 @@ def test_performing_stops_at_the_first_step_that_fails(
     assert "reached" not in capsys.readouterr().out
 
 
-# COVERS: FR-9.1 | positive
+# COVERS FR-9.1 | positive
 def test_performing_runs_every_step_when_each_one_succeeds(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

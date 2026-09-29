@@ -33,7 +33,7 @@ def assigned(table: Assignments, name: str, now: float) -> VoiceChoice:
     return choice
 
 
-# COVERS: FR-10.1 | property
+# COVERS FR-10.1 | property
 def test_only_a_configured_voice_is_ever_assigned() -> None:
     """The pool is the config's list, so nothing kokoro offers leaks into it.
 
@@ -51,7 +51,7 @@ def test_only_a_configured_voice_is_ever_assigned() -> None:
     assert handed_out <= allowed
 
 
-# COVERS: FR-10.1 | edge
+# COVERS FR-10.1 | edge
 def test_an_empty_shortlist_assigns_nobody() -> None:
     """No `voices` in the config means the single `voice` setting still rules.
 
@@ -63,7 +63,7 @@ def test_an_empty_shortlist_assigns_nobody() -> None:
     assert assignments.voice_for("silo", now=1000.0, window=WINDOW) is None
 
 
-# COVERS: FR-10.2 | positive
+# COVERS FR-10.2 | positive
 def test_a_name_keeps_the_same_voice_across_submissions() -> None:
     """The point of the feature: silo sounds like silo the second time too."""
     assignments = Assignments(SHORTLIST)
@@ -74,7 +74,7 @@ def test_a_name_keeps_the_same_voice_across_submissions() -> None:
     assert first == second
 
 
-# COVERS: FR-10.2 | property
+# COVERS FR-10.2 | property
 def test_two_names_speaking_together_get_different_voices() -> None:
     """Distinctness is the whole purpose, so a shared voice while both are live
     would satisfy 'a name keeps one voice' and defeat the requirement."""
@@ -86,7 +86,7 @@ def test_two_names_speaking_together_get_different_voices() -> None:
     assert silo.voice != wrench.voice
 
 
-# COVERS: FR-10.3 | positive
+# COVERS FR-10.3 | positive
 def test_an_assignment_is_released_once_its_name_goes_quiet() -> None:
     """A session that ended stops holding a voice, which is what frees the pool.
 
@@ -105,7 +105,7 @@ def test_an_assignment_is_released_once_its_name_goes_quiet() -> None:
     )
 
 
-# COVERS: FR-10.3 | edge
+# COVERS FR-10.3 | edge
 def test_a_name_inside_the_window_keeps_its_voice() -> None:
     """The boundary is the window itself, so a name one second short still holds."""
     assignments = Assignments(SHORTLIST)
@@ -115,7 +115,7 @@ def test_a_name_inside_the_window_keeps_its_voice() -> None:
     assert len(assignments.held()) == 1
 
 
-# COVERS: FR-10.4 | positive
+# COVERS FR-10.4 | positive
 def test_speaking_refreshes_the_window() -> None:
     """A session talking steadily for longer than the window keeps its voice.
 
@@ -133,13 +133,13 @@ def test_speaking_refreshes_the_window() -> None:
     assert assignments.voice_for("silo", now=later, window=WINDOW) == held
 
 
-# COVERS: FR-10.5 | positive
+# COVERS FR-10.5 | positive
 def test_the_assignment_window_is_six_hours() -> None:
     """A value somebody chose, so it is stated where changing it breaks a test."""
     assert DEFAULT_WINDOW_SECONDS == 6 * 60 * 60
 
 
-# COVERS: FR-10.6 | positive
+# COVERS FR-10.6 | positive
 def test_an_exhausted_shortlist_reuses_the_quietest_voice() -> None:
     """Assignment never refuses, and the collision lands on the oldest voice.
 
@@ -157,7 +157,7 @@ def test_an_exhausted_shortlist_reuses_the_quietest_voice() -> None:
     assert overflow == quietest
 
 
-# COVERS: FR-10.6 | property
+# COVERS FR-10.6 | property
 def test_assignment_never_returns_nothing_while_the_list_has_entries() -> None:
     """A name always gets a voice while the shortlist has entries, never a refusal."""
     assignments = Assignments(SHORTLIST)
@@ -170,7 +170,7 @@ def test_assignment_never_returns_nothing_while_the_list_has_entries() -> None:
     assert all(choice is not None for choice in everybody)
 
 
-# COVERS: FR-10.7 | positive
+# COVERS FR-10.7 | positive
 def test_a_choice_carries_the_pipeline_it_declared() -> None:
     """Sara's timbre with English pronunciation.
 
@@ -185,7 +185,7 @@ def test_a_choice_carries_the_pipeline_it_declared() -> None:
     assert by_alias["Ashley"].pipeline is None
 
 
-# COVERS: FR-10.9 | property
+# COVERS FR-10.9 | property
 def test_a_fresh_table_holds_nothing() -> None:
     """A restart reassigns, which is what not persisting means from outside.
 

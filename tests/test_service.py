@@ -161,7 +161,7 @@ def service_for_fixture(
         service.stop()
 
 
-# COVERS: FR-4.8 | property
+# COVERS FR-4.8 | property
 def test_a_submission_survives_the_service_going_away(
     tmp_path: Path, generator: Generator
 ) -> None:
@@ -195,7 +195,7 @@ def test_a_submission_survives_the_service_going_away(
     assert [text for _, text in second.spoken] == ["survives"]
 
 
-# COVERS: FR-4.8 | property
+# COVERS FR-4.8 | property
 def test_an_accepted_submission_is_on_disk_before_submit_returns(
     tmp_path: Path, generator: Generator
 ) -> None:
@@ -215,7 +215,7 @@ def test_an_accepted_submission_is_on_disk_before_submit_returns(
     assert service.status()["pending"] == 1
 
 
-# COVERS: FR-4.5 | positive
+# COVERS FR-4.5 | positive
 def test_submitting_returns_before_the_clip_is_heard(
     service_for: Callable[..., Service],
 ) -> None:
@@ -228,7 +228,7 @@ def test_submitting_returns_before_the_clip_is_heard(
     assert time.monotonic() - started < 0.5
 
 
-# COVERS: FR-4.3 | positive
+# COVERS FR-4.3 | positive
 def test_an_array_is_spoken_in_order(service_for: Callable[..., Service]) -> None:
     """Generation may finish out of order; playback may not."""
     service = service_for()
@@ -239,7 +239,7 @@ def test_an_array_is_spoken_in_order(service_for: Callable[..., Service]) -> Non
     assert [text for _, text in service.spoken] == ["one", "two", "three"]
 
 
-# COVERS: FR-3.5 | regression
+# COVERS FR-3.5 | regression
 def test_a_submission_queued_behind_another_is_not_greeted(
     service_for: Callable[..., Service],
 ) -> None:
@@ -258,7 +258,7 @@ def test_a_submission_queued_behind_another_is_not_greeted(
     assert service.greeted == ["silo"]
 
 
-# COVERS: FR-3.2 | positive
+# COVERS FR-3.2 | positive
 def test_each_new_name_is_announced_in_its_own_right(
     service_for: Callable[..., Service],
 ) -> None:
@@ -290,7 +290,7 @@ def test_each_new_name_is_announced_in_its_own_right(
     assert service.greeted == ["silo", "wrench"]
 
 
-# COVERS: FR-4.4 | property
+# COVERS FR-4.4 | property
 def test_two_submissions_do_not_interleave(service_for: Callable[..., Service]) -> None:
     """A submission is spoken to completion before the next one starts."""
     service = service_for()
@@ -302,7 +302,7 @@ def test_two_submissions_do_not_interleave(service_for: Callable[..., Service]) 
     assert [name for name, _ in service.spoken] == ["silo", "silo", "wrench"]
 
 
-# COVERS: FR-4.7 | positive
+# COVERS FR-4.7 | positive
 def test_a_failure_reaches_the_log_and_status(
     service_for: Callable[..., Service], tmp_path: Path
 ) -> None:
@@ -316,7 +316,7 @@ def test_a_failure_reaches_the_log_and_status(
     assert "player exited 1" in (tmp_path / "log").read_text(encoding="utf-8")
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_the_directories_it_creates_are_owner_only(
     tmp_path: Path, generator: Generator
 ) -> None:
@@ -347,7 +347,7 @@ def test_the_directories_it_creates_are_owner_only(
     assert state.stat().st_mode & 0o777 == 0o700
 
 
-# COVERS: FR-4.2 | property
+# COVERS FR-4.2 | property
 def test_the_rest_are_prepared_while_one_is_being_spoken(
     service_for: Callable[..., Service], tmp_path: Path
 ) -> None:
@@ -386,7 +386,7 @@ def test_the_rest_are_prepared_while_one_is_being_spoken(
     assert not spoken_while_held
 
 
-# COVERS: FR-7.3 | property
+# COVERS FR-7.3 | property
 def test_generation_runs_ahead_of_the_speaker_without_a_bound(
     service_for: Callable[..., Service], tmp_path: Path
 ) -> None:
@@ -418,7 +418,7 @@ def test_generation_runs_ahead_of_the_speaker_without_a_bound(
     assert not spoken_while_held
 
 
-# COVERS: FR-6.3 | property
+# COVERS FR-6.3 | property
 @pytest.mark.usefixtures("restored_voice")
 def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> None:
     """Setting the voice either way changes what the next clip is spoken in.
@@ -469,7 +469,7 @@ def test_both_routes_reach_one_voice(tmp_path: Path, generator: Generator) -> No
     assert after_file == ("af_sky", "af_sky")
 
 
-# COVERS: FR-8.3 | property
+# COVERS FR-8.3 | property
 def test_a_substitution_does_not_change_what_a_caller_is_told(
     service_for: Callable[..., Service],
 ) -> None:
@@ -493,7 +493,7 @@ def test_a_substitution_does_not_change_what_a_caller_is_told(
     assert service.spoken == [("silo", submitted)]
 
 
-# COVERS: FR-8.3 | property
+# COVERS FR-8.3 | property
 def test_a_substitution_does_not_reach_the_log(
     tmp_path: Path, generator: Generator
 ) -> None:
@@ -541,7 +541,7 @@ def test_a_substitution_does_not_reach_the_log(
     assert "coke oh roh" not in log
 
 
-# COVERS: FR-5.3 | property
+# COVERS FR-5.3 | property
 def test_an_idle_service_is_progressing(service_for: Callable[..., Service]) -> None:
     """Parked on an empty queue is health, and it is the state skid is usually in.
 
@@ -554,7 +554,7 @@ def test_an_idle_service_is_progressing(service_for: Callable[..., Service]) -> 
     assert service.is_progressing(time.monotonic())
 
 
-# COVERS: FR-5.3 | property
+# COVERS FR-5.3 | property
 def test_a_long_clip_on_the_speaker_is_progressing_not_stuck(
     service_for: Callable[..., Service], tmp_path: Path
 ) -> None:
@@ -578,7 +578,7 @@ def test_a_long_clip_on_the_speaker_is_progressing_not_stuck(
     assert while_playing
 
 
-# COVERS: FR-5.3 | negative
+# COVERS FR-5.3 | negative
 def test_a_stalled_loop_stops_looking_like_progress(
     tmp_path: Path, generator: Generator
 ) -> None:
@@ -603,7 +603,7 @@ def test_a_stalled_loop_stops_looking_like_progress(
     assert not service.is_progressing(time.monotonic() + PROGRESS_GRACE + 1)
 
 
-# COVERS: FR-10.2 | property
+# COVERS FR-10.2 | property
 @pytest.mark.usefixtures("restored_voice")
 def test_two_names_are_spoken_in_different_voices(
     service_for: Callable[..., Service],

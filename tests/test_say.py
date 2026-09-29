@@ -53,7 +53,7 @@ def _queued(tmp_path: Path) -> list[tuple[str, list[str]]]:
     return found
 
 
-# COVERS: FR-4.1 | positive
+# COVERS FR-4.1 | positive
 def test_the_messages_arrive_as_one_array_in_order(
     backend: Backend, tmp_path: Path
 ) -> None:
@@ -69,7 +69,7 @@ def test_the_messages_arrive_as_one_array_in_order(
     assert _queued(tmp_path) == [("silo", ["first", "second"])]
 
 
-# COVERS: FR-3.1 | positive
+# COVERS FR-3.1 | positive
 def test_the_submission_carries_the_name_from_the_command_line(
     backend: Backend, tmp_path: Path
 ) -> None:
@@ -79,7 +79,7 @@ def test_the_submission_carries_the_name_from_the_command_line(
     assert _queued(tmp_path) == [("toolbox", ["the gate is green"])]
 
 
-# COVERS: FR-3.1 | negative
+# COVERS FR-3.1 | negative
 def test_no_arguments_at_all_is_refused_and_nothing_is_sent(
     backend: Backend, service: Service
 ) -> None:
@@ -93,7 +93,7 @@ def test_no_arguments_at_all_is_refused_and_nothing_is_sent(
     assert service.status()["pending"] == 0
 
 
-# COVERS: FR-4.1 | negative
+# COVERS FR-4.1 | negative
 def test_a_name_with_no_messages_is_refused_and_nothing_is_sent(
     backend: Backend, service: Service
 ) -> None:
@@ -109,7 +109,7 @@ def test_a_name_with_no_messages_is_refused_and_nothing_is_sent(
     assert service.status()["pending"] == 0
 
 
-# COVERS: FR-4.7 | positive
+# COVERS FR-4.7 | positive
 def test_status_reports_the_queue_a_caller_cannot_log(backend: Backend) -> None:
     """`speak` returned at queue time, so `--status` is how a person looks.
 
@@ -128,7 +128,7 @@ def test_status_reports_the_queue_a_caller_cannot_log(backend: Backend) -> None:
     assert reported["assigned"] == {}
 
 
-# COVERS: FR-4.7 | edge
+# COVERS FR-4.7 | edge
 def test_status_is_answered_even_with_a_stray_positional(
     backend: Backend, service: Service
 ) -> None:
@@ -146,7 +146,7 @@ def test_status_is_answered_even_with_a_stray_positional(
     assert service.status()["pending"] == 0
 
 
-# COVERS: FR-6.3 | positive
+# COVERS FR-6.3 | positive
 def test_setting_the_voice_reaches_the_setting_the_service_reads(
     backend: Backend, config_path: Path
 ) -> None:
@@ -161,7 +161,7 @@ def test_setting_the_voice_reaches_the_setting_the_service_reads(
     assert load_config(config_path).voice == "af_bella"
 
 
-# COVERS: FR-6.5 | negative
+# COVERS FR-6.5 | negative
 def test_a_voice_that_would_silence_skid_is_refused_and_not_written(
     backend: Backend, config_path: Path
 ) -> None:
@@ -172,7 +172,7 @@ def test_a_voice_that_would_silence_skid_is_refused_and_not_written(
     assert not config_path.exists()
 
 
-# COVERS: FR-5.3 | negative
+# COVERS FR-5.3 | negative
 def test_an_unreachable_socket_exits_one_and_names_where_it_looked(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -193,7 +193,7 @@ def test_an_unreachable_socket_exits_one_and_names_where_it_looked(
     assert str(tmp_path / "skid" / "skid.sock") in capsys.readouterr().err
 
 
-# COVERS: FR-5.3 | positive
+# COVERS FR-5.3 | positive
 def test_the_command_works_end_to_end_over_a_real_socket(
     service: Service,
     config_path: Path,

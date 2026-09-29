@@ -55,7 +55,7 @@ stated as an observable property: what is true of a run, not how it is arranged.
 Every test names the requirement it discharges, in a comment directly above
 it:
 
-    # COVERS: FR-4.4 | property
+    # COVERS FR-4.4 | property
 
 The kinds are `positive`, `negative`, `edge`, `property` and `regression`. A
 test citing nothing, or citing a requirement no file defines, fails the
@@ -63,7 +63,7 @@ traceability check. So does a requirement no test cites.
 
 An id is never reused. Retiring a requirement means recording it under
 `## Retired` in `docs/REQUIREMENTS/README.md` with what replaced it, and
-repointing or removing every `COVERS:` mark that named it, in the same change.
+repointing or removing every `COVERS` mark that named it, in the same change.
 
 Tests live in `tests/`, an external test package, and are held to the same
 length, duplication and complexity bar as the source. Name a fixture separately

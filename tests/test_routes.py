@@ -29,7 +29,7 @@ def _result(response: Any) -> Any:
     return response.get_json()[RESULT]
 
 
-# COVERS: FR-5.2 | property
+# COVERS FR-5.2 | property
 def test_every_declared_tool_has_a_route_and_nothing_else_does(
     client: FlaskClient,
 ) -> None:
@@ -54,7 +54,7 @@ def test_every_declared_tool_has_a_route_and_nothing_else_does(
     assert served == declared
 
 
-# COVERS: FR-4.5 | positive
+# COVERS FR-4.5 | positive
 def test_speak_returns_when_the_work_is_queued(client: FlaskClient) -> None:
     """The caller is told yes at queue time, which is what FR-4.5 requires."""
     response = client.post(ROUTES["speak"][1], json={"name": "silo", "messages": ["a"]})
@@ -62,7 +62,7 @@ def test_speak_returns_when_the_work_is_queued(client: FlaskClient) -> None:
     assert _result(response) == "queued 1 message(s) for silo"
 
 
-# COVERS: FR-4.10 | negative
+# COVERS FR-4.10 | negative
 def test_a_message_longer_than_a_paragraph_is_refused(
     client: FlaskClient, service: Service
 ) -> None:
@@ -83,7 +83,7 @@ def test_a_message_longer_than_a_paragraph_is_refused(
     assert service.status()["pending"] == 0
 
 
-# COVERS: FR-4.10 | edge
+# COVERS FR-4.10 | edge
 def test_a_message_at_the_limit_is_accepted(client: FlaskClient) -> None:
     """The bound is inclusive, so the limit itself is a legal message.
 
@@ -99,7 +99,7 @@ def test_a_message_at_the_limit_is_accepted(client: FlaskClient) -> None:
     assert _result(response) == "queued 1 message(s) for silo"
 
 
-# COVERS: FR-6.1 | positive
+# COVERS FR-6.1 | positive
 def test_the_voice_is_set_over_http(client: FlaskClient, config_path: Path) -> None:
     """A caller changes the voice without a file being edited by hand."""
     client.post(ROUTES["set_voice"][1], json={"voice": "af_bella"})
@@ -107,7 +107,7 @@ def test_the_voice_is_set_over_http(client: FlaskClient, config_path: Path) -> N
     assert load_config(config_path).voice == "af_bella"
 
 
-# COVERS: FR-6.5 | negative
+# COVERS FR-6.5 | negative
 def test_an_unknown_voice_is_refused_and_nothing_is_written(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -125,7 +125,7 @@ def test_an_unknown_voice_is_refused_and_nothing_is_written(
     assert not config_path.exists()
 
 
-# COVERS: FR-6.5 | negative
+# COVERS FR-6.5 | negative
 def test_a_voice_this_machine_cannot_speak_is_refused(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -152,7 +152,7 @@ def test_a_voice_this_machine_cannot_speak_is_refused(
     assert load_config(config_path).voice == "af_bella"
 
 
-# COVERS: FR-10.7 | property
+# COVERS FR-10.7 | property
 def test_a_voice_is_spoken_through_the_pipeline_its_entry_declares(
     config_path: Path,
 ) -> None:
@@ -178,7 +178,7 @@ def test_a_voice_is_spoken_through_the_pipeline_its_entry_declares(
     assert pipeline_for(config, "af_bella") is None
 
 
-# COVERS: FR-8.1 | positive
+# COVERS FR-8.1 | positive
 def test_a_substitution_is_declared_over_http(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -192,7 +192,7 @@ def test_a_substitution_is_declared_over_http(
     assert [(e.pattern, e.replacement) for e in entries] == [("kokoro", "koh koh roh")]
 
 
-# COVERS: FR-7.7 | negative
+# COVERS FR-7.7 | negative
 def test_a_regex_that_will_not_compile_is_refused(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -206,7 +206,7 @@ def test_a_regex_that_will_not_compile_is_refused(
     assert not config_path.exists()
 
 
-# COVERS: FR-8.4 | positive
+# COVERS FR-8.4 | positive
 def test_entries_keep_the_order_they_were_added(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -224,7 +224,7 @@ def test_entries_keep_the_order_they_were_added(
     assert patterns == ["zebra", "aardvark"]
 
 
-# COVERS: FR-7.8 | positive
+# COVERS FR-7.8 | positive
 def test_substitutions_persist_to_the_config(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -237,7 +237,7 @@ def test_substitutions_persist_to_the_config(
     assert "em see pee" in config_path.read_text(encoding="utf-8")
 
 
-# COVERS: FR-7.7 | positive
+# COVERS FR-7.7 | positive
 def test_a_literal_and_a_regex_of_the_same_pattern_are_different_entries(
     client: FlaskClient, config_path: Path
 ) -> None:
@@ -259,7 +259,7 @@ def test_a_literal_and_a_regex_of_the_same_pattern_are_different_entries(
     assert [(e.kind, e.replacement) for e in remaining] == [("literal", "literal")]
 
 
-# COVERS: FR-7.9 | property
+# COVERS FR-7.9 | property
 def test_the_substitution_set_is_global(client: FlaskClient) -> None:
     """No name scopes the set, so a correction any caller makes helps every caller."""
     client.post(
@@ -271,7 +271,7 @@ def test_the_substitution_set_is_global(client: FlaskClient) -> None:
     assert listed == [{"kind": "literal", "pattern": "silo", "replacement": "sigh low"}]
 
 
-# COVERS: FR-4.7 | positive
+# COVERS FR-4.7 | positive
 def test_status_reports_what_a_caller_cannot_log(client: FlaskClient) -> None:
     """speak returned at queue time, so status is how a caller learns anything."""
     reported = _result(client.get(ROUTES["status"][1]))
@@ -279,7 +279,7 @@ def test_status_reports_what_a_caller_cannot_log(client: FlaskClient) -> None:
     assert set(reported) >= {"pending", "recent_failures", "voice"}
 
 
-# COVERS: FR-5.2 | negative
+# COVERS FR-5.2 | negative
 def test_a_call_that_does_not_match_its_schema_is_refused_by_field(
     client: FlaskClient, service: Service
 ) -> None:
@@ -304,7 +304,7 @@ def test_a_call_that_does_not_match_its_schema_is_refused_by_field(
     assert service.status()["pending"] == 0
 
 
-# COVERS: FR-5.2 | property
+# COVERS FR-5.2 | property
 def test_the_published_schema_is_the_enforced_one(client: FlaskClient) -> None:
     """What the contract declares is what a call is held to, not a copy of it.
 
@@ -320,7 +320,7 @@ def test_the_published_schema_is_the_enforced_one(client: FlaskClient) -> None:
     assert "voice" in refused.get_json()[ERROR]
 
 
-# COVERS: FR-6.4 | edge
+# COVERS FR-6.4 | edge
 def test_a_missing_config_is_not_an_error(client: FlaskClient) -> None:
     """Reading the set before anything has written one answers empty, not 500."""
     assert _result(client.get(ROUTES["list_substitutions"][1])) == []

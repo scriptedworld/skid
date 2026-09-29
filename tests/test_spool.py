@@ -24,7 +24,7 @@ def _spool(tmp_path: Path) -> Spool:
     return Spool(tmp_path / "spool", ttl_seconds=FIVE_MINUTES)
 
 
-# COVERS: FR-4.8 | positive
+# COVERS FR-4.8 | positive
 def test_a_submission_is_on_disk_before_put_returns(tmp_path: Path) -> None:
     """The durable write is the promise FR-4.5 makes, so it happens first."""
     spool = _spool(tmp_path)
@@ -34,7 +34,7 @@ def test_a_submission_is_on_disk_before_put_returns(tmp_path: Path) -> None:
     assert spool.pending() == 1
 
 
-# COVERS: FR-4.8 | property
+# COVERS FR-4.8 | property
 def test_a_spool_is_read_back_after_a_restart(tmp_path: Path) -> None:
     """A fresh Spool over the same directory finds what the old one accepted.
 
@@ -54,7 +54,7 @@ def test_a_spool_is_read_back_after_a_restart(tmp_path: Path) -> None:
     assert taken.submission.messages == ["one", "two"]
 
 
-# COVERS: FR-4.3 | property
+# COVERS FR-4.3 | property
 def test_entries_are_taken_in_submission_order_not_file_time(tmp_path: Path) -> None:
     """Order is the sequence in the name, because creation time is generation order.
 
@@ -74,7 +74,7 @@ def test_entries_are_taken_in_submission_order_not_file_time(tmp_path: Path) -> 
     assert order == [f"n{index}" for index in range(12)]
 
 
-# COVERS: FR-4.8 | edge
+# COVERS FR-4.8 | edge
 def test_a_half_written_entry_is_never_taken(tmp_path: Path) -> None:
     """A file at its final name is a whole file, because writing renames into place.
 
@@ -93,7 +93,7 @@ def test_a_half_written_entry_is_never_taken(tmp_path: Path) -> None:
     assert spool.pending() == 1
 
 
-# COVERS: FR-4.8 | property
+# COVERS FR-4.8 | property
 def test_a_submission_interrupted_mid_speech_is_dropped_not_replayed(
     tmp_path: Path,
 ) -> None:
@@ -114,7 +114,7 @@ def test_a_submission_interrupted_mid_speech_is_dropped_not_replayed(
     assert restarted.pending() == 0
 
 
-# COVERS: FR-4.9 | positive
+# COVERS FR-4.9 | positive
 def test_a_submission_older_than_the_window_is_discarded(tmp_path: Path) -> None:
     """Five minutes on, a summary is noise read at somebody who missed it."""
     spool = _spool(tmp_path)
@@ -123,7 +123,7 @@ def test_a_submission_older_than_the_window_is_discarded(tmp_path: Path) -> None
     assert spool.take(now=1000.0 + FIVE_MINUTES + 1) is None
 
 
-# COVERS: FR-4.9 | edge
+# COVERS FR-4.9 | edge
 def test_the_expiry_boundary_is_the_window_itself(tmp_path: Path) -> None:
     """Exactly at the window it still speaks; past it, it does not.
 
@@ -136,7 +136,7 @@ def test_the_expiry_boundary_is_the_window_itself(tmp_path: Path) -> None:
     assert spool.take(now=1000.0 + FIVE_MINUTES) is not None
 
 
-# COVERS: FR-4.9 | property
+# COVERS FR-4.9 | property
 def test_expiry_does_not_block_what_is_behind_it(tmp_path: Path) -> None:
     """A stale head is discarded and the queue carries on, rather than stopping."""
     spool = _spool(tmp_path)
@@ -149,7 +149,7 @@ def test_expiry_does_not_block_what_is_behind_it(tmp_path: Path) -> None:
     assert entry.submission.name == "new"
 
 
-# COVERS: FR-4.9 | property
+# COVERS FR-4.9 | property
 def test_what_expired_is_recorded_rather_than_vanishing(tmp_path: Path) -> None:
     """FR-4.5 told the caller yes, so a submission not spoken owes an explanation."""
     spool = _spool(tmp_path)
@@ -160,7 +160,7 @@ def test_what_expired_is_recorded_rather_than_vanishing(tmp_path: Path) -> None:
     assert [entry.submission.name for entry in discarded] == ["silo"]
 
 
-# COVERS: FR-7.2 | property
+# COVERS FR-7.2 | property
 def test_nothing_is_rejected_at_the_door(tmp_path: Path) -> None:
     """Depth is unbounded; only age is capped. FR-7.2 stands as written."""
     spool = _spool(tmp_path)
@@ -171,7 +171,7 @@ def test_nothing_is_rejected_at_the_door(tmp_path: Path) -> None:
     assert spool.pending() == 200
 
 
-# COVERS: FR-4.8 | edge
+# COVERS FR-4.8 | edge
 def test_a_sequence_continues_across_a_restart(tmp_path: Path) -> None:
     """A fresh spool must not reuse a name still on disk, or it overwrites work."""
     first = _spool(tmp_path)
@@ -183,7 +183,7 @@ def test_a_sequence_continues_across_a_restart(tmp_path: Path) -> None:
     assert second.pending() == 2
 
 
-# COVERS: FR-4.8 | negative
+# COVERS FR-4.8 | negative
 def test_an_entry_that_is_not_readable_is_discarded_not_retried(
     tmp_path: Path,
 ) -> None:
@@ -202,7 +202,7 @@ def test_an_entry_that_is_not_readable_is_discarded_not_retried(
     assert spool.pending() == 0
 
 
-# COVERS: FR-4.9 | property
+# COVERS FR-4.9 | property
 def test_downtime_counts_toward_the_window(tmp_path: Path) -> None:
     """A service away ten minutes must not come back and read a ten minute backlog.
 
@@ -221,7 +221,7 @@ def test_downtime_counts_toward_the_window(tmp_path: Path) -> None:
     assert after.pending() == 0
 
 
-# COVERS: FR-4.8 | positive
+# COVERS FR-4.8 | positive
 def test_recovery_keeps_what_is_still_current(tmp_path: Path) -> None:
     """A short restart loses nothing, which is the whole point of the spool."""
     before = _spool(tmp_path)
@@ -234,7 +234,7 @@ def test_recovery_keeps_what_is_still_current(tmp_path: Path) -> None:
     assert after.pending() == 1
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_the_directory_is_owner_only(tmp_path: Path) -> None:
     """It holds what agents said, which is not for other local users to read."""
     spool = _spool(tmp_path)
@@ -242,7 +242,7 @@ def test_the_directory_is_owner_only(tmp_path: Path) -> None:
     assert spool.directory.stat().st_mode & 0o777 == 0o700
 
 
-# COVERS: FR-5.3 | edge
+# COVERS FR-5.3 | edge
 def test_taking_from_an_empty_spool_is_not_an_error(tmp_path: Path) -> None:
     """The common state, and the serve loop asks on every wakeup.
 
@@ -255,7 +255,7 @@ def test_taking_from_an_empty_spool_is_not_an_error(tmp_path: Path) -> None:
     assert _spool(tmp_path).take(now=1000.0) is None
 
 
-# COVERS: FR-4.1 | negative
+# COVERS FR-4.1 | negative
 @pytest.mark.parametrize("messages", [[], ["  "]])
 def test_a_spool_refuses_what_the_queue_refuses(
     tmp_path: Path, messages: list[str]

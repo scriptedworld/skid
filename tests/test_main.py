@@ -40,13 +40,13 @@ from skid.main import (
 from skid.service import Service, Workspace
 
 
-# COVERS: FR-5.4 | negative
+# COVERS FR-5.4 | negative
 def test_a_path_with_nothing_there_is_free(tmp_path: Path) -> None:
     """No file means no owner, which is the ordinary first start."""
     assert someone_is_listening(tmp_path / "skid.sock") is False
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_a_socket_someone_is_listening_on_is_not_free(tmp_path: Path) -> None:
     """A live server owns its path, and skid must not bind over it.
 
@@ -61,7 +61,7 @@ def test_a_socket_someone_is_listening_on_is_not_free(tmp_path: Path) -> None:
         assert someone_is_listening(path) is True
 
 
-# COVERS: FR-5.4 | edge
+# COVERS FR-5.4 | edge
 def test_a_socket_file_nobody_is_listening_on_is_stale(tmp_path: Path) -> None:
     """A leftover file from a process that died is safe to replace.
 
@@ -79,7 +79,7 @@ def test_a_socket_file_nobody_is_listening_on_is_stale(tmp_path: Path) -> None:
     assert someone_is_listening(path) is False
 
 
-# COVERS: FR-5.4 | edge
+# COVERS FR-5.4 | edge
 def test_an_ordinary_file_at_the_path_is_not_a_listener(tmp_path: Path) -> None:
     """Whatever this is, it is not a server, and connecting is how we know."""
     path = tmp_path / "skid.sock"
@@ -88,7 +88,7 @@ def test_an_ordinary_file_at_the_path_is_not_a_listener(tmp_path: Path) -> None:
     assert someone_is_listening(path) is False
 
 
-# COVERS: FR-5.4 | positive
+# COVERS FR-5.4 | positive
 def test_the_runtime_directory_is_owner_only_however_it_was_left(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -111,7 +111,7 @@ def test_the_runtime_directory_is_owner_only_however_it_was_left(
     assert stat.S_IMODE(made.stat().st_mode) == 0o700
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_the_runtime_directory_follows_the_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -128,7 +128,7 @@ def test_the_runtime_directory_follows_the_environment(
     assert runtime_dir().name == "skid"
 
 
-# COVERS: FR-5.4 | property
+# COVERS FR-5.4 | property
 def test_the_state_directory_follows_the_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -140,7 +140,7 @@ def test_the_state_directory_follows_the_environment(
     assert state_dir() == Path.home() / ".local" / "state" / "skid"
 
 
-# COVERS: FR-5.1 | property
+# COVERS FR-5.1 | property
 @pytest.mark.parametrize(
     ("name", "usec", "pid", "expected"),
     [
@@ -175,7 +175,7 @@ def test_the_watchdog_interval_is_half_what_the_unit_asked_for(
     assert watchdog_interval() == expected, name
 
 
-# COVERS: FR-5.1 | positive
+# COVERS FR-5.1 | positive
 def test_readiness_reaches_the_socket_systemd_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -196,7 +196,7 @@ def test_readiness_reaches_the_socket_systemd_named(
         assert listener.recv(64) == b"READY=1"
 
 
-# COVERS: FR-5.1 | negative
+# COVERS FR-5.1 | negative
 def test_nothing_is_sent_and_nothing_raised_when_systemd_is_absent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -206,7 +206,7 @@ def test_nothing_is_sent_and_nothing_raised_when_systemd_is_absent(
     notify(b"READY=1")
 
 
-# COVERS: FR-5.4 | positive
+# COVERS FR-5.4 | positive
 def test_a_socket_bound_by_hand_is_owner_only(
     tmp_path: Path,
 ) -> None:
@@ -225,7 +225,7 @@ def test_a_socket_bound_by_hand_is_owner_only(
         sock.close()
 
 
-# COVERS: FR-5.4 | edge
+# COVERS FR-5.4 | edge
 def test_binding_replaces_a_stale_socket_file(tmp_path: Path) -> None:
     """A leftover file is unlinked, which is safe once nobody is listening on it."""
     path = tmp_path / "skid.sock"
@@ -238,7 +238,7 @@ def test_binding_replaces_a_stale_socket_file(tmp_path: Path) -> None:
         sock.close()
 
 
-# COVERS: FR-9.7 | property
+# COVERS FR-9.7 | property
 def test_the_inherited_socket_is_taken_as_an_object_not_rebound(
     tmp_path: Path,
 ) -> None:
@@ -278,7 +278,7 @@ def _fd_open(fd: int) -> bool:
     return True
 
 
-# COVERS: FR-5.1 | edge
+# COVERS FR-5.1 | edge
 def test_readiness_reaches_an_abstract_socket(monkeypatch: pytest.MonkeyPatch) -> None:
     """systemd may name an abstract socket, which starts `@` and binds at NUL.
 
@@ -298,7 +298,7 @@ def test_readiness_reaches_an_abstract_socket(monkeypatch: pytest.MonkeyPatch) -
         assert listener.recv(64) == b"READY=1"
 
 
-# COVERS: FR-5.1 | positive
+# COVERS FR-5.1 | positive
 def test_building_warms_the_model_and_returns_a_servable_app(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -326,7 +326,7 @@ def test_building_warms_the_model_and_returns_a_servable_app(
         service.stop()
 
 
-# COVERS: FR-5.1 | property
+# COVERS FR-5.1 | property
 def test_the_watchdog_pings_only_while_the_service_is_getting_somewhere(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -28,7 +28,7 @@ def _recording_player(script: Path, log: Path) -> str:
     return f"{script} {{file}}"
 
 
-# COVERS: FR-1.3 | positive
+# COVERS FR-1.3 | positive
 def test_the_player_runs_as_a_subprocess(tmp_path: Path) -> None:
     """A file is played by running a command, not by opening a device."""
     seen = tmp_path / "seen"
@@ -43,7 +43,7 @@ def test_the_player_runs_as_a_subprocess(tmp_path: Path) -> None:
     assert seen.read_text(encoding="utf-8").strip() == str(clip)
 
 
-# COVERS: FR-1.4 | negative
+# COVERS FR-1.4 | negative
 def test_no_device_is_named_on_the_command(tmp_path: Path) -> None:
     """skid does not select an output device, so it passes none.
 
@@ -62,7 +62,7 @@ def test_no_device_is_named_on_the_command(tmp_path: Path) -> None:
     assert seen.read_text(encoding="utf-8").split() == [str(clip)]
 
 
-# COVERS: FR-2.1 | property
+# COVERS FR-2.1 | property
 def test_two_clips_never_overlap(tmp_path: Path) -> None:
     """At most one clip is audible, tested as no two playbacks overlapping.
 
@@ -94,7 +94,7 @@ def test_two_clips_never_overlap(tmp_path: Path) -> None:
     assert kinds == ["start", "end", "start", "end", "start", "end"]
 
 
-# COVERS: FR-1.9 | edge
+# COVERS FR-1.9 | edge
 def test_a_player_that_never_exits_is_killed(tmp_path: Path) -> None:
     """A stuck player must not hold the lock for ever and silence the machine."""
     clip = tmp_path / "clip.wav"
@@ -108,7 +108,7 @@ def test_a_player_that_never_exits_is_killed(tmp_path: Path) -> None:
     assert time.monotonic() - started < 30
 
 
-# COVERS: FR-4.6 | negative
+# COVERS FR-4.6 | negative
 def test_one_failing_clip_does_not_stop_the_rest(tmp_path: Path) -> None:
     """A clip that cannot be played is reported and skipped, and the queue runs on."""
     seen = tmp_path / "seen"
@@ -129,7 +129,7 @@ def test_one_failing_clip_does_not_stop_the_rest(tmp_path: Path) -> None:
     assert seen.read_text(encoding="utf-8").count(str(good)) == 2
 
 
-# COVERS: FR-1.8 | negative
+# COVERS FR-1.8 | negative
 def test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it(
     tmp_path: Path,
 ) -> None:

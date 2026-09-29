@@ -28,7 +28,7 @@ def _write(path: Path, text: str) -> Path:
     return path
 
 
-# COVERS: FR-6.4 | edge
+# COVERS FR-6.4 | edge
 def test_a_missing_config_uses_defaults(tmp_path: Path) -> None:
     """A fresh install speaks without anyone writing a config first."""
     config = load_config(tmp_path / "config.yaml")
@@ -37,7 +37,7 @@ def test_a_missing_config_uses_defaults(tmp_path: Path) -> None:
     assert config.player
 
 
-# COVERS: FR-7.5 | positive
+# COVERS FR-7.5 | positive
 def test_paplay_is_the_default_player(tmp_path: Path) -> None:
     """paplay follows the default sink, which is what FR-1.4 requires."""
     config = load_config(tmp_path / "config.yaml")
@@ -45,7 +45,7 @@ def test_paplay_is_the_default_player(tmp_path: Path) -> None:
     assert config.player == "paplay {file}"
 
 
-# COVERS: FR-7.4 | positive
+# COVERS FR-7.4 | positive
 def test_the_window_defaults_to_thirty_seconds(tmp_path: Path) -> None:
     """Thirty seconds is short by choice: a name that pauses re-announces."""
     config = load_config(tmp_path / "config.yaml")
@@ -53,7 +53,7 @@ def test_the_window_defaults_to_thirty_seconds(tmp_path: Path) -> None:
     assert config.greeting_window_seconds == 30
 
 
-# COVERS: FR-6.2 | positive
+# COVERS FR-6.2 | positive
 def test_the_voice_is_read_from_the_config(tmp_path: Path) -> None:
     """A person sets the voice by editing the file, with no agent involved.
 
@@ -65,7 +65,7 @@ def test_the_voice_is_read_from_the_config(tmp_path: Path) -> None:
     assert load_config(path).voice == "af_bella"
 
 
-# COVERS: FR-3.4 | positive
+# COVERS FR-3.4 | positive
 def test_the_window_is_read_from_the_config(tmp_path: Path) -> None:
     """The window is configurable, and 30 seconds is only its default."""
     path = _write(tmp_path / "config.yaml", "greeting_window_seconds: 5\n")
@@ -73,7 +73,7 @@ def test_the_window_is_read_from_the_config(tmp_path: Path) -> None:
     assert load_config(path).greeting_window_seconds == 5
 
 
-# COVERS: FR-6.4 | positive
+# COVERS FR-6.4 | positive
 def test_the_first_write_creates_the_file(tmp_path: Path) -> None:
     """The file is created by the first write rather than required up front."""
     path = tmp_path / "nested" / "config.yaml"
@@ -84,7 +84,7 @@ def test_the_first_write_creates_the_file(tmp_path: Path) -> None:
     assert load_config(path).voice == "af_bella"
 
 
-# COVERS: FR-7.1 | property
+# COVERS FR-7.1 | property
 def test_a_written_config_reads_back_as_what_was_written(tmp_path: Path) -> None:
     """The record is only a record if skid can read its own writing.
 
@@ -99,7 +99,7 @@ def test_a_written_config_reads_back_as_what_was_written(tmp_path: Path) -> None
     assert load_config(path) == written
 
 
-# COVERS: FR-8.4 | property
+# COVERS FR-8.4 | property
 def test_writing_preserves_the_order_of_substitutions(tmp_path: Path) -> None:
     """Entry order decides which substitution wins, so a write must not sort it.
 
@@ -125,7 +125,7 @@ def test_writing_preserves_the_order_of_substitutions(tmp_path: Path) -> None:
     assert [entry.pattern for entry in reread.substitutions] == ["zebra", "aardvark"]
 
 
-# COVERS: FR-6.4 | negative
+# COVERS FR-6.4 | negative
 def test_a_malformed_config_is_an_error_and_is_not_replaced(tmp_path: Path) -> None:
     """Missing is fine; unparseable is not, and overwriting it would destroy it.
 
@@ -142,7 +142,7 @@ def test_a_malformed_config_is_an_error_and_is_not_replaced(tmp_path: Path) -> N
     assert path.read_text(encoding="utf-8") == original
 
 
-# COVERS: FR-6.4 | negative
+# COVERS FR-6.4 | negative
 def test_a_config_of_the_wrong_shape_says_which_key_is_wrong(tmp_path: Path) -> None:
     """The schema's whole return: a message naming the key, not "will not parse".
 
@@ -156,7 +156,7 @@ def test_a_config_of_the_wrong_shape_says_which_key_is_wrong(tmp_path: Path) -> 
         load_config(path)
 
 
-# COVERS: FR-6.4 | negative
+# COVERS FR-6.4 | negative
 def test_a_misspelt_key_is_refused_rather_than_ignored(tmp_path: Path) -> None:
     """Deliberate, and the main reason the config has a schema.
 
@@ -170,7 +170,7 @@ def test_a_misspelt_key_is_refused_rather_than_ignored(tmp_path: Path) -> None:
         load_config(path)
 
 
-# COVERS: FR-6.2 | property
+# COVERS FR-6.2 | property
 def test_the_sample_config_is_a_config_skid_can_read() -> None:
     """The sample is the only place the shape is written down for a person.
 
@@ -204,7 +204,7 @@ def test_the_sample_config_is_a_config_skid_can_read() -> None:
     )
 
 
-# COVERS: FR-7.1 | negative
+# COVERS FR-7.1 | negative
 def test_a_config_skid_could_not_read_back_is_refused_on_write(
     tmp_path: Path,
 ) -> None:
@@ -222,7 +222,7 @@ def test_a_config_skid_could_not_read_back_is_refused_on_write(
     assert not path.exists()
 
 
-# COVERS: FR-10.1 | positive
+# COVERS FR-10.1 | positive
 def test_the_voice_shortlist_loads_in_file_order(tmp_path: Path) -> None:
     """File order is the order voices are handed out, so it is not ours to sort.
 
@@ -243,7 +243,7 @@ def test_the_voice_shortlist_loads_in_file_order(tmp_path: Path) -> None:
     assert [choice.alias for choice in config.voices] == ["Brian", "Ashley"]
 
 
-# COVERS: FR-10.7 | positive
+# COVERS FR-10.7 | positive
 def test_a_declared_pipeline_survives_a_read_and_a_write(tmp_path: Path) -> None:
     """The field says which phonemiser was asked for, so it round-trips as written.
 
@@ -268,7 +268,7 @@ def test_a_declared_pipeline_survives_a_read_and_a_write(tmp_path: Path) -> None
     assert config.voices[1].pipeline is None
 
 
-# COVERS: FR-10.8 | negative
+# COVERS FR-10.8 | negative
 def test_two_voices_sharing_an_alias_are_refused(tmp_path: Path) -> None:
     """An ambiguous alias is one nothing about either row looks wrong for.
 
@@ -288,7 +288,7 @@ def test_two_voices_sharing_an_alias_are_refused(tmp_path: Path) -> None:
         load_config(path)
 
 
-# COVERS: FR-10.5 | positive
+# COVERS FR-10.5 | positive
 def test_the_assignment_window_is_configurable(tmp_path: Path) -> None:
     """Six hours is a default rather than a constant, so a file can argue with it.
 

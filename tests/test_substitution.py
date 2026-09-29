@@ -9,7 +9,7 @@ import pytest
 from skid.substitution import Substitution, apply_substitutions
 
 
-# COVERS: FR-8.2 | positive
+# COVERS FR-8.2 | positive
 def test_a_replacement_need_not_be_a_word() -> None:
     """A phonetic spelling is a valid replacement, because it is heard."""
     entries = [
@@ -19,7 +19,7 @@ def test_a_replacement_need_not_be_a_word() -> None:
     assert apply_substitutions(entries, "kokoro speaks") == "koh koh roh speaks"
 
 
-# COVERS: FR-8.4 | positive
+# COVERS FR-8.4 | positive
 def test_entries_apply_in_file_order() -> None:
     """The first entry that matches at a position wins, and file order is that order."""
     entries = [
@@ -30,7 +30,7 @@ def test_entries_apply_in_file_order() -> None:
     assert apply_substitutions(entries, "mcp") == "em see pee"
 
 
-# COVERS: FR-8.4 | regression
+# COVERS FR-8.4 | regression
 def test_reordering_the_file_changes_the_result() -> None:
     """Order is the only priority, so swapping two entries swaps which one wins.
 
@@ -44,7 +44,7 @@ def test_reordering_the_file_changes_the_result() -> None:
     assert apply_substitutions([second, first], "mcp") == "mick pee"
 
 
-# COVERS: FR-8.5 | property
+# COVERS FR-8.5 | property
 def test_a_replacement_is_not_re_examined() -> None:
     """What one entry produces is never matched by another, nor by itself.
 
@@ -59,7 +59,7 @@ def test_a_replacement_is_not_re_examined() -> None:
     assert apply_substitutions(entries, "a") == "bb"
 
 
-# COVERS: FR-8.5 | regression
+# COVERS FR-8.5 | regression
 def test_overlapping_entries_take_the_earlier_position() -> None:
     """Position is the primary order; file order only breaks ties at a position.
 
@@ -74,7 +74,7 @@ def test_overlapping_entries_take_the_earlier_position() -> None:
     assert apply_substitutions(entries, "ab") == "Z"
 
 
-# COVERS: FR-7.7 | positive
+# COVERS FR-7.7 | positive
 def test_both_kinds_are_supported() -> None:
     """An entry declares whether its pattern is a literal or a regular expression."""
     entries = [
@@ -89,7 +89,7 @@ def test_both_kinds_are_supported() -> None:
     assert spoken == "version one point two covers requirement"
 
 
-# COVERS: FR-7.7 | negative
+# COVERS FR-7.7 | negative
 def test_an_invalid_regex_is_refused() -> None:
     """A pattern that does not compile is rejected where it is declared.
 
@@ -100,7 +100,7 @@ def test_an_invalid_regex_is_refused() -> None:
         Substitution(kind="regex", pattern="(unclosed", replacement="never")
 
 
-# COVERS: FR-8.2 | edge
+# COVERS FR-8.2 | edge
 def test_a_literal_matches_on_word_boundaries() -> None:
     """A literal does not fire inside a longer word it was not aimed at."""
     entries = [Substitution(kind="literal", pattern="cat", replacement="kat")]
@@ -108,7 +108,7 @@ def test_a_literal_matches_on_word_boundaries() -> None:
     assert apply_substitutions(entries, "concatenate the cat") == "concatenate the kat"
 
 
-# COVERS: FR-8.2 | edge
+# COVERS FR-8.2 | edge
 def test_a_literal_is_case_insensitive() -> None:
     """kokoro says a word wrongly whatever case it was written in."""
     entries = [
@@ -118,7 +118,7 @@ def test_a_literal_is_case_insensitive() -> None:
     assert apply_substitutions(entries, "Kokoro") == "koh koh roh"
 
 
-# COVERS: FR-8.5 | edge
+# COVERS FR-8.5 | edge
 def test_an_empty_set_leaves_the_text_alone() -> None:
     """An empty set takes the ordinary path, and it is the common case."""
     assert apply_substitutions([], "nothing to do here") == "nothing to do here"
