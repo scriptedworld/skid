@@ -4,16 +4,14 @@
 |---|---|---|
 | FR-7.7 | Each substitution entry **declares whether its pattern is a literal or a regular expression**. Both kinds are supported. | [A] |
 
-Settled at the id the open question carried.
-
 The literal kind covers FR-8.2's stated purpose with no rules to learn. The
 regular expression kind is there for what a literal cannot reach, and it is
 opt-in per entry rather than the default reading of every pattern.
 
 ## What it obliges, and where each obligation went
 
-Supporting regular expressions brings three problems that literals do not have.
-Naming them is what stops them being discovered by being bitten:
+Supporting regular expressions brings three problems that literals do not have,
+and each is assigned to a row:
 
 - Ordering. FR-8.4. The set lives in a file and is applied in file order, so
   reordering is editing the file.

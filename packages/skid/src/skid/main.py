@@ -135,9 +135,9 @@ def someone_is_listening(path: Path) -> bool:
     owns a socket nobody can reach, and the by-hand process becomes the service
     without anything saying so.
 
-    A by-hand instance that did this, started at 00:54, was still resident at
-    03:18, holding 1.73 GB and listening on an inode the path no longer
-    resolved to. Nothing could reach it and nothing reported it.
+    Such an instance stays resident unseen: one measured over two hours held
+    1.73 GB, listening on an inode the path no longer resolved to, with nothing
+    able to reach it and nothing reporting it.
 
     Connecting is the only honest test. A socket file that refuses a connection
     is stale and safe to replace; one that accepts is somebody's.

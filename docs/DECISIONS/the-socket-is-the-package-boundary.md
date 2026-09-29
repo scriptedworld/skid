@@ -255,11 +255,12 @@ command charges everything to whichever it walks first:
     du -sh proto real       ->  134M proto, 1.5M real
     du -sh real             ->  33M
 
-Same files, same instant, two answers, and 1.5M is the one that looks like a
-result. Both figures in this document are from a `du` given one directory. The
-comparison is still fair, because the service's 1.3 GB is measured the same way
-and hardlinks from the same cache; what neither figure is, is the marginal disk
-a second environment costs, which is much smaller than either.
+Both ran on the same files at the same instant, and 1.5M is the figure that
+looks like a result. Both figures in this document are from a `du` given one
+directory. The comparison is still fair, because the service's 1.3 GB is
+measured the same way and hardlinks from the same cache; what neither figure
+is, is the marginal disk a second environment costs, which is much smaller than
+either.
 
 A service reinstall stops touching the shim. Measured by fingerprinting every
 path and mtime under the shim's tool environment, running
@@ -300,16 +301,16 @@ What it does not fix. The three pre-existing branch-coverage failures in
 and unchanged at 56.2% and 77.8%. `install.py` is modified by this change and
 went from 76.1% to 77.1%, the new test covering more branches than it added.
 
-One thing this change got wrong first, recorded because the fix is not
-obvious. `already_installed` was rewritten as a list comprehension over the two
-tool directories, which read well and dropped `install.py` to 75.0%, below the
-baseline. A comprehension with a filter carries fewer branch arcs than two `if`
-statements, so the same behaviour measured worse. It is two `if` statements.
+`already_installed` is two `if` statements, and the reason is not obvious. As a
+list comprehension over the two tool directories it read well and dropped
+`install.py` to 75.0%, below the baseline. A comprehension with a filter
+carries fewer branch arcs than two `if` statements, so the same behaviour
+measured worse.
 
 ## The alternative, and why two packages is not enough
 
-Two distributions split by protocol, `skid-mcp` and `skid-http`, was the shape
-first floated. It fails on `skid-say`, which is an HTTP client of the socket and
+The alternative is two distributions split by protocol, `skid-mcp` and
+`skid-http`. It fails on `skid-say`, which is an HTTP client of the socket and
 not an MCP thing, so under that split it belongs to `skid-http` alongside kokoro
 and torch, and a command that needs nothing but a socket path drags in 738 MB of
 tensors.

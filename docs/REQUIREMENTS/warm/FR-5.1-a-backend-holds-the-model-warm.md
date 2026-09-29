@@ -31,6 +31,6 @@ therefore costs 1.31 GB per session. Against the nine sessions running when
 this was measured, that is 12.2 GB where the current shape uses 2.0 GB, one
 service plus nine 35 MB shims, on a machine with 20 GB available.
 
-"Wanted rather than required" is still the right wording. Nothing here is
-violated by loading per submission; what it costs is six seconds a message and,
-at estate scale, most of the machine's free memory.
+"Wanted rather than required" is the right wording: loading per submission
+violates nothing here, and costs six seconds a message and, at estate scale,
+most of the machine's free memory.

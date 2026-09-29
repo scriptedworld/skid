@@ -28,9 +28,9 @@ reader should leave it alone and not correct it toward a default.
 It lives in the config file beside the greeting window (FR-3.4, FR-7.1), so it
 is changeable without a release and by either route FR-6.3 requires.
 
-It is ten times the greeting window's thirty seconds, and that is a
-coincidence. The two answer different questions, neither constrains the other,
-and the ratio is not a rule to preserve if either moves.
+It is ten times the greeting window's thirty seconds by coincidence. The two
+answer different questions and neither constrains the other, so the ratio need
+not survive a change to either.
 
 ## What it does not do
 

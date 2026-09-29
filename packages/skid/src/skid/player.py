@@ -5,7 +5,7 @@ command line and waits for it, which is the whole output path.
 
 Exclusion is that wait. It is only as good as the player's exit, so a command
 that returns before its audio finishes releases the lock early and clips
-overlap. skid cannot detect that and does not pretend to.
+overlap. skid cannot detect that.
 """
 
 from __future__ import annotations
@@ -82,8 +82,8 @@ class Player:
         """Play one clip, holding the lock until the player exits.
 
         Raises PlaybackFailed if the player refuses, fails, or has to be killed
-        for outlasting the timeout. Killing it is what stops one stuck player
-        silencing the machine for ever while the queue grows behind it.
+        for outlasting the timeout. Without the kill, one stuck player would hold
+        the machine silent indefinitely while the queue grows behind it.
         """
         with self._lock:
             self._started = monotonic()

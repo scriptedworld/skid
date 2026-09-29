@@ -4,9 +4,8 @@
 |---|---|---|
 | FR-7.6 | skid is written in **Python**, because kokoro is a Python project and one language is preferred to two. | [A/D] |
 
-Settled at the id the open question carried. The rule was stated
-first-hand, the fact it turns on was measured, and the answer is what the two
-give together.
+The rule is first-hand and the fact it turns on is measured; the answer follows
+from the two together.
 
 ## The rule
 

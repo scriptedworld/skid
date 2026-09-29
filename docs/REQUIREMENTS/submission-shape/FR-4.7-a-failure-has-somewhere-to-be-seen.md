@@ -11,8 +11,7 @@ than when it was heard.
 
 The failure this closes is the one FR-4.6 was written for. If the player
 disappears, every clip fails, every caller still receives success, and the
-machine is silent with nothing anywhere saying why. A report with no destination
-produces exactly the outcome of no report at all.
+machine is silent with nothing anywhere saying why.
 
 Both halves are needed. A person debugging silence reads a log. An agent cannot
 read a log as part of its own work, so it needs to be able to ask.

@@ -12,9 +12,9 @@ loads once; a stdio server per client would load it per client (FR-5.1).
 There is no MCP session because MCP over HTTP puts a session id in the service's
 memory, and a restart forgets it. The service then answers every later request
 `404 Session not found` with a null id, which a JSON-RPC client cannot match to
-the request it is waiting on, so it waits until something outside gives up. A
-call left to run its course was aborted by the MCP client's own backstop after
-1800 seconds, carrying no diagnosis. Caching the handshake and replaying it
+the request it is waiting on, so it waits until something outside gives up: the
+MCP client's own backstop aborts the call after 1800 seconds, carrying no
+diagnosis. Caching the handshake and replaying it
 (`23f15d8`, `60c0946`) recovered from that; holding no session id on either side
 leaves nothing to go stale, and a restart costs a refused connection for as long
 as the service takes to come back.
@@ -30,8 +30,7 @@ history.
 
 A call fails instead of hanging (FR-5.3). A service that is absent, refusing or
 slow produces an httpx error or a status, and either becomes a tool error naming
-the socket. There is no state in which this process is waiting on something it
-cannot describe.
+the socket.
 """
 
 from __future__ import annotations
@@ -96,9 +95,8 @@ class Backend:
     def over_socket(cls, path: Path) -> Backend:
         """A backend over the unix socket skid listens on.
 
-        Both entry points spelled this out, and the four lines were the same in
-        each. A test builds one directly instead, over a WSGI transport, which
-        is why the plain constructor stays.
+        Both entry points build their backend here. A test builds one directly,
+        over a WSGI transport, which is why the plain constructor stays.
         """
         transport = httpx.HTTPTransport(uds=str(path))
         client = httpx.Client(transport=transport, base_url=HOST, timeout=TIMEOUT)
@@ -120,9 +118,8 @@ class Backend:
         """Make one request for `tool` and return what the service answered.
 
         Raises `Unreachable` for a transport failure and for a refusal alike.
-        The status is read before the body, which is the lesson this file learnt
-        expensively: a transport that succeeded says nothing about whether the
-        request did.
+        The status is read before the body, because a transport that succeeded
+        says nothing about whether the request did.
         """
         method, path = method_and_path(tool)
         try:

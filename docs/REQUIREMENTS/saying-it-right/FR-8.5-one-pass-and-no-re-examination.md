@@ -30,5 +30,4 @@ would see entry one's output.
 FR-8.3 keeps all of it off what a caller submitted and what a log records. This
 is about the single pass in between.
 
-The spec review at `a0751af` found this row and `docs/SPEC.md` stating the two
-different priorities; position first is the one that stands.
+Raised by the spec review at `a0751af`.

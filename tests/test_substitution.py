@@ -1,11 +1,7 @@
 """Substitution semantics: what is replaced, in what order, and only once.
 
-These tests are written before the implementation and are expected to fail by
-not importing. The failure names what is missing, which is the point of writing
-them first.
-
-The cases here are the ones the spec review turned up, where FR-8.5 and an
-earlier draft of the spec disagreed about which of two matching entries wins.
+Where two entries match, FR-8.5 decides by position first and by file order
+only between entries matching at the same position.
 """
 
 import pytest
@@ -67,9 +63,8 @@ def test_a_replacement_is_not_re_examined() -> None:
 def test_overlapping_entries_take_the_earlier_position() -> None:
     """Position is the primary order; file order only breaks ties at a position.
 
-    The case that caught the contradiction. FR-8.5 said the earlier entry in the
-    file wins an overlapping region, while the spec said a left-to-right scan.
-    They disagree here: entry priority gives `ax`, position gives `Z`.
+    Entry priority and a left-to-right scan disagree on this input: entry
+    priority gives `ax`, position gives `Z`.
     """
     entries = [
         Substitution(kind="regex", pattern="b", replacement="x"),
@@ -125,5 +120,5 @@ def test_a_literal_is_case_insensitive() -> None:
 
 # COVERS: FR-8.5 | edge
 def test_an_empty_set_leaves_the_text_alone() -> None:
-    """No entries is not a special case, and it is the common one."""
+    """An empty set takes the ordinary path, and it is the common case."""
     assert apply_substitutions([], "nothing to do here") == "nothing to do here"

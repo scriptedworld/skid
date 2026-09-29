@@ -20,4 +20,5 @@ bad premise.
 per second, so 1196 characters plays for 77 seconds. 1196 over 6.4 is 187. One
 division, on two numbers already side by side.
 
-Write the unit, not the column name.
+Record a figure with its unit. The name of the column it was read from does not
+say what was divided by what.

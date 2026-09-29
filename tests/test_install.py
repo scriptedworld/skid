@@ -107,8 +107,7 @@ def _section(unit: str, heading: str) -> str:
 
     Matched on a line that IS the heading rather than on the text appearing
     anywhere, because these units explain themselves in comments and a comment
-    naming `[Service]` would otherwise end the `[Unit]` section early. That is
-    not hypothetical: it is how this helper came to exist.
+    naming `[Service]` would otherwise end the `[Unit]` section early.
     """
     text = (CHECKOUT / "share" / "systemd" / "user" / unit).read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -218,9 +217,9 @@ def test_the_start_limit_is_chosen_and_in_the_section_systemd_reads() -> None:
 
     systemd moved `StartLimitIntervalSec` to `[Unit]` in v229 and ignores it
     in `[Service]` with a warning while `systemd-analyze verify` still exits
-    0. Writing it in the wrong section showed it: the exit status
-    said the unit was fine and the setting was being dropped. Asserting only
-    that the key appears somewhere would pass against exactly that mistake.
+    0. So the exit status says the unit is fine while the setting is dropped.
+    Asserting only that the key appears somewhere would pass against exactly
+    that mistake.
     """
     unit_section = _section("skid.service", "[Unit]")
 
@@ -472,8 +471,8 @@ def test_an_existing_install_is_found_from_the_filesystem_alone(tmp_path: Path) 
 def test_no_terminal_to_ask_on_is_taken_as_no(monkeypatch: pytest.MonkeyPatch) -> None:
     """A script that did not say yes has not said yes.
 
-    Reinstalling replaces files the user owns and re-points their registration.
-    Guessing yes because there was nobody to ask is how that surprises somebody.
+    Reinstalling replaces installed files and re-points the MCP registration, so
+    a yes guessed for want of anyone to ask changes the machine unannounced.
     """
     monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
 
@@ -489,8 +488,7 @@ def test_a_dry_run_shows_every_step_and_performs_none(
 
     Asserted with a step that would leave a trace if it ran, so the assertion is
     about the machine rather than about a flag being read. A dry run that
-    performed even one step would be worse than no dry run at all, because it
-    would be a promise of safety that is not kept.
+    performed even one step would promise a safety it does not provide.
     """
     trace = tmp_path / "this-would-exist-if-it-ran"
     steps = [Step(says="create a file", argv=("touch", str(trace)))]
@@ -530,8 +528,8 @@ def test_an_environment_without_the_model_cannot_start(tmp_path: Path) -> None:
     """A socket that comes up says nothing about whether the service can run.
 
     kokoro downloads `en_core_web_sm` at start-up when it is absent, using pip
-    or uv, and under systemd neither is on PATH. That cost 76 restarts. This is
-    the check that notices, and until FR-9.9 was written nothing exercised it.
+    or uv, and under systemd neither is on PATH, so the service fails at every
+    start while its socket stays up. This is the check that notices.
 
     Both branches, because only the second is the interesting one: a tool
     environment that was never built has no interpreter to ask, and one that was
@@ -592,15 +590,15 @@ def test_nothing_is_verified_against_a_binary_the_install_has_not_made_yet(
     importing nothing.
 
     `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
-    `systemd-analyze verify` refuses a command that is not there. Uninstalling
-    the tool and running an installer that verified first printed:
+    `systemd-analyze verify` refuses a command that is not there. On a machine
+    without the tool, an installer that verifies first prints:
 
         FAILED (1): skid.service: Command /home/ancient/.local/bin/skid is not
         executable: No such file or directory
 
-    That installer stopped there and installed nothing. It had only passed
-    because a previous install had left that binary behind, so it was verifying
-    a stale binary and not the one being installed.
+    It stops there and installs nothing. On a machine with an earlier install it
+    passes, because it verifies the stale binary and not the one being
+    installed.
     """
     plan = _argvs(install_plan(_paths(tmp_path)))
 
@@ -793,8 +791,8 @@ def test_a_reinstall_with_no_terminal_to_ask_on_changes_nothing(
 
     Nothing is replaced here either. `confirmed` asks `sys.stdin.isatty()`, and
     under the suite stdin is not a terminal, so this IS the no-terminal case
-    rather than a simulation of one. That is the case the installer is most
-    likely to meet in anger: a script or a hook with no one to answer.
+    rather than a simulation of one. It is also the case the installer meets
+    most often: a script or a hook with no one to answer.
     """
     paths = _paths(tmp_path)
     paths.units.mkdir(parents=True)
@@ -940,8 +938,8 @@ def test_performing_runs_every_step_when_each_one_succeeds(
     """A plan that succeeds runs all of it, for real, in order.
 
     Asserted by what the commands left on disk rather than by what they
-    printed, because printing is what a dry run also does and the difference
-    between the two is the whole point of this one.
+    printed, because a dry run prints the same lines and only a real run leaves
+    the files.
     """
     first = tmp_path / "first"
     second = tmp_path / "second"

@@ -30,7 +30,7 @@ members = ["packages/*"]
 # difference is load-bearing: the jig invokes these from PATH, where python is
 # 3.14.7 and cannot import skid's dependencies. Run from here they see the 3.12
 # interpreter the code actually uses. `types` reports 30 phantom errors from
-# PATH and one real one from the venv, which is the whole argument.
+# PATH and one real one from the venv.
 #
 # It sits at the root and not in a package, because there is one suite over all
 # three packages and one set of checkers judging them together.
@@ -60,14 +60,15 @@ addopts = "-q --strict-markers"
 
 # Three import packages named, not one, and counting them is the check.
 #
-# The split could have kept every module importable as `skid.x` by making the
-# three distributions share one PEP 420 namespace package, which works in every
-# way that gets checked first. It was rejected because coverage.py does not
-# enumerate unexecuted files in a namespace package: a module no test imports
-# leaves the report entirely rather than appearing at 0%, with no warning.
+# The three distributions do not share one PEP 420 namespace package, although
+# that would keep every module importable as `skid.x`, because coverage.py does
+# not enumerate unexecuted files in a namespace package: a module no test
+# imports leaves the report entirely rather than appearing at 0%, with no
+# warning.
 #
-# That is hard rule 5's failure with nothing written down. Measured on one tree
-# with one file as the only variable; `docs/LESSONS/` carries it.
+# That is hard rule 5's failure with nothing written down.
+# `docs/LESSONS/a-namespace-package-drops-out-of-coverage.md` has the
+# measurement.
 #
 # So each package is a regular package with an `__init__.py`, and all three are
 # named here. A package that goes missing from this list stops being measured
@@ -124,7 +125,7 @@ ignore_missing_imports = true
 # A gate that fails a project for the code it adopted to run the gate is
 # reporting on the wrong repository. Excluding a path holding none of this
 # project's code says so; it hides no finding about skid and adds no pragma.
-# Filed against toolbox: an adopter is graded on the checkers it adopts.
+# Filed against toolbox.
 
 [tool.ruff]
 extend-exclude = ["bin"]
@@ -150,8 +151,7 @@ known-first-party = ["skid", "skid_mcp", "skid_contract"]
 # `pylint --recursive=y .`, which walks the virtualenv, and astroid recurses to
 # death inside torch's generated modules. Pylint over src and tests takes 1.8s;
 # over `.` it had not finished after 900s and was emitting a RecursionError
-# traceback. This is the difference between a gate that runs and one that never
-# returns.
+# traceback.
 ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*', '^adapters/.*', '^\.ephemera/.*']
 
 # The same split mypy's `python_executable` answers. pylint run from PATH is a

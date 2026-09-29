@@ -138,7 +138,7 @@ def test_a_voice_this_machine_cannot_speak_is_refused(
 
     The shortlist is what states which voices render here, FR-10.1, so it is what
     the refusal is measured against. A typo and a real-but-mute voice reach the
-    caller the same way, which is the point: both would silence skid.
+    caller the same way, because both would silence skid.
     """
     save_config(
         Config(voice="af_bella", voices=[VoiceChoice(alias="Carol", voice="af_bella")]),

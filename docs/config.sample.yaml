@@ -32,7 +32,7 @@ voice: af_heart
 # rest. Naming it is for a voice you want speaking a language that is not its
 # own: if_sara through the Italian phonemiser reads English as an Italian would
 # read it aloud from a page, where if_sara through `a` speaks correct English in
-# an Italian accent. The second is usually the point.
+# an Italian accent. The second is usually what you want.
 #
 # A voice assigned to a name is kept while that name keeps talking, and released
 # once it has been quiet for assignment_window_seconds. When every voice is

@@ -96,8 +96,8 @@ stays. `install.py` shells out to `uv`, `systemctl` and `claude` regardless, so
 it keeps its `B404` on the import and its `B603` on `run`. The count is driven
 by which modules run programs at all, not by how many programs each one runs.
 
-So the suppression is not paying for the convenience. If it were, the convenience
-would go.
+So the suppression is not paying for the convenience, and the convenience goes
+if it ever needs a mark of its own.
 
 ### Why the findings cannot be fixed
 

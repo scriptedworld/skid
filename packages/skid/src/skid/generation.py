@@ -127,7 +127,7 @@ class Generator:
     """Holds the warm pipelines and renders text through the current one.
 
     A pipeline is built on first use and kept, so a second message does not pay
-    model start-up. That is what the backend exists for.
+    model start-up.
 
     One model, several phonemisers. Pipelines are cached per code rather
     than dropped on a change, because assignment under FR-10.2 moves between
@@ -140,8 +140,7 @@ class Generator:
     def __init__(self, voice: str = "af_heart", pipeline: str | None = None) -> None:
         """Take the voice and optionally the pipeline, refusing an unknown voice.
 
-        `pipeline` omitted means the one the voice id implies, which is what
-        every caller wanted before FR-10.7 existed.
+        `pipeline` omitted means the one the voice id implies.
         """
         if voice not in VOICES:
             raise ValueError(f"unknown voice: {voice!r}")
@@ -154,8 +153,8 @@ class Generator:
         """Load the model now, rather than on the first message that needs it.
 
         What FR-5.1 asks for, made explicit so a caller can decide when to pay
-        it. The service pays it at start-up, so that being active and being able
-        to answer are the same thing.
+        it. The service pays it at start-up, so a service reported active can
+        already answer.
 
         Warming the second pipeline is cheap, because by then the model exists.
         """

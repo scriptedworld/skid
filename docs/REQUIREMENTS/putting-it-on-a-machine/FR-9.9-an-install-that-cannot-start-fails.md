@@ -6,6 +6,7 @@
 
 A passing socket does not answer this: it comes up whether or not the
 environment behind it can run. kokoro downloads `en_core_web_sm` at start-up
-when it is absent, using pip or uv, and neither is on PATH under systemd, which
-cost 76 restarts. The check runs the tool's own interpreter, because it asks
-about the installed environment rather than the checkout.
+when it is absent, using pip or uv, and neither is on PATH under systemd, so a
+service missing it fails at start-up and systemd restarts it over and over.
+The check runs the tool's own interpreter, because it asks about the installed
+environment rather than the checkout.

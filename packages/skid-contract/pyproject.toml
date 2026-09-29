@@ -20,8 +20,7 @@ requires-python = ">=3.12,<3.13"
 # Nothing, and that is the point of the package. The contract is what both sides
 # of the socket derive from, so it must be installable into either side without
 # bringing the other side's weight with it. A dependency added here lands in the
-# MCP shim's environment and in the service's, so it is added deliberately or
-# not at all.
+# MCP shim's environment and in the service's.
 dependencies = []
 
 [build-system]

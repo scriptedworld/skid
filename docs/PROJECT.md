@@ -92,9 +92,9 @@ after `systemctl --user restart skid.service`.
 
 An editable install carries code, not dependencies. The tool environment is
 resolved when the tool is installed, so a new entry in `pyproject.toml` is not
-there however many times the service restarts. Measured the hard way: `flask`
-and `waitress` were declared and locked, `uv sync` had put them in `.venv`, the
-suite was green, and the service went into a restart loop on
+there however many times the service restarts. With `flask` and `waitress`
+declared and locked, `uv sync` having put them in `.venv` and the suite green,
+the service still went into a restart loop on
 `ModuleNotFoundError: No module named 'waitress'`.
 
     uv tool install --editable packages/skid --reinstall
@@ -133,7 +133,7 @@ skid plays on the machine it runs on. Where that machine is not the one the
 person is sitting at, every clip is generated, played and logged as a success
 into an empty room, and nothing in `status` or the log can tell you.
 
-Here skid runs on lazlo and the person connects from oslo. oslo's `ssh` config
+Here skid runs on lazlo and I connect from oslo. oslo's `ssh` config
 forwards its PipeWire socket over the connection it holds open anyway:
 
     RemoteForward /run/user/1000/pulse-oslo /run/user/1000/pulse/native
@@ -154,13 +154,14 @@ nobody is connected.
 `config/systemd/user/skid.service.d/pulse-oslo.conf`, so the lazlo half survives
 a rebuild. The `RemoteForward` lives in oslo's own `~/.ssh/config`, which nothing
 tracks, so rebuilding oslo restores a skid that runs, queues, reports success and
-is silent. That is the same symptom that went unnoticed for weeks, so check for
-the socket before hunting anything else:
+is silent. That is the symptom
+`docs/LESSONS/every-green-signal-answered-a-narrower-question.md` describes, so
+check for the socket before hunting anything else:
 
     ls -l /run/user/1000/pulse-oslo
 
-A player that opens its own `ssh` per clip was tried first and is the wrong
-shape. It pays a handshake a sentence, and it hangs: the remote `paplay` exits
+A player that opens its own `ssh` per clip is the wrong shape. It pays a
+handshake a sentence, and it hangs: the remote `paplay` exits
 while the local `ssh` sits in `unix_stream_read_generic` holding the pipes skid
 reads, so FR-1.9's timeout kills it at 300 seconds and the caller has long since
 been told yes.
@@ -212,7 +213,7 @@ unregistered.
 ## What is decided
 
 The output path, in full: file, subprocess, default device, no direct access.
-The part least worth reopening.
+Of everything here it is the decision least worth reopening.
 
 The lock covers playback alone, so generation runs ahead of the speaker,
 unbounded, and a submission arriving while another plays queues.
@@ -278,12 +279,12 @@ holding keys an older checkout does not know is refused, not ignored, and
 a refusal at start-up is a service that will not start.
 
 Substitutions are global, each declaring itself literal or regular
-expression, applied in one left-to-right pass whose output no later entry
-examines. File order is the order.
+expression, applied in file order in one left-to-right pass whose output no
+later entry examines.
 
-One HTTP service under systemd, not two processes. It deleted a start
-protocol with a lock file, a stale-socket unlink and a bind-then-rename, which
-was the part of the design nobody had run.
+One HTTP service under systemd, not two processes. Two processes need a start
+protocol with a lock file, a stale-socket unlink and a bind-then-rename, and
+that protocol was the part of the design nobody had run.
 
 A unix socket, not a TCP port, since reaching skid's tools means making the
 machine speak and rewriting its config. `SECURITY.md` states the boundary.
@@ -323,5 +324,4 @@ still blocks.
 
 ## What is not built
 
-Nothing a requirement names. `NEXT_STEPS.md` holds what is open anyway: the
-voice-per-name work, the MCP proxy, one known defect, and the questions nothing depends on.
+Nothing a requirement names. `NEXT_STEPS.md` holds what is open anyway.

@@ -1,7 +1,5 @@
 """Generation: kokoro in, a playable file out.
 
-Written before the implementation and expected to fail by not importing.
-
 These are the three rows with no seam to substitute at, so they run against the
 real engine or not at all. `importorskip` skips the module where kokoro is
 absent rather than reporting a pass, because a skip that reads as a pass is the
@@ -67,7 +65,7 @@ def test_the_model_is_loaded_once_across_submissions(tmp_path: Path) -> None:
 
 # COVERS: FR-10.7 | positive
 def test_a_declared_pipeline_overrides_the_one_the_id_implies() -> None:
-    """An Italian speaker reading English, which is what was chosen by ear.
+    """An Italian speaker reading English.
 
     Asserted against the pipeline kokoro actually built rather than against what
     skid stored, because the failure this guards is skid recording a code and

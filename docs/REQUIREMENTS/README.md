@@ -80,5 +80,5 @@ could ever violate it.
 Its guidance survives as prose in FR-2.1: what holds the lock is a separate
 question from what the lock covers.
 
-`docs/TEST_PLAN.md` reached the same conclusion independently, recording FR-2.2
-as "constrains nothing and is discharged by FR-2.1 passing with whatever".
+`docs/TEST_PLAN.md` records FR-2.2 as "constrains nothing and is discharged by
+FR-2.1 passing with whatever".

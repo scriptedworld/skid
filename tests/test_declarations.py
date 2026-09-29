@@ -160,7 +160,7 @@ def test_skid_imports_no_audio_library(package: str) -> None:
 
     This passes on arrival, and that is not an argument against it. Its value is
     the day somebody reaches for `sounddevice` or `pyaudio` to fix a latency
-    complaint: the change is small, it works, and nothing else in the suite
+    complaint. The change is small and works, and nothing else in the suite
     notices that skid has acquired an audio stack to reason about.
 
     Asserted as equality rather than as an absence, because a denylist of audio
@@ -252,11 +252,11 @@ def test_skid_runs_only_where_kokoro_does() -> None:
     range belongs to somebody else and moves without warning.
 
     This is a tripwire on what kokoro DECLARES, which is not the same as what
-    kokoro SUPPORTS. kokoro is reported first-hand to run fine on 3.13 and 3.14,
-    and has simply not had a release since those arrived, so `<3.13` is stale packaging
-    metadata rather than a real ceiling. The declaration is still what a
-    resolver enforces, so it is still what skid has to sit inside to install at
-    all, and it is still the thing that moves when the situation changes.
+    kokoro SUPPORTS. kokoro is reported to run on 3.13 and 3.14 and has not had
+    a release since those arrived, so `<3.13` is stale packaging metadata rather
+    than a real ceiling. The declaration is what a resolver enforces, so skid
+    has to sit inside it to install at all, and it is what moves when the
+    situation changes.
 
     So it fails on the day kokoro re-declares, not on the day it gains support.
     FR-1.7 names that as the day to retire the row rather than edit the version
@@ -266,7 +266,6 @@ def test_skid_runs_only_where_kokoro_does() -> None:
     not import kokoro and could widen its pin without anything breaking, right
     up until the two packages resolve to different interpreters and the contract
     they share is installed twice into environments that cannot both import it.
-    One repository, one range.
     """
     kokoro_range = SpecifierSet(str(_kokoro()["Requires-Python"]))
 

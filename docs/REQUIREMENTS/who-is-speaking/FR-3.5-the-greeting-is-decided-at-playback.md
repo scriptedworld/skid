@@ -16,8 +16,8 @@ Moving which clock is read does not help if it is read at the wrong time. A
 name that submits a long array and then one more message is quiet at the moment
 the second is queued, and still talking when it plays.
 
-This is the same shape as FR-4.4: every row satisfied, the audible behaviour
-wrong, and the gap living between the rows rather than in any of them.
+This is the same shape as FR-4.4: every row is satisfied and the audible
+behaviour is still wrong, because the gap lies between the rows.
 
 It constrains FR-4.2, because the prefix is text kokoro has to render, so
 the first clip of a submission cannot be prepared ahead until the decision is

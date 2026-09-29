@@ -20,8 +20,8 @@ suite has to change.
 
 **coverage.py enumerates unexecuted files in a regular package and not in a
 namespace package.** A module no test imports appears at 0% in the first case and
-is absent from the report in the second. No warning, no error, no count that
-looks wrong.
+is absent from the report in the second. Coverage prints no warning or error,
+and every count still looks right.
 
 One tree, one variable, `.ephemera/split-proposal/control`:
 
@@ -31,21 +31,20 @@ One tree, one variable, `.ephemera/split-proposal/control`:
     src/ctl/__init__.py deleted     src/ctl/hit.py    2  0  100%
                                     (miss.py is not in the report)
 
-Nothing else changed between those two runs. The same `source = ["ctl"]`, the
-same suite, the same command.
+Nothing else changed between those two runs: both used `source = ["ctl"]` and
+the same suite and command.
 
 ## Why that is worse than a failing check
 
-Hard rule 5 says never settle a coverage failure by excluding the file, because
-coverage is judged per file so a well-tested file cannot carry an untested one.
-An exclusion is at least written down and greppable.
+Hard rule 5 forbids settling a coverage failure by excluding the file. An
+exclusion is at least written down and greppable.
 
 This produces the same loss with nothing written down. The file is not excluded;
 it is simply never considered. A gate reading per-file percentages sees a shorter
 list and has no way to notice that the list got shorter.
 
-The failure needs a module nobody imports, which is exactly the module whose
-coverage anyone would want to know about.
+It happens only to a module no test imports, which is the module a coverage
+report most needs to list.
 
 ## What does not fix it
 

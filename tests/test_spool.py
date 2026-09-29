@@ -1,11 +1,9 @@
 """The durable queue: a directory, taken in name order, surviving a restart.
 
-Written before the implementation and expected to fail by not importing.
-
 Nothing here mocks anything. A spool is a directory, so these tests make real
 directories, write real entries, and in places reach in and corrupt one the way
-a `kill -9` would. That is the seam: the thing under test is a filesystem
-layout, so the filesystem is the fixture.
+a `kill -9` would. The thing under test is a filesystem layout, so the
+filesystem is the fixture.
 """
 
 from __future__ import annotations
@@ -191,7 +189,7 @@ def test_an_entry_that_is_not_readable_is_discarded_not_retried(
 ) -> None:
     """A poison entry that stopped the queue would be worse than losing it.
 
-    The user's answer was that a failure drops the entry, so an entry that
+    A failure drops the entry, so an entry that
     cannot be parsed at all takes the same path rather than being retried
     forever with everything behind it waiting.
     """

@@ -1,11 +1,8 @@
 """`skid-say`, against the real service, over a real request.
 
-`skid-say` was first deployed while the MCP route was unusable and the machine
-had been silent for hours, and it went out untested: `coverage report` read
-`say.py 32 stmts 32 miss 0%`, and neither gate noticed. Traceability read 48 of 48 because it
-measures requirement-to-test and every row already had one, and the gate's
-coverage task runs from PATH's python, which cannot import skid's dependencies.
-Two green numbers over an uncovered file.
+Traceability passing does not show this file is exercised, and neither does a
+coverage task run from an interpreter that cannot import skid's dependencies.
+`docs/LESSONS/every-green-signal-answered-a-narrower-question.md` has why.
 
 Nothing is stood in for. `run` is exercised against the actual Flask app
 behind `httpx.WSGITransport`, exactly as `tests/test_client.py` does, so a call
@@ -13,8 +10,8 @@ goes through the code a socket would reach. `main` is exercised twice over a
 real unix socket: once with nothing listening, and once against waitress
 serving the real app, which is the arrangement the installed command meets.
 
-The argument surface is a contract with a person, not with a client. It is
-what somebody types at 2am when nothing else works, so the cases here are the
+The argument surface is typed by a person, often at 2am when nothing else
+works, so the cases here are the
 ones a person gets wrong: no arguments, a name with nothing to say, and
 `--status` with a stray positional after it.
 """
@@ -120,7 +117,7 @@ def test_status_reports_the_queue_a_caller_cannot_log(backend: Backend) -> None:
     that the report crossed intact and carries every field, not how it was
     formatted.
 
-    `assigned` joined the set with FR-10.2. It answers the question a listener
+    `assigned` is FR-10.2's field. It answers the question a listener
     actually has once names sound different, which is which name is which voice,
     and it is empty until a shortlist is configured.
     """
@@ -139,9 +136,9 @@ def test_status_is_answered_even_with_a_stray_positional(
 
     `silo` parses into `name` and would be a submission under any other flag.
     `--status` is tested first in `run` deliberately, so the query wins and
-    nothing is queued. The alternative, refusing the combination, would be
-    stricter and worse: it answers a question nobody asked at the moment
-    somebody is trying to find out what is wrong.
+    nothing is queued. Refusing the combination would be stricter, and it would
+    answer a question nobody asked while somebody is trying to find out what is
+    wrong.
     """
     reported = json.loads(_said(backend, "--status", "silo"))
 

@@ -4,15 +4,14 @@
 |---|---|---|
 | FR-7.1 | **The config file is the record.** A voice set through the MCP tool is written through to it and survives a restart. | [A] |
 
-Settled at the id the open question carried. It answers FR-6.3's
-remaining half: both routes reach one setting, and the file is the one that
-holds it.
+It answers FR-6.3's remaining half: both routes reach one setting, and the file
+is the one that holds it.
 
 FR-7.8 is the same answer for the pronunciation substitutions.
 
 ## What it obliges
 
-Writing to a file a person owns and edits. The ordering in it is the writer's to
+Writing to a file I own and edit. The ordering in it is the writer's to
 preserve, not to normalise away, which is a real cost of putting the record
 there and not in a file skid owns alone. FR-8.4 is that ordering, and it
 survives on its own terms: a YAML list keeps its order in the decoded structure,

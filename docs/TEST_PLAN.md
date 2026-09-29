@@ -27,9 +27,7 @@ temporary directory and point `XDG_CONFIG_HOME` at it.
 The HTTP surface is WSGI (FR-5.2). Flask hands out a real test client, and
 `httpx.WSGITransport` puts the real MCP server in front of the real app, so a
 tool call in `test_client.py` runs the actual route with an actual `Service`
-behind it and no socket in the way. Nothing is scripted. The file this replaced
-had to hand-write a service that returned 404 on cue, because what it tested was
-recovery from a lost session and a session has to be broken on purpose.
+behind it and no socket in the way. Nothing is scripted.
 
 kokoro has no such seam, which is the constraint below.
 
@@ -104,8 +102,8 @@ installed metadata and checks every interpreter skid admits against it.
 What it watches is what kokoro DECLARES, which is not what kokoro SUPPORTS.
 kokoro is reported first-hand to run on 3.13 and 3.14, and has simply not had a
 release since, so `<3.13` is stale packaging metadata and not a real
-ceiling. The declaration is still what a resolver enforces, so it is still the
-thing skid has to sit inside in order to install, and still the thing that moves.
+ceiling. A resolver enforces the declaration, so skid has to sit inside it to
+install, and it is the declaration that moves.
 
 FR-1.8 tests a documented limit, not a guarantee. skid cannot detect
 a player that returns early, so the test configures one, observes the overlap,
@@ -139,10 +137,10 @@ was retired for exactly that reason, and its guidance is prose in FR-2.1.
 | FR-3.6 | `test_a_fresh_table_greets_everyone` | positive |
 | FR-7.4 | `test_the_window_defaults_to_thirty_seconds`, `test_the_window_boundary_is_the_window_itself`, `test_the_clock_is_the_end_of_speech_not_the_submission` | positive, edge, regression |
 
-FR-3.5 is the test the spec review was for. Submit a long array, then a
-second submission immediately. Assert the second is not prefixed. It passes
-against a playback-time decision and fails against a queue-time one, which is
-the bug the review found, so it is a `regression` even though the defect never
+FR-3.5 guards against deciding the greeting at queue time. Submit a long array,
+then a second submission immediately. Assert the second is not prefixed. It
+passes against a playback-time decision and fails against a queue-time one, a
+bug found in review, so it is a `regression` even though the defect never
 shipped.
 
 ### Submission shape

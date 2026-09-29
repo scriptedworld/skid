@@ -55,8 +55,8 @@ def test_only_a_configured_voice_is_ever_assigned() -> None:
 def test_an_empty_shortlist_assigns_nobody() -> None:
     """No `voices` in the config means the single `voice` setting still rules.
 
-    The way skid behaved before assignment existed, kept reachable so adding the
-    feature does not force a config on anybody.
+    A config without a shortlist keeps working, so the feature does not force a
+    config on anybody.
     """
     assignments = Assignments([])
 
@@ -159,7 +159,7 @@ def test_an_exhausted_shortlist_reuses_the_quietest_voice() -> None:
 
 # COVERS: FR-10.6 | property
 def test_assignment_never_returns_nothing_while_the_list_has_entries() -> None:
-    """Refusal was one of the options and was not chosen, so a name always sings."""
+    """A name always gets a voice while the shortlist has entries, never a refusal."""
     assignments = Assignments(SHORTLIST)
 
     everybody = [
@@ -172,7 +172,7 @@ def test_assignment_never_returns_nothing_while_the_list_has_entries() -> None:
 
 # COVERS: FR-10.7 | positive
 def test_a_choice_carries_the_pipeline_it_declared() -> None:
-    """Sara's timbre with English pronunciation, which is what was chosen by ear.
+    """Sara's timbre with English pronunciation.
 
     The absence of a pipeline is a distinct value from naming one, because None
     means 'the id decides' and `generation` resolves it.

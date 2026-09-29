@@ -1,8 +1,8 @@
 """The config file: defaults, reading, and writing what a person can read back.
 
 The write tests are the ones worth having. FR-7.1 and FR-7.8 make this file the
-record, and the obligation that comes with that is writing into a file somebody
-owns and edits, so the ordering in it is not ours to discard.
+record, and it is also a file somebody owns and edits, so the obligation is to
+keep its ordering through a write.
 
 Preserving comments is not part of that obligation. `docs/config.sample.yaml`
 is where a reason lives, and the live file is emitted canonically. What has to
@@ -148,7 +148,7 @@ def test_a_config_of_the_wrong_shape_says_which_key_is_wrong(tmp_path: Path) -> 
 
     Without a type check `greeting_window_seconds: thirty` loads, and then fails
     somewhere downstream where the config is long out of sight. The message
-    carries the path into the document.
+    names the key's path within the document.
     """
     path = _write(tmp_path / "config.yaml", "greeting_window_seconds: thirty\n")
 
@@ -248,8 +248,8 @@ def test_a_declared_pipeline_survives_a_read_and_a_write(tmp_path: Path) -> None
     """The field says which phonemiser was asked for, so it round-trips as written.
 
     An entry that named one keeps it and an entry that did not still has none.
-    Defaulting it on the way out would turn a deliberate choice into an accident
-    of the voice id, and the two are the whole difference FR-10.7 exists for.
+    Defaulting it on the way out would replace a deliberate choice with whatever
+    the voice id implies, and FR-10.7 exists to keep those two apart.
     """
     path = tmp_path / "config.yaml"
     save_config(

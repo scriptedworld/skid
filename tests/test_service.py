@@ -1,7 +1,5 @@
 """The service: the units composed into the order a listener hears.
 
-Written before the implementation and expected to fail by not importing.
-
 These run against the real generator, so they are slower than the unit tests and
 use deliberately short text. Composition is what they check: each unit is tested
 on its own already, and what is left is whether they are wired in the right
@@ -402,7 +400,8 @@ def test_generation_runs_ahead_of_the_speaker_without_a_bound(
 
     Unbounded is the decided trade rather than an oversight, and the cost is
     stated in the row: a long array holds every clip it has produced before the
-    second one is heard. Asserting the whole set is asserting that cost.
+    second one is heard. The test asserts every clip on disk, so a change that
+    bounds generation fails it.
     """
     work = tmp_path / "work"
     service = service_for(_holds_at(1, tmp_path))

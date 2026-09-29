@@ -36,10 +36,9 @@ instead of failing honestly.
 
     .venv/bin/python -m pytest -o addopts= -q
 
-174 tests, about 30 seconds warm. The first run is slower, because there are no
-test doubles: kokoro is installed and tested against, so the run downloads the
-model weights and renders real audio. Nothing stands in for the engine or for
-the audio path.
+220 tests, about 30 seconds warm. The first run is slower, because there are no
+test doubles for the engine or the audio path: kokoro is installed and tested
+against, so the run downloads the model weights and renders real audio.
 
 Coverage, which is not gated and is measured per file:
 
@@ -97,8 +96,7 @@ calls in the player and the installer.
 A `#nosec`, a `# noqa`, a `# type: ignore` or a mypy override needs a written
 question and a written answer in `docs/SUPPRESSIONS.md` before it is added, and
 the register spells the pragma exactly as the source does. There are five marks
-in the tree, all on `subprocess`, and no mocks. A failing check gets fixed or
-asked about; it does not get quieted.
+in the tree, all on `subprocess`, and no mocks.
 
 ## Commits
 
@@ -118,6 +116,6 @@ the jig files are adopted the same way, so `just checks` and the traceability
 checker do not resolve here. `bolt.skid.definitions.yaml` is tracked because it
 is skid's own.
 
-That is a gap, not a policy. The suite, ruff, mypy, pylint and bandit are
-the checks a contributor can run today, and they are the ones a change is judged
-on.
+The gate being unavailable from a clone is unintended. The suite, ruff, mypy,
+pylint and bandit are the checks a contributor can run today, and they are the
+ones a change is judged on.

@@ -1,4 +1,4 @@
-"""A submission: what one is, and what it refuses to be.
+"""A submission: what it holds, and the inputs it refuses.
 
 FR-4.8 makes the queue durable, so the queue is a directory and `Spool` is it.
 An in-memory queue beside it would be two queues, which is a bug and not belt
@@ -51,6 +51,6 @@ def test_a_submission_without_a_name_is_refused() -> None:
 
 # COVERS: FR-4.1 | negative
 def test_a_submission_saying_nothing_is_refused() -> None:
-    """An empty array is a caller mistake, and silence is not a thing to queue."""
+    """An empty array is a caller mistake, so it is refused and nothing is queued."""
     with pytest.raises(ValueError):
         Submission(name="silo", messages=[])

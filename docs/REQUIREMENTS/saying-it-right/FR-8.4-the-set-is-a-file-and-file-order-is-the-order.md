@@ -4,8 +4,8 @@
 |---|---|---|
 | FR-8.4 | The substitutions are written to a file, and are applied **in the order they appear in it**. Changing the order means reordering the file. | [A] |
 
-Stated when FR-7.7 admitted regular expressions and made ordering something
-that has to be decided.
+FR-7.7's regular expressions make ordering something that has to be decided,
+and this row decides it.
 
 The order is visible and editable in the same place the entries are. No
 priority field, no sort by specificity, no implicit rule about which of two

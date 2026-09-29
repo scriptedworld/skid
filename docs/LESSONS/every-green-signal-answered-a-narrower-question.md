@@ -4,8 +4,8 @@ skid was installed, running, socket-activated, restarting cleanly, reporting an
 empty `recent_failures` and draining its queue to zero. It had been inaudible for
 weeks, and none of those signals was lying.
 
-It ran on lazlo and the person sat at oslo. Every clip generated correctly, played
-correctly, and went into an empty room.
+It ran on lazlo and I sat at oslo. Every clip generated and played
+correctly, into an empty room.
 
 ## What each signal actually answered
 
@@ -34,7 +34,7 @@ tools and applied to skid itself without anybody noticing.
 
 ## What to do
 
-**Ask the person.** It is one sentence and it is the only instrument that exists.
+**Ask me.** It is one sentence and it is the only instrument that exists.
 Where the answer is "no", the next check is whether a socket the audio depends on
 is present, not whether the service is healthy:
 

@@ -6,7 +6,8 @@ interleaving into one stream a listener has to untangle, and `Spool` is what
 keeps them in order.
 
 The queue itself is a directory. FR-4.8 makes it durable, so `skid.spool.Spool`
-is the queue, and an in-memory one beside it would be two queues disagreeing.
+is the queue, and nothing here keeps an in-memory copy that could disagree with
+it.
 """
 
 from __future__ import annotations

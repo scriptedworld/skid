@@ -168,8 +168,7 @@ Inside the backend:
 A submission is spoken to completion before the next one starts, which is
 FR-4.4. Nothing interleaves.
 
-Greeting is decided at step 4, not step 1, which is FR-3.5 and is the
-correction that reordered this list.
+Greeting is decided at step 4, not step 1, which is FR-3.5.
 
 *Discharges FR-4.3, FR-4.4, FR-7.2.*
 
@@ -206,7 +205,7 @@ ear, so no entry is a worse outcome than another.
 
 The pool is the config's `voices` list and nothing else. An empty list means
 assignment is off and the single `voice` setting speaks for everybody, which is
-how skid behaved before this existed and is what an unconfigured machine gets.
+what an unconfigured machine gets.
 
 A name is given a voice the first time it speaks and keeps it. Expired
 assignments are released first, so a name arriving after a long quiet spell can
@@ -437,8 +436,8 @@ case, since a connection starts the service, but it does not remove the wedged
 one: a process that is running and not answering still leaves a client waiting,
 and `Type=notify` makes that less likely, not impossible.
 
-FR-5.3 holds that sentence as a requirement, because as prose alone it was lost
-once in a rewrite of this section and nothing noticed.
+FR-5.3 holds that sentence as a requirement, so the property does not depend on
+this prose surviving a rewrite.
 
 Disk exhaustion is the one that degrades worst, and it is named instead of
 designed away: FR-7.3's unboundedness was chosen with its cost stated. Every
@@ -481,9 +480,9 @@ lexicographic name order.
     000043-wrench.json.tmp    half written, removed at start-up
 
 The text is what is durable, not the audio. The entry is written before
-`submit` returns, which is what puts something behind FR-4.5's promise: before
-this the queue was a `deque`, so "queued" meant accepted by something that
-forgets on restart, and the caller had already been told yes. Clips stay a cache
+`submit` returns, which is what puts something behind FR-4.5's promise: with an
+in-memory `deque`, "queued" would mean accepted by something that forgets on
+restart, after the caller had already been told yes. Clips stay a cache
 under `clips/` and may be deleted freely, because losing one costs regeneration
 time and not data.
 

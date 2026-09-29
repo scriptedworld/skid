@@ -10,8 +10,8 @@ FR-4.5 says a submission returns to its caller once the work is queued. Backed
 by a `deque` in one process, "queued" means "accepted by something that will
 forget on restart", after the caller has already been told yes.
 
-Restarting was the documented way to deploy an edit under an editable install,
-so that loss was routine and not exceptional.
+Restarting is how an edit is deployed under an editable install, so without this
+row that loss is routine and not exceptional.
 
 ## What is durable is the text, not the audio
 
@@ -21,8 +21,7 @@ costs regeneration time rather than data.
 
 A spool of generated audio would not discharge this row. It protects only
 work already generated, and the window this is about is the one between the call
-returning yes and the first clip existing. Text at the front door closes it;
-audio does not.
+returning yes and the first clip existing.
 
 ## The guarantee is precise, and smaller than nothing is lost
 

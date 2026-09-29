@@ -31,7 +31,7 @@ requirement without anybody having predicted it.
 
 ## How the third one arrived
 
-The MCP session lives in the service's memory, so restarting the service left
+The service kept each MCP session id in memory, so restarting it left
 `skid-mcp` holding an id the new process had never heard of. It answered
 `404 Session not found` with `"id": null`, the shim forwarded it verbatim, and
 a JSON-RPC client cannot match a null id to the request it is waiting on. Three
@@ -60,9 +60,9 @@ normal. A bound alone therefore buys nothing; the property is a bounded time
 that produces a diagnosis, and 1800 seconds with none is the ceiling any answer
 has to beat.
 
-Restarting was the documented way to deploy an edit under an editable install,
-so this fired on an ordinary action and not a rare fault, and the service came
-back healthy every time.
+Restarting is how an edit is deployed under an editable install, so this fired
+on an ordinary action and not a rare fault, and the service came back healthy
+every time.
 
 Answered in `client.py`: the shim holds no MCP session, so there is no id for a
 restart to make stale, and a service that is absent, refusing or slow becomes a
@@ -82,6 +82,5 @@ dropped it, and no requirement noticed, because none existed.
     git show a0751af:docs/SPEC.md | grep -c unreachable    1
     grep -c unreachable docs/SPEC.md                       0    (before this row)
 
-It is the same failure FR-4.4
-was written for, one document up: a property that only prose held, lost in an
-edit nobody could have caught by reading the edit.
+FR-4.4 exists for the same reason: a property held only in prose can be lost in
+an edit that nobody could catch by reading the edit.

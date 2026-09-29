@@ -105,8 +105,8 @@ def _substitutions_from(document: dict[str, Any]) -> list[Substitution]:
     """Read the substitution entries in the order the file lists them.
 
     The schema has already said these are objects with the two required keys, so
-    nothing here re-checks the shape. That is the point of validating on the way
-    in: one place decides what a valid file is.
+    nothing here re-checks the shape. The schema is the one definition of a
+    valid file.
     """
     entries: list[Substitution] = []
     for raw in document.get("substitution") or []:
@@ -235,7 +235,8 @@ def save_config(config: Config, path: Path | None = None) -> None:
     Validated on write is the half worth having. A tool that stored a shape
     the schema refuses would produce a file skid could never read again, and the
     caller would be told the write succeeded. Checking the document before it
-    reaches the disk means a bug in skid fails where a bad file would.
+    reaches the disk makes a bug in skid fail at the write, with the same
+    validation error a bad file raises on read.
 
     The temporary-and-rename is wrench's, its FR-6.3, so a kill part way through
     leaves the old config rather than a truncated one.

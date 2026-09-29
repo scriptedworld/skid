@@ -40,8 +40,6 @@ no weaker than it was and no stronger. Closing that would mean building a
 pipeline inside a tool call, which is what FR-5.1 keeps out of the request path.
 
 This is about values that break skid, not about taste. FR-7.5 already allows
-a player that breaks FR-1.4, and FR-1.8 a player that breaks FR-2.1. A setting
-whose effect is silence is a different thing from a setting whose effect is
-disliked.
+a player that breaks FR-1.4, and FR-1.8 a player that breaks FR-2.1.
 
 Raised by the spec review at `a0751af`.

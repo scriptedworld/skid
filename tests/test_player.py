@@ -1,11 +1,9 @@
 """Playback: running a configured command, one at a time, and giving up on it.
 
-Written before the implementation and expected to fail by not importing.
-
 The player takes a path and runs a command line. It does not know what audio is,
 so these tests hand it ordinary files and configure real scripts as the player.
-Nothing here is a double: FR-7.5 makes the player a command line on purpose, and
-that is the seam.
+Nothing here is a double, because FR-7.5 makes the player a command line and a
+configured script is the seam.
 """
 
 import threading
@@ -74,8 +72,8 @@ def test_two_clips_never_overlap(tmp_path: Path) -> None:
 
     Three threads rather than `play_all`, and that is the whole test.
     `play_all` is a loop in one thread, so the alternation it produces holds
-    whether or not a lock exists: this test asserted it that way and passed
-    against a `Player` with `self._lock` removed entirely. Concurrent callers
+    whether or not a lock exists, and a test through it passes against a
+    `Player` with `self._lock` removed entirely. Concurrent callers
     are what make the lock load-bearing.
     """
     log = tmp_path / "log"

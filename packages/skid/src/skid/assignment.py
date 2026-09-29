@@ -1,8 +1,8 @@
 """Which voice each name speaks in, and for how long it keeps it.
 
 The same shape as `greeting.py`: a table holding what happened, and decisions
-that take the time from the caller rather than reading a clock. That is what
-lets a test drive six hours in a few lines without sleeping through them.
+that take the time from the caller rather than reading a clock, so a test can
+drive six hours in a few lines without sleeping.
 
 The table is memory only, FR-10.9. Losing it costs one reassignment per
 name, and every voice on the shortlist was chosen by ear, so no entry is a worse
@@ -103,8 +103,7 @@ class Assignments:
         than doubling up on one that has not.
 
         None when the shortlist is empty, which is a config with no `voices` and
-        means the single `voice` setting applies to everybody, exactly as it did
-        before this existed.
+        means the single `voice` setting applies to everybody.
         """
         if not self._choices:
             return None

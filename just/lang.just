@@ -6,9 +6,8 @@
 # or `mypy` runs against an interpreter that cannot import this project's
 # dependencies.
 #
-# skid's own pyproject records what that costs: the `types` task reports thirty
-# phantom errors from PATH and one real one from the venv. Filed against the jig
-# against the jig.
+# The root pyproject.toml, above [dependency-groups], records what that costs
+# in the `types` task.
 #
 # So `just test` here means `uv run pytest`, and the jig calls in `checks` are
 # the exception: those run bolt, which invokes the checkers from PATH by design,
@@ -29,9 +28,9 @@ test:
     uv run pytest
 
 # Coverage is measured and not enforced, which is the jig's state and not a
-# choice made here: bolt.python-std-quality.yaml produces coverage.xml and its
-# own footer says the per-file threshold waits on an adapter that reads
-# Cobertura XML. An aggregate is refused there, per hard rule 5.
+# choice made here: bolt.python-std-quality.yaml has no per-file threshold yet,
+# and its footer says what that waits on. An aggregate is refused there, per
+# hard rule 5.
 
 # the suite with coverage, and the minimum enforced
 coverage:

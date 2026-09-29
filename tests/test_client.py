@@ -57,7 +57,7 @@ def test_the_script_is_the_mcp_server_and_offers_every_tool(server: Any) -> None
 def test_a_tool_call_reaches_the_service_and_returns_its_answer(
     server: Any, service: Service
 ) -> None:
-    """One call, one request, one answer, with no handshake in front of it."""
+    """A tool call is a single request to the service, with no handshake first."""
     _call(server, "speak", name="silo", messages=["one", "two"])
 
     assert service.status()["pending"] == 1
@@ -83,7 +83,7 @@ def test_an_unreachable_service_fails_the_call_rather_than_hanging() -> None:
 
     A real transport over a real absent path, so what is exercised is what a
     client meets when the service is down: an error, promptly, naming where it
-    looked. The case this replaces waited 1800 seconds and said nothing.
+    looked. Without it the call waits 1800 seconds and says nothing.
     """
     transport = httpx.HTTPTransport(uds=str(NOWHERE))
     with httpx.Client(transport=transport, base_url="http://localhost") as http:

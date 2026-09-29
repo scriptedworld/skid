@@ -2,8 +2,8 @@
 
 The MCP route needs a `skid-mcp` that the Claude Code session spawned at
 start-up, so a session whose shim predates a deploy cannot speak until it is
-restarted, and only a person can do that. That has left the machine silent for
-hours with a service that was working perfectly.
+restarted, and only a person can do that. Until then the machine stays silent
+however well the service is working.
 
 The socket is the interface and MCP is one client of it. This is another, and it
 needs nothing but the socket being there.

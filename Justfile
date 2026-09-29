@@ -23,8 +23,6 @@
 #
 # `default` is the exception and has to be here: defined in an import it is not
 # found, and bare `just` answers "justfile contains no default recipe".
-#
-# Every project here exposes the same two-word interface.
 set allow-duplicate-recipes := true
 
 import? 'just/project.just'

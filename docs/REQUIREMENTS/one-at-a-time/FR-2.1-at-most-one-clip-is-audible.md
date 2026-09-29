@@ -19,6 +19,6 @@ outside it ever plays a clip.
 What the lock covers is a separate question from what holds it, and FR-7.3
 settles that one: playback alone.
 
-This paragraph absorbed the retired FR-2.2. It is guidance and not a constraint,
-so it belongs beside the requirement it qualifies instead of standing as one.
+This guidance is what remains of the retired FR-2.2. It does not constrain, so
+it sits beside the requirement it qualifies instead of standing as one.
 See `## Retired` in `../README.md`.

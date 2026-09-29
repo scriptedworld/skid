@@ -3,11 +3,12 @@
 Nothing here starts a service. `someone_is_listening` is a question about a
 path, so these tests make real unix sockets in `tmp_path` and ask about them.
 
-The bug this is written against: run by hand, skid unlinked whatever was at the
-socket path and bound its own. Under socket activation that takes the path away
-from systemd, which goes on believing it owns a socket nobody can reach. A
-by-hand instance started at 00:54 was still resident at 03:18 holding 1.73 GB, listening on an inode the path no longer resolved to,
-reachable by nobody and reported by nothing.
+The failure this guards against: run by hand, skid unlinks whatever is at the
+socket path and binds its own. Under socket activation that takes the path away
+from systemd, which goes on believing it owns a socket nobody can reach. The
+by-hand instance stays resident, holding the model in memory and listening on an
+inode the path no longer resolves to, reachable by nobody and reported by
+nothing.
 """
 
 from __future__ import annotations
@@ -49,8 +50,8 @@ def test_a_path_with_nothing_there_is_free(tmp_path: Path) -> None:
 def test_a_socket_someone_is_listening_on_is_not_free(tmp_path: Path) -> None:
     """A live server owns its path, and skid must not bind over it.
 
-    This is the case that cost 1.73 GB and two hours, when skid unlinked exactly
-    this and carried on.
+    Unlinking this path and carrying on is the failure the module docstring
+    describes.
     """
     path = tmp_path / "skid.sock"
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as held:
@@ -211,8 +212,8 @@ def test_a_socket_bound_by_hand_is_owner_only(
 ) -> None:
     """skid sets the mode because skid owns the bind.
 
-    Letting the server create the socket from a path produced an 0666 socket
-    whose privacy came entirely from the directory above it.
+    A server left to create the socket from a path makes it 0666, so its
+    privacy comes entirely from the directory above it.
     """
     path = tmp_path / "skid.sock"
 
@@ -303,9 +304,9 @@ def test_building_warms_the_model_and_returns_a_servable_app(
 ) -> None:
     """`build` produces a started service and an app, with the model already loaded.
 
-    Slow and real. This loads kokoro, which is the point: FR-5.1 is that a
-    backend holds the model warm so a message does not pay start-up, and a test
-    that skipped the load would assert the opposite of the requirement.
+    Slow and real. It loads kokoro because FR-5.1 is about the model being warm
+    before a message arrives, and a test that skipped the load would assert the
+    opposite of the requirement.
 
     Every directory it touches is redirected through the environment, which is
     what `runtime_dir`, `state_dir` and `default_config_path` already read, so
@@ -378,6 +379,7 @@ def test_the_watchdog_pings_only_while_the_service_is_getting_somewhere(
 # both assert that the caller believes what the test told it rather than that
 # the watchdog withholds when the service is stuck.
 #
-# It is the branch most worth having and the one this suite cannot honestly
-# reach from outside. What would settle it is a seam that lets a real Service be
-# put in a stuck state, which is a change to Service rather than to its tests.
+# It is the branch that matters most, and this suite cannot reach it from
+# outside without faking the state. What would settle it is a seam that lets a
+# real Service be put in a stuck state, which is a change to Service rather than
+# to its tests.

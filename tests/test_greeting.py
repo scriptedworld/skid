@@ -1,7 +1,5 @@
 """The quiet window: who gets announced, and against which clock.
 
-Written before the implementation and expected to fail by not importing.
-
 The decision is deliberately a pure function of a table, a name and a time, so
 that FR-3.5's rule about *when* it is evaluated can be tested by passing the
 time the caller would pass. The pipeline placement itself needs a running

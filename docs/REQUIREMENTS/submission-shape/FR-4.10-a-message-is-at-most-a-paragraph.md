@@ -15,11 +15,11 @@ the caller had already been told its submission was queued.
 
 ## Why a refusal rather than a longer bound or a split
 
-Raising FR-1.9 was the obvious move and is wrong: it is a stuck-process detector,
+Raising FR-1.9 is wrong, however obvious: it is a stuck-process detector,
 so every second added is a second a genuinely stuck player holds the machine
 silent.
 
-Splitting a long message for the caller was considered and refused. It would mean
+skid does not split a long message for the caller. Splitting would mean
 skid choosing where a sentence ends, and a split in the wrong place is heard.
 
 So the caller is told. A refusal at the tool reaches somebody who can act on it,

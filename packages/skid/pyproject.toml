@@ -13,9 +13,8 @@ description = "Voice output for the agents. Text in, one clip at a time out."
 # inside the project directory and `../../LICENSE` is not permitted.
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-# FR-1.6 is scope rather than a permanent boundary, and until this line it was a
-# sentence in a document with nothing a test could read. Declared so the scope
-# is checkable: `tests/test_declarations.py` asserts this exact string.
+# FR-1.6 is scope rather than a permanent boundary. Declared so the scope is
+# checkable: `tests/test_declarations.py` asserts this exact string.
 #
 # What makes another platform cheap later is FR-1.3 through FR-1.5, so widening
 # this is a matter of naming a player and its command line rather than of
@@ -33,7 +32,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     # kokoro's English path needs this spaCy model and will try to DOWNLOAD it
     # at runtime if it is absent, using pip or uv. Under systemd neither is on
-    # PATH, so the service failed to start 76 times before this line existed.
+    # PATH, so without this line the service fails to start, every time.
     # Declared rather than fetched: a service must not need a package installer.
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "kokoro>=0.9.4",

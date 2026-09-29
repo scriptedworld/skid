@@ -38,7 +38,8 @@ service kept a session id, a restart forgot it, and a client that could not
 match the answer to its request waited until something outside it gave up. The
 fix was to hold no session instead of recovering from a lost one.
 
-That left the state gone and the connection still held. This is the other half.
+That left the state gone and the connection still held, and this decision
+removes the connection.
 
 ## What is true today, and it is measured
 
@@ -72,8 +73,8 @@ against a held connection. A stale pooled connection more usually fails as a
 broken pipe on the next write than as a refusal.
 
 Settling it costs one restart and two calls: make a call, restart the service,
-call again, and read what the second one raises. It was not done here because
-the service is shared and other callers were using it.
+call again, and read what the second one raises. The service is shared, so it
+needs a moment when no other caller is using it.
 
 That measurement does not change this decision. It changes how the current
 behaviour is described, and it is worth taking before anybody writes the

@@ -13,5 +13,4 @@ Without this row, "queued" is compatible with taking one message from each
 waiting submission in turn, which preserves both orders and makes a listener
 follow two speakers at once.
 
-Raised by `docs/SPEC.md`, which asserted it as a design choice before any
-requirement said it.
+Raised by `docs/SPEC.md`.

@@ -1,8 +1,7 @@
 # Running skid in a container
 
 skid is a good fit for a container everywhere except the last inch: it has to
-reach a speaker, and a container has none. That is the whole difficulty and
-everything below is about it.
+reach a speaker, and a container has none.
 
 This is guidance, not a shipped image. The Containerfile here is short
 enough to read and has not been through the gate. Treat it as a starting point.
@@ -84,7 +83,7 @@ audible path rather than the exit status:
 
     skid-say container "hello from the container"
 
-and hear it. A clean exit is not evidence.
+and hear it.
 
 ## Debian without a container
 
@@ -119,9 +118,9 @@ Verified, on the machine this was written on:
     the git source resolves              uv fetches wrench from GitHub, 158 packages,
                                          and picks CPython 3.12 over a newer default
 
-The suite is NOT verified on a clean machine. 174 tests pass here. A cold
-review elsewhere got 45 dots and then a native crash inside the generation
-tests, with espeak-ng failing to find its data directory.
+The suite is NOT verified on a clean machine. 174 tests pass here. On another
+machine the suite reached 45 dots and then crashed natively inside the
+generation tests, with espeak-ng failing to find its data directory.
 
 espeak-ng is part of the speech engine, not a system package to add. It
 arrives with `kokoro`, which pulls `espeakng_loader`, and that wheel carries
@@ -147,6 +146,5 @@ inside a container, and none of the Debian steps has been run on a clean
 install. A QEMU install test is what would settle the second half, and building
 the image once would settle the first.
 
-Both are worth doing before anyone relies on this page, and the reason it says
-so is that a setup document nobody has run is the failure this project already
-records elsewhere.
+Both should happen before anyone relies on this page, because until then it is
+a setup document nobody has run.

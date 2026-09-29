@@ -30,7 +30,7 @@ rebuild the other and a service restart no longer disturbs the MCP side.
 
 Nothing needs root and nothing is written outside `$HOME`, which is the property
 that makes an installer for this service an ordinary thing to run rather than
-something to read carefully first. Read it carefully anyway.
+something to read carefully first.
 
 Run against a machine that already has skid, it says so and asks. Answering
 yes reinstalls, which means the registration is removed and added rather than
@@ -77,8 +77,8 @@ class Step:
     """One command, with the sentence a person should read while it runs.
 
     `tolerate` is the substring in the command's own output that means the step
-    found the world already in the state it wanted. A step carrying one is
-    idempotent by inspection rather than by hope.
+    found the world already in the state it wanted, so a step carrying one is
+    safe to re-run.
     """
 
     says: str
@@ -141,8 +141,8 @@ def _unit_checks(source: Path) -> list[Step]:
     `skid.service` names `~/.local/bin/skid` in `ExecStart`, and
     `systemd-analyze verify` fails on a command that is not there, so a check
     placed before the tool install cannot pass on a machine that has never had
-    skid. It only ever passed because a previous install had left the binary
-    behind, and it verified that stale binary rather than the one being
+    skid. On a machine that has, it passes against the binary a previous
+    install left behind and verifies that stale binary, not the one being
     installed.
 
     Ordering it after the install makes the `ExecStart` check mean something:
@@ -246,11 +246,9 @@ def install_plan(paths: Paths, *, reinstall: bool = False) -> list[Step]:
     the wrong command survives every re-run that only adds (FR-9.11).
 
     Both steps are skipped when the entry is already the one this install
-    would write. FR-9.11 asks that the registration name the checkout being
-    installed, and an entry reading `command: skid-mcp` does that for every
-    checkout, because the name resolves through a symlink the tool install
-    re-points. Re-registering it would change no bytes and would cost every
-    running session its `speak`. `registration_is_current` is the test.
+    would write. `registration_is_current` decides that, and says why such an
+    entry already names the checkout being installed (FR-9.11) and what
+    re-registering it would cost.
     """
     source = paths.checkout / "share" / "systemd" / "user"
     packages = paths.checkout / "packages"
@@ -404,9 +402,8 @@ def spacy_model_present(paths: Paths) -> bool:
     """Whether the tool environment can import the spaCy model kokoro needs.
 
     kokoro downloads `en_core_web_sm` at start-up when it is absent, using pip
-    or uv, and under systemd neither is on PATH. That failure cost 76 restarts
-    before the model was declared as a dependency. Checking it here is what
-    stops the next one, and it is a question about the installed environment
+    or uv, and under systemd neither is on PATH, so without the model the
+    service fails every start. It is a question about the installed environment
     rather than about the checkout, so the tool's own interpreter answers it.
 
     The service's environment and not the shim's. kokoro is the service's
@@ -492,8 +489,7 @@ def verify_installed(paths: Paths) -> bool:
 
     Two questions, and the second is the one a passing socket does not answer:
     kokoro downloads `en_core_web_sm` at start-up when it is absent, using pip
-    or uv, and under systemd neither is on PATH. That cost 76 failed starts
-    before the model was declared as a dependency. An install that leaves it
+    or uv, and under systemd neither is on PATH. An install that leaves it
     missing has produced a service that cannot start, and says so here rather
     than at the first `speak`.
     """

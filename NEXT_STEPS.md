@@ -41,8 +41,8 @@ restart into a broken client, and every consumer then needs reconnection logic
 that runs only when something has already gone wrong. Forwarding per call makes
 a restart invisible to the caller, because there is nothing to go stale.
 
-Today's `skid-mcp` holds no session, which was removed deliberately, and does
-hold a pooled connection: one `httpx.Client` per process, reused across calls.
+Today's `skid-mcp` deliberately holds no session, and does hold a pooled
+connection: one `httpx.Client` per process, reused across calls.
 So the existing statements that it holds nothing between calls are about state
 and are accurate about state.
 `docs/DECISIONS/the-forwarder-holds-no-connection.md` carries the reasoning, the
