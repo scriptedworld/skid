@@ -46,6 +46,16 @@ dependencies = [
     # version 12040, and falls back to CPU, so the default wheel carries a CUDA
     # stack this machine cannot use even once.
     "torch",
+    # Declared only to bound the resolve. kokoro depends on huggingface-hub
+    # with no cap, and every tokenizers release a current transformers accepts
+    # caps it below 2.0. A resolver that takes hub 2.x first backtracks
+    # transformers to 4.12.2, whose tokenizers 0.10.3 is an sdist that current
+    # Rust refuses to build (invalid_reference_casting). The cap is what
+    # tokenizers already demands, written where the resolver sees it first.
+    "huggingface-hub<2",
+    # A floor, so a conflict like the one above fails as a conflict instead of
+    # as a source build of a 2021 release.
+    "transformers>=5",
     # The config and the spool are read, written and validated through wrench,
     # which is the ecosystem's one answer for structured files. Comments for a
     # file a person edits live in `docs/config.sample.yaml`, so the live file
