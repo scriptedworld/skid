@@ -262,6 +262,11 @@ Each entry carries an `alias`, an ordinary first name matching the sex in the
 voice id. It is read and never spoken, so it only has to be distinguishable on
 the page. `status` reports the live map as `assigned`.
 
+A name can be given one voice for good, in the config's `speakers` mapping from
+name to alias, so an agent always sounds like the persona it has. skid infers
+nothing from a name; a name not listed draws from the pool as above. What
+happens when the pool runs out with declarations in it is undecided, FR-10.16.
+
 The config file is the record, for the voice and the substitutions alike. A
 setting made through an MCP tool is written through and survives a restart, and
 the ordering of substitutions is preserved.

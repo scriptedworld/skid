@@ -119,13 +119,21 @@ def test_status_reports_the_queue_a_caller_cannot_log(backend: Backend) -> None:
 
     `assigned` is FR-10.2's field. It answers the question a listener
     actually has once names sound different, which is which name is which voice,
-    and it is empty until a shortlist is configured.
+    and it is empty until a shortlist is configured. `declared` is FR-10.15's,
+    empty until the config declares a name.
     """
     reported = json.loads(_said(backend, "--status"))
 
-    assert set(reported) == {"pending", "recent_failures", "voice", "assigned"}
+    assert set(reported) == {
+        "pending",
+        "recent_failures",
+        "voice",
+        "assigned",
+        "declared",
+    }
     assert reported["pending"] == 0
     assert reported["assigned"] == {}
+    assert reported["declared"] == {}
 
 
 # COVERS FR-4.7 | edge

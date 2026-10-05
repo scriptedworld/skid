@@ -185,6 +185,60 @@ def test_a_choice_carries_the_pipeline_it_declared() -> None:
     assert by_alias["Ashley"].pipeline is None
 
 
+RAMONA = {"ramona": SHORTLIST[2]}
+"""Ramona declared as Wendy, the last entry, so file order would never reach it first."""
+
+
+# COVERS FR-10.10 | positive
+def test_a_declared_name_speaks_in_its_declared_voice() -> None:
+    """The declaration wins over the pool, which would hand out Ashley first."""
+    assignments = Assignments(SHORTLIST, RAMONA)
+
+    assert assigned(assignments, "ramona", now=1000.0) == SHORTLIST[2]
+    assert "ramona" not in assignments.held()
+
+
+# COVERS FR-10.10 | edge
+def test_a_declaration_outlasts_any_quiet() -> None:
+    """Quiet releases an assignment and a declaration is not one.
+
+    Ramona speaks, falls silent for twice the window, and the voices she could
+    have lost to are all taken in between.
+    """
+    assignments = Assignments(SHORTLIST, RAMONA)
+    assignments.voice_for("ramona", now=1000.0, window=WINDOW)
+    assignments.record_spoken("ramona", when=1000.0)
+    later = 1000.0 + 2 * WINDOW
+    for name in ["first", "second", "third"]:
+        assignments.voice_for(name, now=later, window=WINDOW)
+
+    assert assigned(assignments, "ramona", now=later) == SHORTLIST[2]
+
+
+# COVERS FR-10.12 | property
+def test_a_declared_voice_is_not_given_out_while_another_is_free() -> None:
+    """Two undeclared names take the two voices nobody declared, never Ashley.
+
+    Ashley is first on the list, so file order alone would hand her out first.
+    """
+    assignments = Assignments(SHORTLIST, {"ramona": SHORTLIST[0]})
+
+    given = {
+        assigned(assignments, name, now=1000.0).voice for name in ["silo", "wrench"]
+    }
+
+    assert given == {"am_echo", "if_sara"}
+
+
+# COVERS FR-10.13 | positive
+def test_a_declaration_matches_a_name_in_any_case() -> None:
+    """`Ramona` and `RAMONA` are the agent the file calls `ramona`."""
+    assignments = Assignments(SHORTLIST, RAMONA)
+
+    assert assigned(assignments, "Ramona", now=1000.0) == SHORTLIST[2]
+    assert assigned(assignments, "RAMONA", now=1000.0) == SHORTLIST[2]
+
+
 # COVERS FR-10.9 | property
 def test_a_fresh_table_holds_nothing() -> None:
     """A restart reassigns, which is what not persisting means from outside.

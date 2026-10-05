@@ -218,6 +218,13 @@ refused, and assert the config on disk is unchanged.
 | FR-10.7 | `test_a_choice_carries_the_pipeline_it_declared`, `test_a_declared_pipeline_survives_a_read_and_a_write`, `test_a_declared_pipeline_overrides_the_one_the_id_implies`, `test_switching_voices_keeps_one_model_across_pipelines` | positive, property |
 | FR-10.8 | `test_two_voices_sharing_an_alias_are_refused` | negative |
 | FR-10.9 | `test_a_fresh_table_holds_nothing` | property |
+| FR-10.10 | `test_a_declared_name_speaks_in_its_declared_voice`, `test_a_declaration_outlasts_any_quiet`, `test_a_declared_name_is_spoken_in_its_declared_voice` | positive, edge, property |
+| FR-10.11 | `test_a_declaration_naming_no_voice_is_refused` | negative |
+| FR-10.12 | `test_a_declared_voice_is_not_given_out_while_another_is_free` | property |
+| FR-10.13 | `test_a_declaration_matches_a_name_in_any_case`, `test_two_declarations_differing_only_in_case_are_refused` | positive, negative |
+| FR-10.14 | `test_declarations_survive_a_tool_rewriting_the_config` | positive |
+| FR-10.15 | `test_status_reports_each_declaration` | positive |
+| FR-10.16 | none, the row is `[?]` | |
 
 The clock is a parameter, exactly as it is for the greeting. Six hours is a
 number passed in, so `test_speaking_refreshes_the_window` drives past the window
@@ -241,6 +248,12 @@ table built fresh holds nothing by construction, so no mutation of the source
 can make it hold something. It sits with FR-1.8 and FR-7.9 as a row the suite
 cannot distinguish. The other eight FR-10 rows were probed by mutation and all
 eight caught it.
+
+FR-10.10 to FR-10.14 were probed the same way: ignoring the declaration, not
+folding the name, not reserving declared voices and not writing `speakers` each
+fail at least one test. FR-10.12's test declares the first voice on the list,
+because declaring the last one passed with the reservation removed: file order
+never reached it.
 
 ### Saying it right
 

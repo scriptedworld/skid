@@ -70,6 +70,7 @@ class Config:
     expiry_seconds: int = DEFAULT_EXPIRY_SECONDS
     substitutions: list[Substitution] = field(default_factory=list)
     voices: list[VoiceChoice] = field(default_factory=list)
+    speakers: dict[str, str] = field(default_factory=dict)
     assignment_window_seconds: int = DEFAULT_ASSIGNMENT_WINDOW_SECONDS
 
 
@@ -99,6 +100,31 @@ def pipeline_for(config: Config, voice: str) -> str | None:
         if choice.voice == voice:
             return choice.pipeline
     return None
+
+
+def declared_voices(config: Config) -> dict[str, VoiceChoice]:
+    """Each declared name's voice entry, keyed by the folded name, FR-10.10.
+
+    Raises `ValueError` naming the offender for an alias that is not on the
+    shortlist, FR-10.11, and for two names that fold to one, FR-10.13.
+    `load_config` calls it so a bad file is refused on read; the service calls
+    it again to build the table, which costs a dictionary.
+    """
+    by_alias = {choice.alias: choice for choice in config.voices}
+    declared: dict[str, VoiceChoice] = {}
+    written: dict[str, str] = {}
+    for name, alias in config.speakers.items():
+        choice = by_alias.get(alias)
+        if choice is None:
+            raise ValueError(f"speaker {name!r} names {alias!r}, which no voice has")
+        key = name.casefold()
+        if key in written:
+            raise ValueError(
+                f"speakers {written[key]!r} and {name!r} differ only in case"
+            )
+        written[key] = name
+        declared[key] = choice
+    return declared
 
 
 def _substitutions_from(document: dict[str, Any]) -> list[Substitution]:
@@ -171,7 +197,7 @@ def load_config(path: Path | None = None) -> Config:
     except (wrench.ParseError, wrench.ValidationError) as exc:
         raise ValueError(f"config is present but not usable: {exc}") from exc
 
-    return Config(
+    config = Config(
         voice=str(document.get("voice", DEFAULT_VOICE)),
         player=str(document.get("player", DEFAULT_PLAYER)),
         greeting_window_seconds=int(
@@ -180,10 +206,16 @@ def load_config(path: Path | None = None) -> Config:
         expiry_seconds=int(document.get("expiry_seconds", DEFAULT_EXPIRY_SECONDS)),
         substitutions=_substitutions_from(document),
         voices=_voices_from(document),
+        speakers={
+            str(name): str(alias)
+            for name, alias in (document.get("speakers") or {}).items()
+        },
         assignment_window_seconds=int(
             document.get("assignment_window_seconds", DEFAULT_ASSIGNMENT_WINDOW_SECONDS)
         ),
     )
+    declared_voices(config)
+    return config
 
 
 def _as_document(config: Config) -> dict[str, object]:
@@ -191,8 +223,10 @@ def _as_document(config: Config) -> dict[str, object]:
 
     Every value is written, including one that equals its default. The file is
     the record, so a reader should see what is in use rather than having to know
-    which defaults applied. `substitution` and `voices` are omitted when empty,
-    because an empty list in the file says less than its absence.
+    which defaults applied. `substitution`, `voices` and `speakers` are omitted
+    when empty, because an empty list in the file says less than its absence.
+    `speakers` is written whenever it is not, FR-10.14, since every tool
+    rewrites the whole file.
 
     A `pipeline` equal to the voice id's own letter is still written when it was
     written, and an entry that never named one still does not. The field says
@@ -217,6 +251,8 @@ def _as_document(config: Config) -> dict[str, object]:
             }
             for choice in config.voices
         ]
+    if config.speakers:
+        document["speakers"] = dict(config.speakers)
     if config.substitutions:
         document["substitution"] = [
             {

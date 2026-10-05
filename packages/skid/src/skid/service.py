@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from skid.assignment import Assignments
-from skid.config import Config, load_config, pipeline_for
+from skid.config import Config, declared_voices, load_config, pipeline_for
 from skid.generation import GenerationFailed, Generator
 from skid.greeting import QuietTable, greeting_for, should_greet
 from skid.player import PlaybackFailed, Player
@@ -147,7 +147,7 @@ class Service:
                 ttl_seconds=float(config.expiry_seconds),
             ),
             table=QuietTable(),
-            assignments=Assignments(config.voices),
+            assignments=Assignments(config.voices, declared_voices(config)),
         )
         self._loop = Loop(
             incoming=queue.Queue(),
@@ -276,6 +276,7 @@ class Service:
                 name: choice.alias
                 for name, choice in self._parts.assignments.held().items()
             },
+            "declared": dict(self._config.speakers),
         }
 
     def _refresh_config(self) -> None:
@@ -290,7 +291,8 @@ class Service:
         `set_voice` call rewrites the config and lands here, and rebuilding
         unconditionally would take every name's voice away whenever anybody
         touched an unrelated setting. Comparing the lists is enough because
-        `VoiceChoice` is frozen, so equality is by value.
+        `VoiceChoice` is frozen, so equality is by value. A changed declaration
+        rebuilds it too, FR-10.10, since the next clip has to speak it.
         """
         if (
             self._workspace.config_path is None
@@ -310,8 +312,12 @@ class Service:
         self._parts.generator.set_voice(
             self._config.voice, pipeline_for(self._config, self._config.voice)
         )
-        if self._parts.assignments.choices != self._config.voices:
-            self._parts.assignments = Assignments(self._config.voices)
+        declared = declared_voices(self._config)
+        if (
+            self._parts.assignments.choices != self._config.voices
+            or self._parts.assignments.declared != declared
+        ):
+            self._parts.assignments = Assignments(self._config.voices, declared)
 
     def _log(self, line: str) -> None:
         """Append one line to the log a person reads when the machine goes quiet."""

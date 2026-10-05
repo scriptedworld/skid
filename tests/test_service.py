@@ -142,12 +142,14 @@ def service_for_fixture(
         behaviour: str = "true",
         substitutions: list[Substitution] | None = None,
         voices: list[VoiceChoice] | None = None,
+        speakers: dict[str, str] | None = None,
     ) -> Service:
         service = Service(
             config=Config(
                 player=_player_that(behaviour, tmp_path),
                 substitutions=list(substitutions or []),
                 voices=list(voices or []),
+                speakers=dict(speakers or {}),
             ),
             generator=generator,
             workspace=Workspace(work_dir=tmp_path / "work", log_path=tmp_path / "log"),
@@ -630,3 +632,40 @@ def test_two_names_are_spoken_in_different_voices(
     service.wait_idle(timeout=300)
 
     assert service.status()["assigned"] == {"silo": "Ashley", "wrench": "Carol"}
+
+
+# COVERS FR-10.10 | property
+@pytest.mark.usefixtures("restored_voice")
+def test_a_declared_name_is_spoken_in_its_declared_voice(
+    service_for: Callable[..., Service], generator: Generator
+) -> None:
+    """The wiring: the generator really spoke Carol for Ramona.
+
+    Carol is second on the list, so a service that ignored the declaration and
+    asked the pool would have spoken Ashley, and the generator's voice after the
+    one submission would say so.
+    """
+    service = service_for(
+        voices=[
+            VoiceChoice(alias="Ashley", voice="af_alloy"),
+            VoiceChoice(alias="Carol", voice="af_bella"),
+        ],
+        speakers={"ramona": "Carol"},
+    )
+
+    service.submit("Ramona", ["one"])
+    service.wait_idle(timeout=300)
+
+    assert generator.voice == "af_bella"
+    assert service.status()["assigned"] == {}
+
+
+# COVERS FR-10.15 | positive
+def test_status_reports_each_declaration(service_for: Callable[..., Service]) -> None:
+    """Declared names are not in `assigned`, so they are reported beside it."""
+    service = service_for(
+        voices=[VoiceChoice(alias="Carol", voice="af_bella")],
+        speakers={"ramona": "Carol"},
+    )
+
+    assert service.status()["declared"] == {"ramona": "Carol"}

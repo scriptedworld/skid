@@ -4,17 +4,14 @@ Every requirement `docs/REQUIREMENTS/` states is built and has a test citing it.
 What follows is what is open anyway: three pieces of planned work, one known
 defect, and a set of questions nothing depends on.
 
-## Open: a voice belongs to a name, and is chosen rather than allocated
+## Open: running out of voices, and choosing one over MCP
 
-A voice is assigned from a pool as names arrive, so which one a name gets
-depends on who spoke first and it does not survive the assignment expiring. A
-name should hold a voice because somebody picked it for that name.
-
-Two halves. **The assignment becomes data, not an allocation**: a name
-maps to a voice in the config, and the pool stays as the fallback for a name
-nobody has chosen for. And **the choice becomes settable over MCP**, which
-`set_voice` cannot express today: it takes a voice and no name, so it changes
-the default for everybody instead of one caller's voice.
+A name declared in the config's `speakers` keeps its voice, FR-10.10 to
+FR-10.15. Two things remain. What an undeclared name gets once every
+undeclared voice is held is FR-10.16, left undecided because the team is not
+yet that large; today it falls to FR-10.6 and lands on a declared voice first.
+And a declaration is made by editing the file: `set_voice` takes a voice and no
+name, and no tool sets one name's voice.
 
 ## Open where nothing is configured: a voice that cannot render
 

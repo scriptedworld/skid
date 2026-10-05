@@ -53,6 +53,16 @@ voices:
 # working is audible and holding one spare is not.
 assignment_window_seconds: 21600
 
+# A voice chosen for a name, by the alias of an entry in `voices` above. A name
+# listed here always speaks in that voice, however long it has been quiet, and
+# no other name is given it while a voice nobody declared is free. A name not
+# listed is assigned one from the pool as above.
+#
+# The name matches whatever case a caller sends it in. An alias that is not in
+# `voices`, or two names differing only in case, is refused at start-up.
+speakers:
+  ramona: Wendy
+
 # The command that plays a clip. {file} is substituted with the path.
 # It must not return before the audio is inaudible, or the next clip overlaps.
 player: paplay {file}

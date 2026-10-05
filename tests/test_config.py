@@ -179,7 +179,7 @@ def test_the_sample_config_is_a_config_skid_can_read() -> None:
     means a key renamed in the schema and not in the sample fails the suite.
 
     Every value in it is a default, so the loaded config equals a default one
-    apart from the two lists it demonstrates. The voice entries show both forms
+    apart from the lists and the declaration it demonstrates. The voice entries show both forms
     FR-10.7 allows, because a sample that only showed the common one would leave
     the interesting field undocumented.
     """
@@ -201,6 +201,7 @@ def test_the_sample_config_is_a_config_skid_can_read() -> None:
             VoiceChoice(alias="Marcus", voice="bm_daniel"),
             VoiceChoice(alias="Wendy", voice="if_sara", pipeline="a"),
         ],
+        speakers={"ramona": "Wendy"},
     )
 
 
@@ -286,6 +287,57 @@ def test_two_voices_sharing_an_alias_are_refused(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Ashley"):
         load_config(path)
+
+
+SHORTLIST_YAML = (
+    "voices:\n"
+    "  - alias: Ashley\n"
+    "    voice: af_alloy\n"
+    "  - alias: Brian\n"
+    "    voice: am_echo\n"
+)
+
+
+# COVERS FR-10.11 | negative
+def test_a_declaration_naming_no_voice_is_refused(tmp_path: Path) -> None:
+    """Falling through to the pool would put the agent in a voice nobody chose."""
+    path = _write(
+        tmp_path / "config.yaml", SHORTLIST_YAML + "speakers:\n  ramona: Wendy\n"
+    )
+
+    with pytest.raises(ValueError, match="'ramona' names 'Wendy'"):
+        load_config(path)
+
+
+# COVERS FR-10.13 | negative
+def test_two_declarations_differing_only_in_case_are_refused(tmp_path: Path) -> None:
+    """Which one applied would depend on file order, so neither is chosen."""
+    path = _write(
+        tmp_path / "config.yaml",
+        SHORTLIST_YAML + "speakers:\n  ramona: Ashley\n  Ramona: Brian\n",
+    )
+
+    with pytest.raises(ValueError, match="differ only in case"):
+        load_config(path)
+
+
+# COVERS FR-10.14 | positive
+def test_declarations_survive_a_tool_rewriting_the_config(tmp_path: Path) -> None:
+    """What `set_voice` does to the file: read it, change the voice, write it all.
+
+    A writer that dropped `speakers` would pass every other config test and
+    silently undo every declaration the first time anybody set a voice.
+    """
+    path = _write(
+        tmp_path / "config.yaml",
+        SHORTLIST_YAML + "speakers:\n  ramona: Ashley\n  larry: Brian\n",
+    )
+    config = load_config(path)
+    config.voice = "am_echo"
+
+    save_config(config, path)
+
+    assert load_config(path).speakers == {"ramona": "Ashley", "larry": "Brian"}
 
 
 # COVERS FR-10.5 | positive

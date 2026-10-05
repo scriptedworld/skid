@@ -72,6 +72,11 @@ CONFIG: dict[str, Any] = {
     "properties": {
         "voice": {"type": "string", "minLength": 1},
         "voices": {"type": "array", "items": VOICE_CHOICE},
+        "speakers": {
+            "type": "object",
+            "propertyNames": {"minLength": 1},
+            "additionalProperties": {"type": "string", "minLength": 1},
+        },
         "assignment_window_seconds": {"type": "integer", "minimum": 1},
         "player": {"type": "string", "minLength": 1},
         "greeting_window_seconds": {"type": "integer", "minimum": 0},
@@ -99,6 +104,11 @@ one setting FR-6.1 to FR-6.3 reach and is what a caller gets when no shortlist
 is configured. `voices` is the pool assignment draws from under FR-10.1, and an
 absent or empty one means nobody is assigned anything and `voice` speaks for
 everybody.
+
+`speakers` maps a name to the alias of a `voices` entry, FR-10.10 and FR-10.11.
+That the alias exists, and that no two names fold to one, are checked in
+`config.load_config`, for the reason the alias uniqueness check is: the schema
+cannot see across two keys, and the message has to name the offender.
 
 `assignment_window_seconds` has a floor of 1 rather than 0. Zero would expire
 every assignment before the next submission arrived, so a name would be given a

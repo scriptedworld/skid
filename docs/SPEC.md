@@ -245,7 +245,22 @@ does not know is recorded as a failure and stepped over.
 `status` reports the current map as `assigned`, name to alias, which is how a
 person asks who sounds like whom without working it out by listening.
 
-*Discharges FR-10.1 through FR-10.9.*
+A name may be declared in the config's `speakers` mapping, name to the alias of
+a shortlist entry. A declared name is answered from the declaration before the
+table is consulted, so it holds nothing there and nothing expires; the config
+is read again on start, so a restart keeps it. Names are matched by
+`str.casefold`. The alias is checked against the shortlist, and the names
+against each other, when the config is read, and a failure names the offender.
+
+Declared voices count as taken when an unheld voice is chosen, so the pool
+gives one out only once no undeclared voice is free. What happens past that
+point is FR-10.16 and undecided, so the reuse rule above applies unchanged, and
+because a declared voice has no entry in the table it reads as the quietest.
+
+Every tool write carries `speakers` through, since a tool rewrites the whole
+file. `status` reports the mapping as `declared`, as the config spells it.
+
+*Discharges FR-10.1 through FR-10.15. FR-10.16 is open.*
 
 ### Substitution
 

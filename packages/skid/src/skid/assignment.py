@@ -17,7 +17,7 @@ so each keeps its own record and neither can quietly change the other.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 DEFAULT_WINDOW_SECONDS = 6 * 60 * 60
@@ -50,11 +50,24 @@ class Assignments:
     Built from the configured shortlist, FR-10.1. Nothing outside the list is
     ever handed out, so a voice that cannot render cannot reach a caller as long
     as the list was chosen from voices that do.
+
+    Declarations sit beside the table rather than in it, FR-10.10. A declared
+    name is answered before the table is consulted, so release and restart have
+    nothing of it to lose.
     """
 
-    def __init__(self, choices: Sequence[VoiceChoice]) -> None:
-        """Take the shortlist in file order, which is the order voices are given out."""
+    def __init__(
+        self,
+        choices: Sequence[VoiceChoice],
+        declared: Mapping[str, VoiceChoice] | None = None,
+    ) -> None:
+        """Take the shortlist in file order, and the declarations keyed by folded name.
+
+        `declared` is keyed by `str.casefold` of the name, FR-10.13, which
+        `config.declared_voices` produces.
+        """
         self._choices = list(choices)
+        self._declared = dict(declared or {})
         self._held: dict[str, VoiceChoice] = {}
         self._last_heard: dict[str, float] = {}
 
@@ -62,6 +75,11 @@ class Assignments:
     def choices(self) -> list[VoiceChoice]:
         """The shortlist this was built from."""
         return list(self._choices)
+
+    @property
+    def declared(self) -> dict[str, VoiceChoice]:
+        """The declarations this was built from, keyed by folded name."""
+        return dict(self._declared)
 
     def held(self) -> dict[str, VoiceChoice]:
         """Who currently holds which voice, as a copy.
@@ -104,7 +122,13 @@ class Assignments:
 
         None when the shortlist is empty, which is a config with no `voices` and
         means the single `voice` setting applies to everybody.
+
+        A declared name gets its declaration and takes nothing from the table,
+        FR-10.10.
         """
+        declared = self._declared.get(name.casefold())
+        if declared is not None:
+            return declared
         if not self._choices:
             return None
 
@@ -125,8 +149,13 @@ class Assignments:
         FR-10.6. Reuse rather than refusal or a shared default: assignment always
         returns something, and the collision it produces is one this project has
         already accepted, since two sessions sharing a name share a voice anyway.
+
+        A declared voice counts as taken, FR-10.12. The reuse below is left as
+        FR-10.6 had it, because what happens once the free voices run out is
+        FR-10.16 and undecided.
         """
         taken = {choice.voice for choice in self._held.values()}
+        taken |= {choice.voice for choice in self._declared.values()}
         for choice in self._choices:
             if choice.voice not in taken:
                 return choice
