@@ -174,11 +174,19 @@ Greeting is decided at step 4, not step 1, which is FR-3.5.
 
 ### Greeting
 
-The backend holds, per name, the time the last clip for that name finished
-playing. In memory only, so a restart costs at most one extra greeting per name.
+The backend holds, per name and work, the time the last clip for that pair
+finished playing. In memory only, so a restart costs at most one extra greeting
+per name.
+
+The work is the optional `work` argument to `speak`, the caller's own words for
+what it is working on, kept with the submission in the spool. skid speaks it as
+given and derives none: no working directory, no roster.
 
 The decision is made when the submission reaches the front of the queue. A
-name quiet for 30 seconds by that clock is prefixed `Hi, [name] here.` Both
+name and work quiet for 30 seconds by that clock is prefixed
+`Hi, [name] here, in [work].`, or `Hi, [name] here.` where no work was named. A
+name speaking on different work is a different pair, so it is announced again
+however recently it spoke. Both
 endpoints of the comparison are then at playback, which is the point: an
 unbounded queue can put minutes between queueing and speech, and deciding at
 queue time would announce a name that has been talking continuously ever since.
@@ -194,7 +202,7 @@ A greeting clip is never the thing FR-4.6 reports as a failed message. If the
 first message fails, the greeting is discarded with it instead of announcing a
 name that then says nothing.
 
-*Discharges FR-3.2, FR-3.3, FR-3.4, FR-3.5, FR-3.6, FR-7.4.*
+*Discharges FR-3.2 to FR-3.10, FR-7.4.*
 
 ### Assignment
 

@@ -124,11 +124,13 @@ class Spool:
         safe = "".join(c if c.isalnum() else "_" for c in submission.name)[:40]
         final = self.directory / f"{sequence:06d}-{safe}{SUFFIX}"
 
-        payload = {
+        payload: dict[str, object] = {
             "name": submission.name,
             "messages": submission.messages,
             "queued_at": now,
         }
+        if submission.work is not None:
+            payload["work"] = submission.work
         wrench.save_json_file(payload, final, SCHEMA, wrench.LOCAL_FILE)
         final.chmod(0o600)
         return final
@@ -158,7 +160,9 @@ class Spool:
             return None
         return Entry(
             submission=Submission(
-                name=payload["name"], messages=list(payload["messages"])
+                name=payload["name"],
+                messages=list(payload["messages"]),
+                work=payload.get("work"),
             ),
             path=path,
             queued_at=float(payload["queued_at"]),

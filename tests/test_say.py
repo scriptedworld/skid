@@ -79,6 +79,22 @@ def test_the_submission_carries_the_name_from_the_command_line(
     assert _queued(tmp_path) == [("toolbox", ["the gate is green"])]
 
 
+# COVERS FR-3.8 | positive
+def test_the_work_from_the_command_line_is_queued(
+    backend: Backend, tmp_path: Path
+) -> None:
+    """`--work` reaches the spool, and leaving it out sends none."""
+    _said(backend, "--work", "omnikey", "ramona", "built")
+    _said(backend, "silo", "plain")
+
+    works = []
+    spool = Spool(tmp_path / "spool")
+    while (entry := spool.take(now=0.0)) is not None:
+        works.append((entry.submission.name, entry.submission.work))
+        spool.done(entry)
+    assert works == [("ramona", "omnikey"), ("silo", None)]
+
+
 # COVERS FR-3.1 | negative
 def test_no_arguments_at_all_is_refused_and_nothing_is_sent(
     backend: Backend, service: Service

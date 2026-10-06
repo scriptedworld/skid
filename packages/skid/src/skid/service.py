@@ -122,6 +122,7 @@ class Record:
     """
 
     greeted: list[str] = field(default_factory=list)
+    introduced: list[str] = field(default_factory=list)
     spoken: list[tuple[str, str]] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
 
@@ -161,6 +162,11 @@ class Service:
     def greeted(self) -> list[str]:
         """Names announced so far, in the order they were announced."""
         return self._record.greeted
+
+    @property
+    def introduced(self) -> list[str]:
+        """Every greeting line actually played, in the order heard."""
+        return self._record.introduced
 
     @property
     def spoken(self) -> list[tuple[str, str]]:
@@ -219,15 +225,17 @@ class Service:
             self._loop.thread.join(timeout=30)
             self._loop.thread = None
 
-    def submit(self, name: str, messages: list[str]) -> None:
+    def submit(self, name: str, messages: list[str], work: str | None = None) -> None:
         """Queue an array. Returns once it is on disk, not once it is heard.
 
         The write is the promise. FR-4.5 says this returns when the work is
         queued, and FR-4.8 makes queued mean durable, so the entry is on disk
         before the caller is told yes. What goes on `_incoming` afterwards is a
         wakeup and carries nothing: the spool is the queue.
+
+        The work the caller named is stored with the submission, FR-3.10.
         """
-        submission = Submission(name=name, messages=list(messages))
+        submission = Submission(name=name, messages=list(messages), work=work)
         self._parts.spool.put(submission, now=time.time())
         self._loop.idle.clear()
         self._loop.incoming.put(WAKE)
@@ -363,7 +371,7 @@ class Service:
     ) -> None:
         """Generate the greeting and every message, ahead of playback, in order."""
         self._apply_voice(submission.name)
-        texts = [(greeting_for(submission.name), True)]
+        texts = [(greeting_for(submission.name, submission.work), True)]
         texts += [(message, False) for message in submission.messages]
 
         for offset, (raw, is_greeting) in enumerate(texts):
@@ -377,6 +385,21 @@ class Service:
             clips.put(Clip(path=path, text=raw, is_greeting=is_greeting))
             self._progress()
         clips.put(STOP)
+
+    def _play(self, name: str, clip: Clip) -> None:
+        """Play one clip, record what was heard, and clear it away whatever happened."""
+        try:
+            self._parts.player.play(clip.path)
+        except PlaybackFailed as exc:
+            self._record_failure(str(exc))
+        else:
+            if clip.is_greeting:
+                self._record.introduced.append(clip.text)
+            else:
+                self._record.spoken.append((name, clip.text))
+        finally:
+            clip.path.unlink(missing_ok=True)
+            self._progress()
 
     def _speak(self, submission: Submission, index_base: int) -> None:
         """Generate ahead in one thread while playing in this one."""
@@ -400,6 +423,7 @@ class Service:
                     submission.name,
                     now=time.monotonic(),
                     window=float(self._config.greeting_window_seconds),
+                    work=submission.work,
                 )
                 if greet:
                     self._record.greeted.append(submission.name)
@@ -408,20 +432,13 @@ class Service:
                 clip.path.unlink(missing_ok=True)
                 continue
 
-            try:
-                self._parts.player.play(clip.path)
-            except PlaybackFailed as exc:
-                self._record_failure(str(exc))
-            else:
-                if not clip.is_greeting:
-                    self._record.spoken.append((submission.name, clip.text))
-            finally:
-                clip.path.unlink(missing_ok=True)
-                self._progress()
+            self._play(submission.name, clip)
 
         worker.join(timeout=5)
         finished = time.monotonic()
-        self._parts.table.record_finished(submission.name, when=finished)
+        self._parts.table.record_finished(
+            submission.name, when=finished, work=submission.work
+        )
         self._parts.assignments.record_spoken(submission.name, when=finished)
 
     def _serve(self) -> None:

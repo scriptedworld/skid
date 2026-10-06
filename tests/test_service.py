@@ -292,6 +292,32 @@ def test_each_new_name_is_announced_in_its_own_right(
     assert service.greeted == ["silo", "wrench"]
 
 
+# COVERS FR-3.2 | property
+def test_a_name_moving_to_new_work_is_announced_with_it(
+    service_for: Callable[..., Service],
+) -> None:
+    """The wiring: the work reaches both the spoken line and the quiet window.
+
+    Three back to back from one name. The second names new work and is
+    announced although ramona has just spoken; the third names the same work
+    as the second and is not. The last names none and is announced by name
+    alone, because no work is a distinct key of its own.
+    """
+    service = service_for()
+
+    service.submit("ramona", ["one"], "omnikey")
+    service.submit("ramona", ["two"], "skid")
+    service.submit("ramona", ["three"], "skid")
+    service.submit("ramona", ["four"])
+    service.wait_idle(timeout=300)
+
+    assert service.introduced == [
+        "Hi, ramona here, in omnikey.",
+        "Hi, ramona here, in skid.",
+        "Hi, ramona here.",
+    ]
+
+
 # COVERS FR-4.4 | property
 def test_two_submissions_do_not_interleave(service_for: Callable[..., Service]) -> None:
     """A submission is spoken to completion before the next one starts."""

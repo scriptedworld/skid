@@ -10,6 +10,7 @@ needs nothing but the socket being there.
 
     skid-say silo "the gate is green"
     skid-say silo "first" "second"      one submission, two messages
+    skid-say --work omnikey ramona "built"   introduced as working in omnikey
     skid-say --status
     skid-say --voice af_bella
 
@@ -44,6 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--status", action="store_true", help="queue depth, failures and voice"
     )
     parser.add_argument("--voice", metavar="VOICE", help="set the voice and persist it")
+    parser.add_argument(
+        "--work", metavar="WORK", help="what the speaker is working on, as spoken"
+    )
     return parser
 
 
@@ -55,8 +59,11 @@ def run(backend: Backend, arguments: argparse.Namespace) -> str:
         return str(backend.call("set_voice", voice=arguments.voice))
     if not arguments.name or not arguments.messages:
         raise Unreachable("say who is speaking and what to say")
+    named = {"work": arguments.work} if arguments.work else {}
     return str(
-        backend.call("speak", name=arguments.name, messages=list(arguments.messages))
+        backend.call(
+            "speak", name=arguments.name, messages=list(arguments.messages), **named
+        )
     )
 
 

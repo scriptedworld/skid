@@ -17,10 +17,14 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Submission:
-    """An array of messages from one named caller."""
+    """An array of messages from one named caller, and the work it named.
+
+    `work` is None where the caller named none, FR-3.9.
+    """
 
     name: str
     messages: list[str] = field(default_factory=list)
+    work: str | None = None
 
     def __post_init__(self) -> None:
         """Refuse a submission that names nobody or says nothing."""

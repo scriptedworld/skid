@@ -154,13 +154,20 @@ def _speech_tools(server: MCPServer, backend: Backend) -> None:
     """Register the tools that make skid talk or report on talking."""
 
     @server.tool()
-    def speak(name: str, messages: list[str]) -> str:
-        """Say an array of messages, in order, in the voice skid is set to.
+    def speak(name: str, messages: list[str], work: str | None = None) -> str:
+        """Say an array of messages, in order, in the voice skid has for `name`.
+
+        `work` names what you are working on, a project or a directory or
+        whatever describes it, and is spoken in the introduction as given:
+        "Hi, ramona here, in omnikey." Leave it out and the introduction is
+        the name alone. A name speaking on new work is introduced again.
 
         Returns once the work is queued, not once it has been heard. Nothing is
         rejected and nothing already queued is replaced.
         """
-        return str(backend.call("speak", name=name, messages=messages))
+        if work is None:
+            return str(backend.call("speak", name=name, messages=messages))
+        return str(backend.call("speak", name=name, messages=messages, work=work))
 
     @server.tool()
     def set_voice(voice: str) -> str:

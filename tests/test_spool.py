@@ -54,6 +54,27 @@ def test_a_spool_is_read_back_after_a_restart(tmp_path: Path) -> None:
     assert taken.submission.messages == ["one", "two"]
 
 
+# COVERS FR-3.10 | property
+def test_the_work_named_survives_a_restart(tmp_path: Path) -> None:
+    """The work is part of what was queued, so the process that comes back has it.
+
+    The second entry names none, and comes back naming none rather than
+    inheriting the first's.
+    """
+    first = _spool(tmp_path)
+    first.put(Submission(name="ramona", messages=["one"], work="omnikey"), now=1000.0)
+    first.put(Submission(name="silo", messages=["two"]), now=1001.0)
+
+    second = _spool(tmp_path)
+    second.recover(now=1002.0)
+
+    works = []
+    while (entry := second.take(now=1002.0)) is not None:
+        works.append(entry.submission.work)
+        second.done(entry)
+    assert works == ["omnikey", None]
+
+
 # COVERS FR-4.3 | property
 def test_entries_are_taken_in_submission_order_not_file_time(tmp_path: Path) -> None:
     """Order is the sequence in the name, because creation time is generation order.

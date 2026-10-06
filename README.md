@@ -17,10 +17,12 @@ Text arrives as an array of messages. kokoro turns each into an audio file, and
 a subprocess plays them through the operating system's own player on the default
 output device, one at a time. skid never opens an audio device itself.
 
-Every caller gives a name. The first thing heard from a name in a while is
-prefixed `Hi, <name> here.`, so you know who is speaking without every message
-in a run announcing itself. Where you list voices in the config, each name is
-also assigned one of its own and keeps it while it goes on talking.
+Every caller gives a name, and may name the work it is on. The first thing
+heard from a name and work in a while is prefixed `Hi, <name> here, in <work>.`,
+or `Hi, <name> here.` without work, so you know who is speaking and where
+without every message in a run announcing itself. Where you list voices in the
+config, each name is also assigned one of its own and keeps it while it goes on
+talking, and a name listed under `speakers` always speaks in the voice given it.
 
 A long-running process holds the model in memory, so speaking does not wait for
 kokoro to load.

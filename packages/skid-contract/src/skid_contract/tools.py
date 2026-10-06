@@ -72,6 +72,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                 "items": {"type": "string", "maxLength": MESSAGE_CHARS},
                 "minItems": 1,
             },
+            "work": {"type": "string", "minLength": 1},
         },
         "required": ["name", "messages"],
     },
@@ -101,6 +102,10 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "status": {"type": "object", "properties": {}},
 }
 """What each tool takes. Enforced, not merely advertised.
+
+`speak`'s `work` is optional and is the caller's own words for what it is
+working on, FR-3.7 and FR-3.8: a project, a directory, whatever describes it.
+skid speaks it as given and derives nothing in its place.
 
 `routes.py` compiles these with wrench and validates every incoming call against
 them, so a request that does not match is refused with a message naming the

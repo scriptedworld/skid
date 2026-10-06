@@ -22,6 +22,7 @@ import pytest
 
 from skid.config import load_config
 from skid.service import Service
+from skid.spool import Spool
 from skid_contract.tools import ROUTES, SCHEMAS
 from skid_mcp.client import Backend, Unreachable, build_server
 
@@ -61,6 +62,21 @@ def test_a_tool_call_reaches_the_service_and_returns_its_answer(
     _call(server, "speak", name="silo", messages=["one", "two"])
 
     assert service.status()["pending"] == 1
+
+
+# COVERS FR-3.8 | positive
+@pytest.mark.usefixtures("service")
+def test_the_speak_tool_carries_the_work(server: Any, tmp_path: Path) -> None:
+    """A caller names its work beside its name, and it reaches the queue.
+
+    Read through a second `Spool` over the service's directory; the fixture
+    does not start the worker, so nothing drains it underneath this.
+    """
+    _call(server, "speak", name="ramona", messages=["built"], work="omnikey")
+
+    taken = Spool(tmp_path / "spool").take(now=0.0)
+    assert taken is not None
+    assert (taken.submission.name, taken.submission.work) == ("ramona", "omnikey")
 
 
 # COVERS FR-4.4 | property

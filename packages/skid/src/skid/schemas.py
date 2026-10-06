@@ -124,6 +124,7 @@ SPOOL_ENTRY: dict[str, Any] = {
         "name": {"type": "string", "minLength": 1},
         "messages": {"type": "array", "items": {"type": "string"}, "minItems": 1},
         "queued_at": {"type": "number", "minimum": 0},
+        "work": {"type": "string", "minLength": 1},
     },
     "required": ["name", "messages", "queued_at"],
     "additionalProperties": False,
@@ -138,4 +139,7 @@ rather than raising from a dataclass three frames later.
 `queued_at` is required and has no default. A fallback of 0.0 reads as the
 epoch and makes an entry infinitely expired, so an entry missing it would be
 silently discarded as too old instead of being reported as malformed.
+
+`work` is optional, FR-3.9 and FR-3.10: an entry written without one, by a
+caller that named none or by an older skid, is still a submission.
 """

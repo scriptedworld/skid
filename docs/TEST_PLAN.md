@@ -118,7 +118,11 @@ was retired for exactly that reason, and its guidance is prose in FR-2.1.
 | Requirement | Test | Kind |
 |---|---|---|
 | FR-3.1 | `test_an_empty_name_is_refused`, `test_a_submission_without_a_name_is_refused`, `test_the_submission_carries_the_name_from_the_command_line`, `test_no_arguments_at_all_is_refused_and_nothing_is_sent` | negative, positive |
-| FR-3.2 | `test_a_name_not_heard_recently_is_greeted`, `test_the_greeting_names_the_speaker`, `test_the_window_is_per_name`, `test_each_new_name_is_announced_in_its_own_right` | positive, property |
+| FR-3.2 | `test_a_name_not_heard_recently_is_greeted`, `test_the_greeting_names_the_speaker`, `test_the_greeting_names_the_work`, `test_the_window_is_per_name`, `test_a_name_on_new_work_is_greeted_inside_the_window`, `test_each_new_name_is_announced_in_its_own_right`, `test_a_name_moving_to_new_work_is_announced_with_it` | positive, property |
+| FR-3.7 | `test_the_work_is_spoken_exactly_as_given` | property |
+| FR-3.8 | `test_the_speak_tool_carries_the_work`, `test_the_work_from_the_command_line_is_queued` | positive |
+| FR-3.9 | `test_no_work_is_the_name_alone` | positive |
+| FR-3.10 | `test_the_work_named_survives_a_restart` | property |
 | FR-3.3 | `test_a_name_heard_moments_ago_is_not_greeted` | positive |
 | FR-3.4 | `test_the_window_is_read_from_the_config`, `test_a_shorter_window_greets_sooner` | positive |
 | FR-3.5 | `test_a_submission_queued_behind_another_is_not_greeted` | regression |

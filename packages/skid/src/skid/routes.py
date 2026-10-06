@@ -57,11 +57,13 @@ def _speech_operations(
         """Queue an array. Returns once it is on disk, not once it is heard.
 
         The schema has already required a non-empty name and at least one
-        message, so nothing here re-checks the shape.
+        message, so nothing here re-checks the shape. `work` is optional,
+        FR-3.9, and a client older than it sends none.
         """
         name = str(body["name"])
         messages = [str(message) for message in body["messages"]]
-        service.submit(name, messages)
+        work = body.get("work")
+        service.submit(name, messages, str(work) if work else None)
         return f"queued {len(messages)} message(s) for {name}"
 
     def set_voice(body: dict[str, Any]) -> str:

@@ -27,6 +27,42 @@ def test_the_greeting_names_the_speaker() -> None:
     assert greeting_for("silo") == "Hi, silo here."
 
 
+# COVERS FR-3.2 | positive
+def test_the_greeting_names_the_work() -> None:
+    """With sessions across projects, the name alone no longer says where."""
+    assert greeting_for("ramona", "omnikey") == "Hi, ramona here, in omnikey."
+
+
+# COVERS FR-3.7 | property
+def test_the_work_is_spoken_exactly_as_given() -> None:
+    """skid speaks what it is given, so a path or a phrase arrives untouched."""
+    for work in ["the home directory", "~/.projects/skid", "OmniKey"]:
+        assert greeting_for("ramona", work) == f"Hi, ramona here, in {work}."
+
+
+# COVERS FR-3.9 | positive
+def test_no_work_is_the_name_alone() -> None:
+    """A caller that names nothing is introduced as it always was."""
+    assert greeting_for("ramona", None) == "Hi, ramona here."
+
+
+# COVERS FR-3.2 | property
+def test_a_name_on_new_work_is_greeted_inside_the_window() -> None:
+    """The window belongs to the name and the work together.
+
+    Five seconds after ramona finished in omnikey she is quiet there and new in
+    skid, and her name alone would have said nothing about the move.
+    """
+    table = QuietTable()
+    table.record_finished("ramona", when=1000.0, work="omnikey")
+
+    assert (
+        should_greet(table, "ramona", now=1005.0, window=WINDOW, work="omnikey")
+        is False
+    )
+    assert should_greet(table, "ramona", now=1005.0, window=WINDOW, work="skid") is True
+
+
 # COVERS FR-3.3 | positive
 def test_a_name_heard_moments_ago_is_not_greeted() -> None:
     """The prefix identifies a speaker, not a message."""
