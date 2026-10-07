@@ -450,6 +450,14 @@ most of them happen:
 A person debugging silence reads the log. An agent cannot, so it asks. FR-4.7
 requires both and FR-4.6's word "reported" means this.
 
+The log also records every submission, so silence has a reading: an
+`accepted` line when one is spooled and a `played` line when it has finished,
+each naming the name, the work and the count of messages and never their
+text (FR-4.11, FR-4.12). No `accepted` line means nobody called; `played` with
+fewer messages than were accepted means the failures above. The log rotates at
+1 MiB to `skid.log.1`, keeping three old files (FR-4.13). One lock covers the
+write and the rotation, since the request thread and the serve loop both log.
+
 What the design admits, which is more than the output path's two. FR-1.5
 buys a failure surface of a missing player and a bad file. The design around it
 adds:

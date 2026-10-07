@@ -140,10 +140,10 @@ One mark, one file.
     packages/skid/src/skid/generation.py   # pragma: allowlist secret   the v1.0 revision in REVISIONS
 
 `generation.REVISIONS` pins the commit of each Hugging Face repository that
-voice packs are fetched at. detect-secrets reads the v1.0 one,
-`f3ff3571791e39611d31c381e3a41a3af07b4987`, as a "Hex High Entropy String". It
-is a public git commit hash of `hexgrad/Kokoro-82M`, and anybody can read it
-from that repository's history. The v1.1-zh one beside it scores under the
+voice packs are fetched at. detect-secrets reads the v1.0 one as a "Hex High
+Entropy String". It is a public git commit hash of `hexgrad/Kokoro-82M`, and
+anybody can read it from that repository's history. The hash is not repeated
+here, because a scanner reading this file would flag the copy too. The v1.1-zh one beside it scores under the
 threshold and carries no mark.
 
 ### The question put, 2026-10-07

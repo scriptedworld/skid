@@ -318,6 +318,87 @@ def test_a_name_moving_to_new_work_is_announced_with_it(
     ]
 
 
+def _log_lines(tmp_path: Path) -> list[str]:
+    """The service log's lines without their timestamps."""
+    text = (tmp_path / "log").read_text(encoding="utf-8")
+    return [line.split(" ", 1)[1] for line in text.splitlines()]
+
+
+# COVERS FR-4.11 | positive
+def test_every_accepted_submission_is_logged_without_its_text(
+    service_for: Callable[..., Service], tmp_path: Path
+) -> None:
+    """Who, on what, and how many: enough to tell silence from absence."""
+    service = service_for()
+
+    service.submit("ramona", ["first secret sentence", "second"], "omnikey")
+    service.submit("silo", ["third"])
+    service.wait_idle(timeout=300)
+
+    lines = _log_lines(tmp_path)
+    assert "accepted ramona work=omnikey messages=2" in lines
+    assert "accepted silo messages=1" in lines
+    assert not any("secret" in line for line in lines)
+
+
+# COVERS FR-4.12 | positive
+def test_every_played_submission_is_logged_with_its_count(
+    service_for: Callable[..., Service], tmp_path: Path
+) -> None:
+    """Played after accepted, and every message counted."""
+    service = service_for()
+
+    service.submit("ramona", ["one", "two"], "omnikey")
+    service.wait_idle(timeout=300)
+
+    lines = _log_lines(tmp_path)
+    accepted = lines.index("accepted ramona work=omnikey messages=2")
+    assert lines.index("played ramona work=omnikey messages=2/2") > accepted
+
+
+# COVERS FR-4.12 | negative
+def test_a_submission_whose_clips_all_fail_logs_none_played(
+    service_for: Callable[..., Service], tmp_path: Path
+) -> None:
+    """The gap between accepted and played is the line a person is looking for."""
+    service = service_for(behaviour="exit 1")
+
+    service.submit("ramona", ["one"])
+    service.wait_idle(timeout=300)
+
+    assert "played ramona messages=0/1" in _log_lines(tmp_path)
+
+
+# COVERS FR-4.13 | property
+def test_the_log_is_rotated_and_old_files_are_bounded(
+    tmp_path: Path, generator: Generator
+) -> None:
+    """A small limit and many submissions: no file passes it, and only two old ones stay.
+
+    Not started, because `submit` logs on acceptance and the spool holds the
+    rest, which is all this needs.
+    """
+    service = Service(
+        config=Config(),
+        generator=generator,
+        workspace=Workspace(
+            work_dir=tmp_path / "work",
+            log_path=tmp_path / "skid.log",
+            log_limit_bytes=200,
+            log_keep=2,
+        ),
+    )
+
+    for index in range(30):
+        service.submit(f"agent{index:02d}", ["hello"])
+
+    files = sorted(path.name for path in tmp_path.glob("skid.log*"))
+    assert files == ["skid.log", "skid.log.1", "skid.log.2"]
+    assert all((tmp_path / name).stat().st_size <= 200 for name in files)
+    newest = (tmp_path / "skid.log").read_text(encoding="utf-8")
+    assert "accepted agent29 messages=1" in newest
+
+
 # COVERS FR-4.4 | property
 def test_two_submissions_do_not_interleave(service_for: Callable[..., Service]) -> None:
     """A submission is spoken to completion before the next one starts."""

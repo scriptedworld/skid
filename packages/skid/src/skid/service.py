@@ -81,6 +81,10 @@ class Workspace:
     work_dir: Path
     log_path: Path
     config_path: Path | None = None
+    log_limit_bytes: int = 1024 * 1024
+    """The size past which the log is moved aside, FR-4.13."""
+    log_keep: int = 3
+    """How many moved-aside logs are kept, FR-4.13."""
 
 
 @dataclass
@@ -157,6 +161,7 @@ class Service:
         )
         self._loop.idle.set()
         self._record = Record()
+        self._log_lock = threading.Lock()
 
     @property
     def greeted(self) -> list[str]:
@@ -237,6 +242,9 @@ class Service:
         """
         submission = Submission(name=name, messages=list(messages), work=work)
         self._parts.spool.put(submission, now=time.time())
+        self._log(
+            f"accepted {self._who(submission)} messages={len(submission.messages)}"
+        )
         self._loop.idle.clear()
         self._loop.incoming.put(WAKE)
 
@@ -328,9 +336,41 @@ class Service:
             self._parts.assignments = Assignments(self._config.voices, declared)
 
     def _log(self, line: str) -> None:
-        """Append one line to the log a person reads when the machine goes quiet."""
-        with self._workspace.log_path.open("a", encoding="utf-8") as out:
-            out.write(f"{time.time():.3f} {line}\n")
+        """Append one line to the log a person reads when the machine goes quiet.
+
+        Written from the request thread and the serve loop both, so the lock
+        keeps a rotation from moving the file out from under another write.
+        """
+        entry = f"{time.time():.3f} {line}\n"
+        with self._log_lock:
+            self._rotate_log(len(entry.encode("utf-8")))
+            with self._workspace.log_path.open("a", encoding="utf-8") as out:
+                out.write(entry)
+
+    def _rotate_log(self, incoming: int) -> None:
+        """Move the log aside if `incoming` more bytes would pass the limit, FR-4.13.
+
+        `skid.log.1` is the newest old file. The oldest kept is overwritten by
+        the shift, so at most `log_keep` old files ever exist.
+        """
+        path = self._workspace.log_path
+        if (
+            not path.exists()
+            or path.stat().st_size + incoming <= self._workspace.log_limit_bytes
+        ):
+            return
+        keep = self._workspace.log_keep
+        for index in range(keep - 1, 0, -1):
+            older = path.with_name(f"{path.name}.{index}")
+            if older.exists():
+                older.replace(path.with_name(f"{path.name}.{index + 1}"))
+        path.replace(path.with_name(f"{path.name}.1"))
+
+    @staticmethod
+    def _who(submission: Submission) -> str:
+        """The name and work a log line names a submission by, never its text."""
+        work = f" work={submission.work}" if submission.work else ""
+        return f"{submission.name}{work}"
 
     def _record_failure(self, line: str) -> None:
         """Record a failure where both a person and a caller can find it."""
@@ -415,6 +455,7 @@ class Service:
             daemon=True,
         )
         worker.start()
+        heard_before = len(self._record.spoken)
 
         greet: bool | None = None
         while True:
@@ -440,6 +481,11 @@ class Service:
             self._play(submission.name, clip)
 
         worker.join(timeout=5)
+        played = len(self._record.spoken) - heard_before
+        self._log(
+            f"played {self._who(submission)} "
+            f"messages={played}/{len(submission.messages)}"
+        )
         finished = time.monotonic()
         self._parts.table.record_finished(
             submission.name, when=finished, work=submission.work

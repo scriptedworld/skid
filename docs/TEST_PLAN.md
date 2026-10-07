@@ -151,6 +151,9 @@ shipped.
 | FR-4.7 | `test_status_reports_what_a_caller_cannot_log`, `test_status_reports_what_a_caller_cannot_log`, `test_status_reports_the_queue_a_caller_cannot_log`, `test_status_is_answered_even_with_a_stray_positional`, `test_a_failure_reaches_the_log_and_status` | positive, edge |
 | FR-4.8 | `test_a_submission_survives_the_service_going_away`, `test_an_accepted_submission_is_on_disk_before_submit_returns`, `test_a_submission_is_on_disk_before_put_returns`, `test_a_spool_is_read_back_after_a_restart`, `test_a_half_written_entry_is_never_taken`, `test_a_submission_interrupted_mid_speech_is_dropped_not_replayed`, `test_a_sequence_continues_across_a_restart`, `test_an_entry_that_is_not_readable_is_discarded_not_retried`, `test_recovery_keeps_what_is_still_current` | property, positive, edge, negative |
 | FR-4.9 | `test_a_submission_older_than_the_window_is_discarded`, `test_the_expiry_boundary_is_the_window_itself`, `test_expiry_does_not_block_what_is_behind_it`, `test_what_expired_is_recorded_rather_than_vanishing`, `test_downtime_counts_toward_the_window` | positive, edge, property |
+| FR-4.11 | `test_every_accepted_submission_is_logged_without_its_text` | positive |
+| FR-4.12 | `test_every_played_submission_is_logged_with_its_count`, `test_a_submission_whose_clips_all_fail_logs_none_played` | positive, negative |
+| FR-4.13 | `test_the_log_is_rotated_and_old_files_are_bounded` | property |
 | FR-7.2 | `test_nothing_is_rejected_at_the_door` | property |
 | FR-7.3 | `test_generation_runs_ahead_of_the_speaker_without_a_bound` | property |
 
