@@ -51,7 +51,7 @@ FIRST_PARTY = frozenset(PACKAGES)
 """What this repository publishes, so an import of one is not a third party."""
 
 THIRD_PARTY = {
-    "skid": {"flask", "kokoro", "numpy", "waitress", "wrench"},
+    "skid": {"flask", "huggingface_hub", "kokoro", "numpy", "waitress", "wrench"},
     "skid_mcp": {"httpx", "mcp"},
     "skid_contract": set[str](),
 }

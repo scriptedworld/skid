@@ -9,6 +9,7 @@ thing this suite is trying not to build.
 import wave
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from skid.generation import Generator
@@ -92,6 +93,71 @@ def test_switching_voices_keeps_one_model_across_pipelines() -> None:
     assert american is not british
     assert american.model is british.model
     assert generator.pipeline is british
+
+
+# COVERS FR-1.10 | positive
+def test_the_model_is_v1_1_zh() -> None:
+    """Asked of the model kokoro built, not of the constant skid passed it."""
+    assert Generator().pipeline.model.repo_id == "hexgrad/Kokoro-82M-v1.1-zh"
+
+
+# COVERS FR-1.11 | property
+def test_each_voice_comes_from_the_release_that_publishes_it() -> None:
+    """The path kokoro is handed sits in the right repository's cache.
+
+    A pack from the model's own repository would be the v1.1-zh one for every
+    voice, and `af_heart` is not published there.
+    """
+    generator = Generator()
+
+    old = Path(generator.pack_for("af_heart")).parts
+    new = Path(generator.pack_for("af_maple")).parts
+
+    assert "models--hexgrad--Kokoro-82M" in old
+    assert "models--hexgrad--Kokoro-82M-v1.1-zh" in new
+
+
+# COVERS FR-1.11 | positive
+def test_an_old_voice_and_a_new_one_both_render(tmp_path: Path) -> None:
+    """The shortlist's voices and the three new ones speak on one model."""
+    generator = Generator(voice="af_heart")
+    generator.generate("one", tmp_path / "old.wav")
+
+    generator.set_voice("bf_vale")
+    generator.generate("one", tmp_path / "new.wav")
+
+    for name in ["old.wav", "new.wav"]:
+        with wave.open(str(tmp_path / name), "rb") as handle:
+            assert handle.getnframes() > 0
+
+
+def _gain_applied(voice: str, tmp_path: Path) -> float:
+    """How much louder skid's file is than kokoro's own output for `voice`.
+
+    The same text through the same warm pipeline and pack, so the only
+    difference between the two is what skid did on the way to the file.
+    """
+    generator = Generator(voice=voice)
+    clip = generator.generate("The gate is green.", tmp_path / f"{voice}.wav")
+    with wave.open(str(clip), "rb") as handle:
+        written = np.frombuffer(handle.readframes(handle.getnframes()), dtype="<i2")
+    chunks = generator.pipeline("The gate is green.", voice=generator.pack_for(voice))
+    raw = np.concatenate([chunk.audio.numpy() for chunk in chunks]) * 32767
+    return float(
+        np.sqrt(np.mean(written.astype(float) ** 2)) / np.sqrt(np.mean(raw**2))
+    )
+
+
+# COVERS FR-1.12 | positive
+def test_bf_vale_is_raised_by_a_quarter(tmp_path: Path) -> None:
+    """The measured correction, applied to the samples skid writes."""
+    assert _gain_applied("bf_vale", tmp_path) == pytest.approx(1.25, rel=0.01)
+
+
+# COVERS FR-1.12 | negative
+def test_no_other_voice_is_changed(tmp_path: Path) -> None:
+    """af_sol is the loudest voice measured, and it is left as kokoro made it."""
+    assert _gain_applied("af_sol", tmp_path) == pytest.approx(1.0, rel=0.01)
 
 
 # COVERS FR-6.5 | negative

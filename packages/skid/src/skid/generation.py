@@ -29,11 +29,13 @@ VOICES = frozenset(
         "af_heart",
         "af_jessica",
         "af_kore",
+        "af_maple",
         "af_nicole",
         "af_nova",
         "af_river",
         "af_sarah",
         "af_sky",
+        "af_sol",
         "am_adam",
         "am_echo",
         "am_eric",
@@ -47,6 +49,7 @@ VOICES = frozenset(
         "bf_emma",
         "bf_isabella",
         "bf_lily",
+        "bf_vale",
         "bm_daniel",
         "bm_fable",
         "bm_george",
@@ -79,18 +82,31 @@ VOICES = frozenset(
         "zm_yunyang",
     ]
 )
-"""The 54 voices kokoro 0.9.4 offers.
+"""Every voice skid can speak in: v1.0's 54 and v1.1-zh's three English ones.
 
-Measured against `hexgrad/Kokoro-82M`, and re-derivable:
+Measured against both repos, and re-derivable:
 
     from huggingface_hub import list_repo_files
     sorted(f.split('/')[-1].removesuffix('.pt')
-           for f in list_repo_files('hexgrad/Kokoro-82M')
+           for f in list_repo_files(repo)
            if f.startswith('voices/'))
 
-Held here rather than fetched, because validating a setting must not need the
-network. It drifts when kokoro adds a voice, and a name refused that should not
-be is the symptom.
+v1.1-zh's other 100 are Chinese and are left out. Held here rather than
+fetched, because validating a setting must not need the network. It drifts
+when kokoro adds a voice, and a name refused that should not be is the symptom.
+"""
+
+V1_1_VOICES = frozenset(["af_maple", "af_sol", "bf_vale"])
+"""The voices only v1.1-zh publishes, FR-1.11. Every other one comes from v1.0."""
+
+GAIN = {"bf_vale": 1.25}
+"""Level corrections, FR-1.12, as a multiplier on the rendered samples.
+
+bf_vale renders quieter than the rest. Measured 2026-10-07 on the v1.1-zh
+model over three sentences each: bf_vale's mean RMS 0.0343 against 0.0367 to
+0.0606 for six other voices, a mean ratio of 1.264
+(`.ephemera/kokoro-v11/06_vale_gain.py`). Its loudest sample at this gain is
+0.32 of full scale.
 """
 
 
@@ -104,12 +120,40 @@ class GenerationFailed(Exception):
     """
 
 
-REPO_ID = "hexgrad/Kokoro-82M"
-"""Named rather than defaulted, which is also what silences kokoro's own warning.
+REPO_ID = "hexgrad/Kokoro-82M-v1.1-zh"
+"""The model, FR-1.10. Named rather than defaulted, which also silences
+kokoro's warning on every pipeline built without it.
 
-kokoro prints a line on every pipeline it builds if this is not passed, and skid
-now builds more than one.
+The Chinese-focused release, chosen for its three new English voices. Every
+older voice runs on it and sounds measurably different than on v1.0, which was
+heard and accepted.
 """
+
+V1_0_REPO = "hexgrad/Kokoro-82M"
+"""Where every voice not in `V1_1_VOICES` is published, FR-1.11."""
+
+
+REVISIONS = {
+    V1_0_REPO: "f3ff3571791e39611d31c381e3a41a3af07b4987",  # pragma: allowlist secret
+    REPO_ID: "01e7505bd6a7a2ac4975463114c3a7650a9f7218",
+}
+"""The commit of each repository that voice packs are fetched at.
+
+The revisions the v1.1-zh measurement ran against, read from the Hugging Face
+cache's `refs/main` on 2026-10-07. Pinned so that a pack republished upstream
+cannot change a voice without a commit here. The model file itself is fetched
+by kokoro, which takes no revision.
+"""
+
+
+def repo_for(voice: str) -> str:
+    """The repository that publishes `voice`'s pack.
+
+    kokoro fetches a pack from the model's own repository, and v1.1-zh carries
+    none of v1.0's voices, so left to itself it would fail to load every voice
+    on the shortlist but three.
+    """
+    return REPO_ID if voice in V1_1_VOICES else V1_0_REPO
 
 
 def _lang_code(voice: str) -> str:
@@ -148,6 +192,7 @@ class Generator:
         self.pipeline_code = pipeline or _lang_code(voice)
         self._pipelines: dict[str, Any] = {}
         self._model: Any | None = None
+        self._packs: dict[str, str] = {}
 
     def warm(self) -> None:
         """Load the model now, rather than on the first message that needs it.
@@ -197,6 +242,22 @@ class Generator:
         self.warm()
         return self._pipelines[self.pipeline_code]
 
+    def pack_for(self, voice: str) -> str:
+        """The local path of `voice`'s pack, fetched from the repo publishing it.
+
+        FR-1.11. kokoro is handed the path, so it never looks in the model's
+        repository for a voice that is not there. Kept once fetched, so only
+        the first clip in a voice consults the cache.
+        """
+        if voice not in self._packs:
+            from huggingface_hub import hf_hub_download
+
+            repo = repo_for(voice)
+            self._packs[voice] = hf_hub_download(
+                repo_id=repo, filename=f"voices/{voice}.pt", revision=REVISIONS[repo]
+            )
+        return self._packs[voice]
+
     def generate(self, text: str, path: Path) -> Path:
         """Render `text` to a WAV at `path`, and return it.
 
@@ -204,10 +265,11 @@ class Generator:
         one thing to handle rather than the whole of torch's error surface.
         """
         try:
-            chunks = list(self.pipeline(text, voice=self.voice))
+            chunks = list(self.pipeline(text, voice=self.pack_for(self.voice)))
             audio = np.concatenate([chunk.audio.numpy() for chunk in chunks])
         except Exception as exc:
             raise GenerationFailed(f"could not render {text!r}: {exc}") from exc
+        audio = audio * GAIN.get(self.voice, 1.0)
 
         path.parent.mkdir(parents=True, exist_ok=True)
         # `Wave_write` rather than `wave.open(..., "wb")`: both are public, and

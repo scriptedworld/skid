@@ -67,8 +67,8 @@ threshold change would stop enforcing every Low finding estate-wide; a tree-wide
 skip would stop enforcing these two rules at any severity, including on code
 nobody has written yet. Both were offered and neither was chosen.
 
-The cost: this spends skid's zero-suppression record. Apart from these marks the
-tree carries no `nosec`, no `noqa` and no `type: ignore`.
+The cost: this spends skid's zero-suppression record. Apart from these marks and
+S-2's one the tree carries no `nosec`, no `noqa` and no `type: ignore`.
 
 ### Which calls are forced, and which was chosen
 
@@ -132,3 +132,36 @@ involved anywhere. The suppression says "we run subprocesses on purpose", not
 A `subprocess` call whose argv comes from an MCP caller, or a `shell=True`
 anywhere. Neither exists. If either appears, this entry does not cover it and
 the new call site needs its own question rather than a copied mark.
+
+## S-2, a pinned commit read as a secret
+
+One mark, one file.
+
+    packages/skid/src/skid/generation.py   # pragma: allowlist secret   the v1.0 revision in REVISIONS
+
+`generation.REVISIONS` pins the commit of each Hugging Face repository that
+voice packs are fetched at. detect-secrets reads the v1.0 one,
+`f3ff3571791e39611d31c381e3a41a3af07b4987`, as a "Hex High Entropy String". It
+is a public git commit hash of `hexgrad/Kokoro-82M`, and anybody can read it
+from that repository's history. The v1.1-zh one beside it scores under the
+threshold and carries no mark.
+
+### The question put, 2026-10-07
+
+> bandit flags `hf_hub_download` without a pinned revision (B615). Pinning
+> fixes that, and then detect-secrets flags the pinned SHA. Mark that one line
+> with `pragma: allowlist secret` and register it, or drop the pinning, which
+> brings back bandit's finding and needs its own suppression instead?
+
+### The answer
+
+> I'm fine with the suppression, we know what it is ... so that's better than
+> muting the warning from bandit.
+
+So the download stays pinned, which is the property bandit asked for, and the
+one mark says the scanner is wrong about one literal.
+
+### What would make this entry wrong
+
+Anything on that line other than a commit hash of a public repository, or a
+second hex literal elsewhere taking the same mark by copy.

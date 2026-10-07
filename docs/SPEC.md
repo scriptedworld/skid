@@ -316,7 +316,16 @@ played by `paplay` on the default sink. So the output path of FR-1.1 through
 FR-1.5 is known to work as specified, not assumed to.
 
 kokoro returns float samples; the writer scales to signed 16-bit little-endian.
-That conversion is the whole of what sits between the engine and the file.
+That conversion, and FR-1.12's gain of 1.25 on bf_vale alone, is the whole of
+what sits between the engine and the file.
+
+The model is `hexgrad/Kokoro-82M-v1.1-zh`, FR-1.10. kokoro would fetch every
+voice pack from that repository, which publishes only af_maple, af_sol and
+bf_vale in English, so skid fetches each pack itself from the release that
+publishes it, `hexgrad/Kokoro-82M` for the rest, and hands kokoro the local
+path, FR-1.11. Packs from both releases have the same shape and run on the one
+model; the older ones sound measurably different on it than on v1.0, which
+was heard and accepted.
 
 Generation runs ahead of playback without bound in queue depth, and one
 message at a time. One warm model is shared, nothing establishes that a kokoro
@@ -327,7 +336,7 @@ many at once.
 A clip's file is deleted once it has played or been discarded. The working
 directory is removed when the backend exits.
 
-*Discharges FR-1.1, FR-1.2, FR-4.2, FR-7.3.*
+*Discharges FR-1.1, FR-1.2, FR-1.10 to FR-1.12, FR-4.2, FR-7.3.*
 
 ### Playback
 
@@ -603,11 +612,12 @@ service manager.
 
 ## What this deliberately leaves open
 
-- Voice names are not open; measurement settled them. kokoro 0.9.4 offers 54
-  voices, listed by `hexgrad/Kokoro-82M` under `voices/`, named
-  `<lang><gender>_<name>`: `af_` and `am_` American, `bf_` and `bm_` British,
-  then `e`, `f`, `h`, `i`, `j`, `p` and `z` for the other languages. `af_heart`
-  is a real voice. FR-6.5's validation checks against that set.
+- Voice names are not open; measurement settled them. skid knows 57: the 54
+  `hexgrad/Kokoro-82M` lists under `voices/`, and af_maple, af_sol and bf_vale
+  from `hexgrad/Kokoro-82M-v1.1-zh`. They are named `<lang><gender>_<name>`:
+  `af_` and `am_` American, `bf_` and `bm_` British, then `e`, `f`, `h`, `i`,
+  `j`, `p` and `z` for the other languages. FR-6.5's validation checks against
+  that set.
 - Whether the greeting window is settable through a tool as well as the
   file. FR-3.4 requires only that it is configurable, and FR-7.1 says which
   route would win.

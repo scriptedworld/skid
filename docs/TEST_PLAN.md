@@ -73,6 +73,9 @@ render audio, which is why the first run downloads the weights.
 | FR-1.7 | `test_skid_runs_only_where_kokoro_does` | property |
 | FR-1.8 | `test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it` | negative |
 | FR-1.9 | `test_a_player_that_never_exits_is_killed` | edge |
+| FR-1.10 | `test_the_model_is_v1_1_zh` | positive |
+| FR-1.11 | `test_each_voice_comes_from_the_release_that_publishes_it`, `test_an_old_voice_and_a_new_one_both_render` | property, positive |
+| FR-1.12 | `test_bf_vale_is_raised_by_a_quarter`, `test_no_other_voice_is_changed` | positive, negative |
 
 FR-1.5 is a source property, not a call. It reads skid's own imports and
 asserts none is an audio library. `soundfile` fails it and the stdlib `wave`
