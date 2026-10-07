@@ -7,11 +7,11 @@ defect, and a set of questions nothing depends on.
 ## Open: running out of voices, and choosing one over MCP
 
 A name declared in the config's `speakers` keeps its voice, FR-10.10 to
-FR-10.15. Two things remain. What an undeclared name gets once every
-undeclared voice is held is FR-10.16, left undecided because the team is not
-yet that large; today it falls to FR-10.6 and lands on a declared voice first.
-And a declaration is made by editing the file: `set_voice` takes a voice and no
-name, and no tool sets one name's voice.
+FR-10.15, and a name given a reused voice is told the voices ran out,
+FR-10.16. Two things remain. The reuse still lands on a declared voice first,
+since a declared voice reads as never heard; more voices is the chosen answer,
+and whether kokoro v1.1-zh supplies them is being measured. And a declaration
+is made by editing the file: no tool sets one name's voice.
 
 ## Open where nothing is configured: a voice that cannot render
 

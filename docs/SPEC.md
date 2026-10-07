@@ -261,14 +261,16 @@ is read again on start, so a restart keeps it. Names are matched by
 against each other, when the config is read, and a failure names the offender.
 
 Declared voices count as taken when an unheld voice is chosen, so the pool
-gives one out only once no undeclared voice is free. What happens past that
-point is FR-10.16 and undecided, so the reuse rule above applies unchanged, and
-because a declared voice has no entry in the table it reads as the quietest.
+gives one out only once no undeclared voice is free. Past that point the reuse
+rule above applies unchanged, and because a declared voice has no entry in the
+table it reads as the quietest. The table remembers which names it gave a
+reused voice, and their greeting ends `We've run out of voices.` until that
+assignment is released.
 
 Every tool write carries `speakers` through, since a tool rewrites the whole
 file. `status` reports the mapping as `declared`, as the config spells it.
 
-*Discharges FR-10.1 through FR-10.15. FR-10.16 is open.*
+*Discharges FR-10.1 through FR-10.16.*
 
 ### Substitution
 

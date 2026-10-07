@@ -371,7 +371,12 @@ class Service:
     ) -> None:
         """Generate the greeting and every message, ahead of playback, in order."""
         self._apply_voice(submission.name)
-        texts = [(greeting_for(submission.name, submission.work), True)]
+        greeting = greeting_for(
+            submission.name,
+            submission.work,
+            ran_out=self._parts.assignments.ran_out_for(submission.name),
+        )
+        texts = [(greeting, True)]
         texts += [(message, False) for message in submission.messages]
 
         for offset, (raw, is_greeting) in enumerate(texts):

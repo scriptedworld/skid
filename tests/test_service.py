@@ -660,6 +660,24 @@ def test_two_names_are_spoken_in_different_voices(
     assert service.status()["assigned"] == {"silo": "Ashley", "wrench": "Carol"}
 
 
+# COVERS FR-10.16 | property
+@pytest.mark.usefixtures("restored_voice")
+def test_a_name_in_a_reused_voice_is_told_the_voices_ran_out(
+    service_for: Callable[..., Service],
+) -> None:
+    """The wiring: one voice, two names, and only the second hears why."""
+    service = service_for(voices=[VoiceChoice(alias="Ashley", voice="af_alloy")])
+
+    service.submit("silo", ["one"])
+    service.submit("wrench", ["two"])
+    service.wait_idle(timeout=300)
+
+    assert service.introduced == [
+        "Hi, silo here.",
+        "Hi, wrench here. We've run out of voices.",
+    ]
+
+
 # COVERS FR-10.10 | property
 @pytest.mark.usefixtures("restored_voice")
 def test_a_declared_name_is_spoken_in_its_declared_voice(

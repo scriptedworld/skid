@@ -33,6 +33,18 @@ def test_the_greeting_names_the_work() -> None:
     assert greeting_for("ramona", "omnikey") == "Hi, ramona here, in omnikey."
 
 
+# COVERS FR-10.16 | positive
+def test_running_out_is_said_after_the_introduction() -> None:
+    """The exact line J asked for, with and without work."""
+    assert (
+        greeting_for("ramona", "omnikey", ran_out=True)
+        == "Hi, ramona here, in omnikey. We've run out of voices."
+    )
+    assert (
+        greeting_for("silo", ran_out=True) == "Hi, silo here. We've run out of voices."
+    )
+
+
 # COVERS FR-3.7 | property
 def test_the_work_is_spoken_exactly_as_given() -> None:
     """skid speaks what it is given, so a path or a phrase arrives untouched."""

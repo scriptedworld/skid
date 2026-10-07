@@ -239,6 +239,42 @@ def test_a_declaration_matches_a_name_in_any_case() -> None:
     assert assigned(assignments, "RAMONA", now=1000.0) == SHORTLIST[2]
 
 
+# COVERS FR-10.16 | positive
+def test_only_a_name_given_a_reused_voice_has_run_out() -> None:
+    """Three names take the three voices; the fourth is the one that ran out."""
+    assignments = Assignments(SHORTLIST)
+    for name in ["first", "second", "third", "fourth"]:
+        assignments.voice_for(name, now=1000.0, window=WINDOW)
+
+    assert [
+        assignments.ran_out_for(name) for name in ["first", "second", "third", "fourth"]
+    ] == [False, False, False, True]
+
+
+# COVERS FR-10.16 | edge
+def test_running_out_ends_with_the_reused_assignment() -> None:
+    """Released and arriving again with voices free, a name has its own voice."""
+    assignments = Assignments(SHORTLIST[:1])
+    assignments.voice_for("first", now=1000.0, window=WINDOW)
+    assignments.voice_for("second", now=1000.0, window=WINDOW)
+    later = 1000.0 + WINDOW + 1
+
+    assignments.release_expired(now=later, window=WINDOW)
+    assignments.voice_for("second", now=later, window=WINDOW)
+
+    assert not assignments.ran_out_for("second")
+
+
+# COVERS FR-10.16 | negative
+def test_a_declared_name_never_runs_out() -> None:
+    """Ramona's voice is hers however full the pool is."""
+    assignments = Assignments(SHORTLIST[:1], {"ramona": SHORTLIST[0]})
+    assignments.voice_for("silo", now=1000.0, window=WINDOW)
+    assignments.voice_for("ramona", now=1000.0, window=WINDOW)
+
+    assert not assignments.ran_out_for("ramona")
+
+
 # COVERS FR-10.9 | property
 def test_a_fresh_table_holds_nothing() -> None:
     """A restart reassigns, which is what not persisting means from outside.

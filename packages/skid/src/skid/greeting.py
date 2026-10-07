@@ -15,14 +15,16 @@ which is the right amount of engineering for a thirty second window.
 
 from __future__ import annotations
 
+RAN_OUT = "We've run out of voices."
+"""Said after the introduction of a name speaking in a reused voice, FR-10.16."""
 
-def greeting_for(name: str, work: str | None = None) -> str:
+
+def greeting_for(name: str, work: str | None = None, ran_out: bool = False) -> str:
     """The line spoken before a name's first message in a while."""
     if not name.strip():
         raise ValueError("a submission carries a name identifying its sender")
-    if work:
-        return f"Hi, {name} here, in {work}."
-    return f"Hi, {name} here."
+    line = f"Hi, {name} here, in {work}." if work else f"Hi, {name} here."
+    return f"{line} {RAN_OUT}" if ran_out else line
 
 
 class QuietTable:

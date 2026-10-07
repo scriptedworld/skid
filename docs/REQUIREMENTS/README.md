@@ -47,10 +47,10 @@ because closing one is a decision against a row that exists. Its file then moves
 into the category its answer belongs to. So `one-at-a-time` holds FR-2.1,
 FR-7.2 and FR-7.3.
 
-All nine of FR-7 are closed, and there is no `open/` category; an empty
-directory at a standard path reads as a lost file. A question raised since sits
-in the category it belongs to: FR-10.16, what happens when the free voices run
-out, is open in `a-voice-per-name`.
+Nothing is open. All nine of FR-7 are closed, and there is no `open/`
+category; an empty directory at a standard path reads as a lost file. A
+question raised since sits in the category its answer belongs to and closes at
+its own id, as FR-10.16 did.
 
 ## Retired
 

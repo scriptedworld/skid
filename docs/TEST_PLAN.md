@@ -228,7 +228,7 @@ refused, and assert the config on disk is unchanged.
 | FR-10.13 | `test_a_declaration_matches_a_name_in_any_case`, `test_two_declarations_differing_only_in_case_are_refused` | positive, negative |
 | FR-10.14 | `test_declarations_survive_a_tool_rewriting_the_config` | positive |
 | FR-10.15 | `test_status_reports_each_declaration` | positive |
-| FR-10.16 | none, the row is `[?]` | |
+| FR-10.16 | `test_only_a_name_given_a_reused_voice_has_run_out`, `test_running_out_ends_with_the_reused_assignment`, `test_a_declared_name_never_runs_out`, `test_running_out_is_said_after_the_introduction`, `test_a_name_in_a_reused_voice_is_told_the_voices_ran_out` | positive, edge, negative, property |
 
 The clock is a parameter, exactly as it is for the greeting. Six hours is a
 number passed in, so `test_speaking_refreshes_the_window` drives past the window

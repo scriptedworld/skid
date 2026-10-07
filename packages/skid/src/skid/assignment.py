@@ -70,6 +70,7 @@ class Assignments:
         self._declared = dict(declared or {})
         self._held: dict[str, VoiceChoice] = {}
         self._last_heard: dict[str, float] = {}
+        self._reused: set[str] = set()
 
     @property
     def choices(self) -> list[VoiceChoice]:
@@ -111,7 +112,16 @@ class Assignments:
         for name in gone:
             self._held.pop(name, None)
             self._last_heard.pop(name, None)
+            self._reused.discard(name)
         return gone
+
+    def ran_out_for(self, name: str) -> bool:
+        """Whether `name` holds a voice FR-10.6 reused because none was free.
+
+        FR-10.16 announces it. True for as long as the name keeps that voice,
+        and false again once the assignment is released.
+        """
+        return name in self._reused
 
     def voice_for(self, name: str, now: float, window: float) -> VoiceChoice | None:
         """The voice `name` speaks in, assigning one if it does not have it yet.
@@ -138,27 +148,34 @@ class Assignments:
         if held is not None:
             return held
 
-        chosen = self._pick()
+        chosen = self._free()
+        if chosen is None:
+            chosen = self._quietest()
+            self._reused.add(name)
         self._held[name] = chosen
         self._last_heard.setdefault(name, now)
         return chosen
 
-    def _pick(self) -> VoiceChoice:
-        """An unheld voice in file order, or the quietest one if all are held.
+    def _free(self) -> VoiceChoice | None:
+        """The first voice in file order that nobody holds or declared, if any.
 
-        FR-10.6. Reuse rather than refusal or a shared default: assignment always
-        returns something, and the collision it produces is one this project has
-        already accepted, since two sessions sharing a name share a voice anyway.
-
-        A declared voice counts as taken, FR-10.12. The reuse below is left as
-        FR-10.6 had it, because what happens once the free voices run out is
-        FR-10.16 and undecided.
+        A declared voice counts as taken, FR-10.12.
         """
         taken = {choice.voice for choice in self._held.values()}
         taken |= {choice.voice for choice in self._declared.values()}
         for choice in self._choices:
             if choice.voice not in taken:
                 return choice
+        return None
+
+    def _quietest(self) -> VoiceChoice:
+        """The voice silent longest, given out again because none is free.
+
+        FR-10.6. Reuse rather than refusal or a shared default: assignment always
+        returns something, and the collision it produces is one this project has
+        already accepted, since two sessions sharing a name share a voice anyway.
+        FR-10.16 has the greeting say so.
+        """
         return min(self._choices, key=self._last_heard_for_voice)
 
     def _last_heard_for_voice(self, choice: VoiceChoice) -> float:
