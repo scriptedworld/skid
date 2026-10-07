@@ -165,3 +165,34 @@ one mark says the scanner is wrong about one literal.
 
 Anything on that line other than a commit hash of a public repository, or a
 second hex literal elsewhere taking the same mark by copy.
+
+## S-3, the same hash in history, read as a key
+
+One entry, one file.
+
+    .gitleaksignore   f1ed9164d79a651353ffff3fa4bc257de6039b3b:docs/SUPPRESSIONS.md:generic-api-key:143
+
+S-2's first draft quoted the pinned hash right after the word
+"detect-secrets", and gitleaks' generic-api-key rule takes a keyword like
+"secret" near a long hex string for a credential. The draft was committed and
+pushed in `f1ed916` before the gate ran. The quote has since been removed from
+the file, but gitleaks reads history, so that commit fails it for good.
+
+`.gitleaksignore` names a single finding by commit, file, rule and line. It
+exempts nothing else: not that rule, not that file, not that line in any other
+commit.
+
+### The question put, 2026-10-07
+
+> gitleaks flags the public commit hash quoted in `f1ed916`, which is pushed.
+> Ignore that one finding by fingerprint in `.gitleaksignore`, or rewrite
+> history to remove it, which means force-pushing published commits?
+
+### The answer
+
+> go with the gitleaksignore
+
+### What would make this entry wrong
+
+A second fingerprint in `.gitleaksignore` added without its own question, or a
+real credential at that location, which the commit's content rules out.
