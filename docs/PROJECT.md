@@ -77,7 +77,8 @@ What crosses the socket is plain HTTP and nothing is cached on either side.
 so a tool cannot exist on one side only.
 
 Two tool environments are the reason for the layout. The service's measures
-1.3 GB and the shim's 33 MB, and reinstalling the service leaves the shim's
+6.7 GB, most of it torch's CUDA libraries, and the shim's 28 MB, and
+reinstalling the service leaves the shim's
 byte-for-byte identical. With one environment, replacing the part that makes
 noise rebuilds the part that talks to the client, and every running session
 loses `speak` until it restarts.

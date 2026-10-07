@@ -110,7 +110,9 @@ is, so it costs you nothing to arrange.
 
 It is a machine learning stack and it is not small. The weight is all on the
 service side: skid installs as two tools, and the service's environment measures
-about 1.3 GB, mostly torch, while the MCP shim's is about 33 MB.
+about 6.7 GB, mostly torch built for CUDA 12.6, while the MCP shim's is about
+28 MB. kokoro runs on an NVIDIA GPU where torch finds one and on the CPU
+otherwise.
 The warm service holds a few gigabytes resident, since that is what a loaded
 model costs, and the first run downloads about 340 MB of kokoro weights into
 `~/.cache/huggingface`. The first call after a start waits for the model to load;

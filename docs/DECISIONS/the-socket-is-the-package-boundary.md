@@ -169,7 +169,7 @@ what it actually contains.
 
 `packages/skid/pyproject.toml`. Everything the current file declares about
 the service: the licence, the Linux classifier, `requires-python`, kokoro, torch
-with its CPU index, the spaCy model wheel, flask, waitress, wrench,
+with its CUDA 12.6 index, the spaCy model wheel, flask, waitress, wrench,
 `allow-direct-references`, and
 
     [project.scripts]
@@ -178,7 +178,7 @@ with its CPU index, the spaCy model wheel, flask, waitress, wrench,
 
     [tool.uv.sources]
     wrench = { git = "https://github.com/scriptedworld/wrench.git", subdirectory = "python" }
-    torch = [{ index = "pytorch-cpu" }]
+    torch = [{ index = "pytorch-cu126" }]
     skid-contract = { workspace = true }
 
 `httpx` and `mcp` leave it. Nothing the service imports reaches either.
