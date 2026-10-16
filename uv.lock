@@ -1955,7 +1955,7 @@ requires-dist = [
     { name = "torch", index = "https://download.pytorch.org/whl/cu126" },
     { name = "transformers", specifier = ">=5" },
     { name = "waitress", specifier = ">=3.0" },
-    { name = "wrench", git = "https://github.com/scriptedworld/wrench.git?subdirectory=python" },
+    { name = "wrench", git = "https://github.com/scriptedworld/wrench.git?subdirectory=python&tag=python%2Fv0.5.0" },
 ]
 
 [[package]]
@@ -2509,7 +2509,7 @@ wheels = [
 [[package]]
 name = "wrench"
 version = "0.5.0"
-source = { git = "https://github.com/scriptedworld/wrench.git?subdirectory=python#9ff0d8a6e52a44ae24a010bacc6426a29627a3c3" }
+source = { git = "https://github.com/scriptedworld/wrench.git?subdirectory=python&tag=python%2Fv0.5.0#eda56ec3d5e0595d86e164f2ee26398509f6edcf" }
 dependencies = [
     { name = "jsonschema" },
     { name = "referencing" },

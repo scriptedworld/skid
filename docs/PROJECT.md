@@ -318,12 +318,18 @@ readily as a registry name, which is what lets a standalone clone install.
 Fetching it in the bootstrap, and not from a sibling checkout by path, was a
 prerequisite for going public.
 
+The source pins a release tag, `python/v0.5.0`, never a commit and never the
+default branch, per silo's
+`docs/DECISIONS/shared-tools-are-consumed-by-release-tag.md`. `uv.lock`
+records the commit behind the tag. Moving to a new wrench release is an edit
+to that tag and a re-lock.
+
 It is not editable. mypy cannot follow a PEP 660 import hook, so under an
 editable install wrench's `py.typed` is invisible and every import of it is an
 error. wrench carries its schemas as generated source, so nothing forces an
 editable install.
 
-The consequence is that skid tracks the wrench that is pushed, not the one
+The consequence is that skid tracks the wrench that is released, not the one
 beside it. A local wrench is invisible here without `uv sync --no-sources` or
 an overridden source, so a change written in a sibling checkout cannot be
 verified against skid until it lands. `NEXT_STEPS.md` carries what publishing

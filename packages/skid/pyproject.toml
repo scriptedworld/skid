@@ -94,6 +94,7 @@ skid-install = "skid.install:main"
 
 # wrench is not on a package registry, so it is named by git URL. uv takes one
 # as readily as a registry name, which is what lets a standalone clone install.
+# It pins a release tag, never a commit or the default branch.
 #
 # Not editable. mypy cannot follow a PEP 660 import hook, so under an editable
 # install wrench's py.typed is invisible and every import of it is an error.
@@ -104,7 +105,7 @@ skid-install = "skid.install:main"
 #
 #     uv sync --no-sources        # or point it at ../wrench/python locally
 [tool.uv.sources]
-wrench = { git = "https://github.com/scriptedworld/wrench.git", subdirectory = "python" }
+wrench = { git = "https://github.com/scriptedworld/wrench.git", subdirectory = "python", tag = "python/v0.5.0" }
 torch = [{ index = "pytorch-cu126" }]
 skid-contract = { workspace = true }
 
