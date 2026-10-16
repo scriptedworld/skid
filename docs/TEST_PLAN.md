@@ -70,12 +70,12 @@ render audio, which is why the first run downloads the weights.
 | FR-1.4 | `test_no_device_is_named_on_the_command` | negative |
 | FR-1.5 | `test_skid_imports_no_audio_library` | property |
 | FR-1.6 | `test_the_licence_is_declared_and_matches_the_file_beside_it`, `test_linux_is_declared_rather_than_intended` | property |
-| FR-1.7 | `test_skid_runs_only_where_kokoro_does` | property |
 | FR-1.8 | `test_a_player_returning_early_overlaps_and_skid_does_not_prevent_it` | negative |
 | FR-1.9 | `test_a_player_that_never_exits_is_killed` | edge |
 | FR-1.10 | `test_the_model_is_v1_1_zh` | positive |
 | FR-1.11 | `test_each_voice_comes_from_the_release_that_publishes_it`, `test_an_old_voice_and_a_new_one_both_render` | property, positive |
 | FR-1.12 | `test_bf_vale_is_raised_by_a_quarter`, `test_no_other_voice_is_changed` | positive, negative |
+| FR-1.13 | `test_every_package_declares_the_same_single_python`, `test_nothing_compiled_is_built_from_source` | property |
 
 FR-1.5 is a source property, not a call. It reads skid's own imports and
 asserts none is an audio library. `soundfile` fails it and the stdlib `wave`
@@ -83,18 +83,14 @@ module passes, which is why the spec picks `wave`. Asserted as the whole
 third-party set and not as an absence, because a denylist of audio libraries
 only catches the ones somebody thought of.
 
-FR-1.7 asserts a containment, not a version. The planned name was
-`test_requires_python_is_3_12_only`, which is the row copied into an assertion:
-it passes whenever somebody edits both the row and the test, and fails only when
-they edit one. What the row requires is that skid's range sits inside kokoro's,
-and the outer range belongs to somebody else, so the test reads it from kokoro's
-installed metadata and checks every interpreter skid admits against it.
-
-What it watches is what kokoro DECLARES, which is not what kokoro SUPPORTS.
-kokoro is reported first-hand to run on 3.13 and 3.14, and has simply not had a
-release since, so `<3.13` is stale packaging metadata and not a real
-ceiling. A resolver enforces the declaration, so skid has to sit inside it to
-install, and it is the declaration that moves.
+FR-1.13 asserts a shape, not a version. A test that the range is
+`>=3.14,<3.15` would be the row copied into an assertion: it passes whenever
+somebody edits both and fails only when they edit one. So one test asserts that
+each package admits exactly one minor version and that the three agree, and the
+other that nothing compiled was built from source. uv locks only the wheels
+that fit the declared interpreter, so a lock entry with an sdist and no wheel
+is one that was built here, and a shared object in its installed file list
+says it was compiled.
 
 FR-1.8 tests a documented limit, not a guarantee. skid cannot detect
 a player that returns early, so the test configures one, observes the overlap,
@@ -344,8 +340,8 @@ torch, transformers and numpy are still in it.
 
 It fails on the day kokoro becomes a thin wrapper over a compiled runtime, which
 is the day to re-examine the choice of language instead of inheriting it.
-Same file and same shape as FR-1.7's test; both are tripwires on an external
-premise.
+Same file and same shape as FR-1.13's wheel test; both are tripwires on an
+external premise.
 
 ## What this plan does not cover, and why
 

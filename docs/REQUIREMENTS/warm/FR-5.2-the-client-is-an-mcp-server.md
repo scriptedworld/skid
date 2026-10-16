@@ -17,6 +17,6 @@ by nothing the service loads.
     .venv/bin/python -c 'import importlib.metadata as m; print(m.version("mcp"))'
     2.1.1
 
-Ask skid's own interpreter rather than the machine's. `python3` here is 3.14.7
-and carries a different `mcp`, so asking it says the SDK exists somewhere rather
-than that it is present for this project. FR-1.7 names the same trap.
+Ask skid's own interpreter rather than the machine's. The machine's `python3`
+carries its own packages, a different `mcp` among them, so asking it says the
+SDK exists somewhere, not that it is present for this project.

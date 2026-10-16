@@ -22,10 +22,11 @@ license-files = ["LICENSE", "NOTICE"]
 classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
-# 3.12 alone, and not a floor. kokoro declares requires_python <3.13,>=3.10, so
-# a bare >=3.12 resolves to an interpreter it refuses. FR-1.7 carries the
-# measurement and says to retire the row rather than edit this in place.
-requires-python = ">=3.12,<3.13"
+# 3.14 alone, and not a floor, so each tool environment is built on the
+# interpreter the suite ran on. The newest every compiled dependency publishes a
+# wheel for; FR-1.13 carries the measurement. kokoro declares <3.13, which uv
+# does not enforce as a ceiling.
+requires-python = ">=3.14,<3.15"
 # The service side of the socket and nothing else. No `httpx` and no `mcp`:
 # nothing the service imports reaches either, and `tests/test_declarations.py`
 # asserts the imports per package.

@@ -198,7 +198,7 @@ def registration_is_current(config: Path) -> bool:
     """
     try:
         parsed = json.loads(config.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         return False
     entry = parsed.get("mcpServers", {}).get(SERVER_NAME)
     if not isinstance(entry, dict):

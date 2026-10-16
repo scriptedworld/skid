@@ -1,10 +1,8 @@
 # The Python half for skid.
 #
 # Every recipe runs through uv, and that is load-bearing, not a habit.
-# skid pins `requires-python = ">=3.12,<3.13"` because kokoro declares
-# `<3.13,>=3.10`, while `python3` on this machine is 3.14.7. So a bare `pytest`
-# or `mypy` runs against an interpreter that cannot import this project's
-# dependencies.
+# skid's dependencies live in `.venv` and nowhere else, so a bare `pytest` or
+# `mypy` runs against an interpreter that cannot import them.
 #
 # The root pyproject.toml, above [dependency-groups], records what that costs
 # in the `types` task.

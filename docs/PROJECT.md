@@ -298,19 +298,19 @@ machine speak and rewriting its config. `SECURITY.md` states the boundary.
 
 No mocks. kokoro is installed and tested against.
 
-Python 3.12 exactly, because kokoro declares `<3.13,>=3.10`. Linux only,
-first pass, declared as a classifier in all three `pyproject.toml` files, so
-FR-1.6 has something a test can read and one package cannot claim to be portable
-while another declares Linux.
+Python 3.14 exactly, in all three packages, FR-1.13. The estate runs on 3.15
+where a repository's dependencies allow it and 3.14 where not, and spaCy's
+compiled stack and triton publish no 3.15 wheels. Linux only, first pass,
+declared as a classifier in all three `pyproject.toml` files, so FR-1.6 has
+something a test can read and one package cannot claim to be portable while
+another declares Linux.
 
-kokoro's `<3.13` is a declaration, not a ceiling. It runs on 3.13 and 3.14
-and has simply not had a release since, so "kokoro refuses 3.13" is about the
-metadata rather than the software. The pin stands anyway, because it costs
-nothing: nothing in skid's source needs a newer interpreter, and
-`uv tool install --editable` reads `requires-python` and builds the tool
-environment on 3.12 with no flag, whatever the machine's default is. Installing
-into an environment holding an interpreter kokoro accepts is the answer to the
-declaration, and it is already the arrangement.
+kokoro and misaki declare `<3.13`, and that binds nothing. Both are pure Python
+and run on 3.14, and uv enforces only the lower bound of a dependency's
+`requires-python`, so no override is needed and none survives a re-lock. A
+kokoro release raising its floor past 3.14 is the case that would bite.
+`uv tool install --editable` reads skid's own `requires-python` and builds each
+tool environment on 3.14 with no flag, whatever the machine's default is.
 
 wrench is a git dependency, and a clone needs no sibling checkout. It is not
 on a registry, so `[tool.uv.sources]` names it by git URL; uv takes one as

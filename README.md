@@ -100,13 +100,13 @@ and these are the things a stranger would otherwise find out by running it:
 
 ## What it needs, and what it costs
 
-Linux with a systemd user session, Python 3.12, `uv`, and a player on PATH.
+Linux with a systemd user session, Python 3.14, `uv`, and a player on PATH.
 `paplay` is the default and works on PulseAudio and PipeWire alike; any command
 taking a file argument can be named in the config instead.
 
-Python 3.12 exactly, because kokoro declares `<3.13`. `uv tool install` reads
-that and builds the tool environment on 3.12 whatever your default interpreter
-is, so it costs you nothing to arrange.
+Python 3.14 exactly, the newest version every compiled dependency publishes a
+wheel for. `uv tool install` reads that and builds the tool environment on 3.14
+whatever your default interpreter is, so it costs you nothing to arrange.
 
 It is a machine learning stack and it is not small. The weight is all on the
 service side: skid installs as two tools, and the service's environment measures

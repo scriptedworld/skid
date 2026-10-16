@@ -565,14 +565,13 @@ and depth is not.
 
 ## What runs it
 
-Python 3.12 exactly, and a uv project. kokoro declares `<3.13,>=3.10`, and
-this machine's default interpreter is 3.14.7, so the pin is load-bearing rather
-than conventional.
+Python 3.14 exactly, and a uv project. It is the newest version every compiled
+dependency publishes a wheel for: spaCy's stack and triton have none for 3.15.
 
-The declaration is not a ceiling. kokoro is reported first-hand to run on 3.13
-and 3.14, and has simply not had a release since. A resolver still enforces
-what is declared, and nothing in skid needs a newer interpreter, so the pin
-costs nothing and stays.
+kokoro declares `<3.13,>=3.10`, which is stale metadata and not a ceiling.
+kokoro is pure Python and runs on 3.14, and uv enforces only the lower bound of
+a dependency's `requires-python`, so the declaration installs and refuses
+nothing.
 
 Dependencies: `kokoro`, `flask` and `waitress` for the service, the Anthropic
 MCP SDK for Python for the script alone, `httpx` between them, `wrench` for the
@@ -586,12 +585,12 @@ It is installed as an ordinary copy. mypy cannot follow a PEP 660 import hook, s
 under an editable install wrench's `py.typed` is invisible and every import of it
 is an error.
 
-kokoro 0.9.4 and its torch stack install and run under 3.12.14, and the WAV
+kokoro 0.9.4 and its torch stack install and run under 3.14.8, and the WAV
 writer is the stdlib's.
 
-The MCP SDK under 3.12 is settled: measured on skid's own interpreter, `mcp`
-2.1.1 under 3.12.14. A reading taken under 3.14.7, this machine's default, says
-only that the SDK exists, not that it is present for skid.
+The MCP SDK is measured on skid's own interpreter: `mcp` 2.1.1 under 3.14.8.
+A reading taken from the machine's `python3` says only that the SDK exists, not
+that it is present for skid.
 
 waitress and not gunicorn, because it serves a socket that is already
 bound and listening, which is exactly what socket activation hands over.
@@ -603,7 +602,7 @@ inspection and `Adjustments` is where it is visible.
 
 skid is installed with `uv tool install`, so it gets its own environment and its
 own pinned interpreter instead of depending on whatever `python3` means on the
-machine. That is what makes FR-1.7's pin hold in practice and not only in
+machine. That is what makes FR-1.13's pin hold in practice and not only in
 `pyproject.toml`.
 
 The installer also writes the two systemd user units and reloads the daemon.
@@ -616,7 +615,7 @@ Linux only in the first pass, and the systemd dependence makes that sharper than
 it was: the platform-specific surface is now the player command and the
 service manager.
 
-*Discharges FR-1.6, FR-1.7, FR-7.6, FR-5.2.*
+*Discharges FR-1.6, FR-1.13, FR-7.6, FR-5.2.*
 
 ## What this deliberately leaves open
 

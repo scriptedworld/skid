@@ -148,7 +148,7 @@ def someone_is_listening(path: Path) -> bool:
         probe.settimeout(1.0)
         try:
             probe.connect(str(path))
-        except (ConnectionRefusedError, FileNotFoundError, OSError):
+        except ConnectionRefusedError, FileNotFoundError, OSError:
             return False
     return True
 

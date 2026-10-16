@@ -7,11 +7,11 @@ behaviour to exercise: the declaration is the property, so the test reads the
 declaration. Reaching for a behavioural test on one of them produces something
 vacuous. `test_install.py` established the shape, asserting a plan as data.
 
-Two of them are tripwires on something outside skid. FR-1.7 and FR-7.6 both rest
-on measurements of kokoro that were true when they were taken, and a measurement
-expires. Reading kokoro's own installed metadata means the day it moves is the
-day these fail, which is the day each row is up for re-examination rather than
-for having its numbers edited in place.
+Two of them are tripwires on something outside skid. FR-7.6 rests on a
+measurement of kokoro, and FR-1.13 on its compiled dependencies publishing
+wheels, and a measurement expires. Reading what was installed means the day
+either moves is the day these fail, which is the day each row is up for
+re-examination rather than for having its numbers edited in place.
 
 Nothing here imports skid. These are properties of the distribution and of its
 source text, and importing the package would test the interpreter running the
@@ -22,12 +22,12 @@ from __future__ import annotations
 
 import ast
 import sys
-from importlib.metadata import PackageNotFoundError, metadata
+import tomllib
+from importlib.metadata import PackageNotFoundError, distribution, metadata
 from pathlib import Path
 from typing import Any
 
 import pytest
-import tomllib
 from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
@@ -243,38 +243,55 @@ def test_linux_is_declared_rather_than_intended() -> None:
         assert "Operating System :: POSIX :: Linux" in classifiers, package
 
 
-# COVERS FR-1.7 | property
-def test_skid_runs_only_where_kokoro_does() -> None:
-    """skid's interpreter range sits inside kokoro's, read from kokoro itself.
+# COVERS FR-1.13 | property
+def test_every_package_declares_the_same_single_python() -> None:
+    """One minor version, and the same one in all three packages.
 
-    Not a check that the range is `>=3.12,<3.13`, which would be the row copied
-    rather than tested. What FR-1.7 requires is a containment, and the outer
-    range belongs to somebody else and moves without warning.
+    Not a check that the range is `>=3.14,<3.15`, which would be the row copied
+    rather than tested. What the row requires is that each range admits exactly
+    one minor version and that the three agree.
 
-    This is a tripwire on what kokoro DECLARES, which is not the same as what
-    kokoro SUPPORTS. kokoro is reported to run on 3.13 and 3.14 and has not had
-    a release since those arrived, so `<3.13` is stale packaging metadata rather
-    than a real ceiling. The declaration is what a resolver enforces, so skid
-    has to sit inside it to install at all, and it is what moves when the
-    situation changes.
-
-    So it fails on the day kokoro re-declares, not on the day it gains support.
-    FR-1.7 names that as the day to retire the row rather than edit the version
-    in place, so what skid was pinned to stays legible.
-
-    Every package and not only the one that depends on kokoro. The shim does
-    not import kokoro and could widen its pin without anything breaking, right
-    up until the two packages resolve to different interpreters and the contract
-    they share is installed twice into environments that cannot both import it.
+    A range admitting two would let `uv tool install` build a tool on whichever
+    the machine offers first, an interpreter the suite never ran on. Two
+    packages disagreeing would let the service and the shim resolve the contract
+    they share onto different interpreters.
     """
-    kokoro_range = SpecifierSet(str(_kokoro()["Requires-Python"]))
-
+    admitted = {}
     for package in sorted(PACKAGES):
-        skid_range = SpecifierSet(_pyproject(package)["project"]["requires-python"])
-        allowed = [version for version in _minor_versions() if version in skid_range]
+        declared = SpecifierSet(_pyproject(package)["project"]["requires-python"])
+        admitted[package] = [v for v in _minor_versions() if v in declared]
 
-        assert allowed, f"{package} admits no interpreter: {skid_range}"
-        assert [v for v in allowed if v not in kokoro_range] == [], package
+    assert all(len(versions) == 1 for versions in admitted.values()), admitted
+    assert len({versions[0] for versions in admitted.values()}) == 1, admitted
+
+
+# COVERS FR-1.13 | property
+def test_nothing_compiled_is_built_from_source() -> None:
+    """Every lock entry with no wheel installed pure Python.
+
+    uv records only the wheels that fit the declared interpreter, so a compiled
+    dependency that stops publishing one for it is locked with an sdist alone
+    and built here from source. That build can succeed on this machine and fail
+    on the next, and nothing else in the suite would notice.
+
+    Read from what was installed rather than from the sdist, because whether a
+    package is compiled is only known once it is built: a shared object in its
+    file list says so. An entry not installed here, held out by a platform
+    marker, has nothing to read and is passed over.
+    """
+    lock = tomllib.loads((CHECKOUT / "uv.lock").read_text(encoding="utf-8"))
+    compiled_from_source = []
+    for entry in lock["package"]:
+        if "sdist" not in entry or entry.get("wheels"):
+            continue
+        try:
+            files = distribution(entry["name"]).files or []
+        except PackageNotFoundError:
+            continue
+        if any(path.suffix == ".so" for path in files):
+            compiled_from_source.append(entry["name"])
+
+    assert compiled_from_source == []
 
 
 # COVERS FR-7.6 | property

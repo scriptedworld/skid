@@ -8,7 +8,7 @@ enough to read and has not been through the gate. Treat it as a starting point.
 
 ## What it needs
 
-    Python 3.12          kokoro declares <3.13
+    Python 3.14          the newest every compiled dependency has a wheel for
     uv                   to install from the git source
     a player on PATH     `paplay` by default, any command taking a file
     about 5 GB           the tool environment, mostly torch
@@ -47,7 +47,7 @@ playback somebody else's problem.
     RUN curl -LsSf https://astral.sh/uv/install.sh | sh
     ENV PATH="/root/.local/bin:${PATH}"
 
-    RUN uv tool install --python 3.12 \
+    RUN uv tool install --python 3.14 \
             "git+https://github.com/scriptedworld/skid.git#subdirectory=packages/skid"
 
     ENV XDG_RUNTIME_DIR=/run/skid
@@ -55,7 +55,7 @@ playback somebody else's problem.
 
     CMD ["skid"]
 
-`uv` fetches Python 3.12 itself, so the base image's Python version does not
+`uv` fetches Python 3.14 itself, so the base image's Python version does not
 have to match.
 
 ## Running it
@@ -91,7 +91,7 @@ The same prerequisites, minus the image:
 
     apt-get install -y python3 curl ca-certificates pulseaudio-utils git
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    uv tool install --python 3.12 \
+    uv tool install --python 3.14 \
         "git+https://github.com/scriptedworld/skid.git#subdirectory=packages/skid"
 
 The subdirectory is required and naming the repository root will not work.
@@ -116,7 +116,11 @@ Verified, on the machine this was written on:
     the sound server exposes a socket    pipewire-pulse, $XDG_RUNTIME_DIR/pulse/native
     skid runs without systemd            it binds its own socket when LISTEN_FDS is unset
     the git source resolves              uv fetches wrench from GitHub, 158 packages,
-                                         and picks CPython 3.12 over a newer default
+                                         and picks the declared CPython over a newer
+                                         default; measured when that was 3.12
+
+`--python 3.14` through the git source is NOT re-measured. The checkout itself
+locks and installs on 3.14.8.
 
 The suite is NOT verified on a clean machine. 174 tests pass here. On another
 machine the suite reached 45 dots and then crashed natively inside the

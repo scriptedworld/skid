@@ -12,7 +12,7 @@ everybody else.
 
 ## Setting up
 
-Linux, Python 3.12, and `uv`.
+Linux, Python 3.14, and `uv`.
 
     uv sync
 
@@ -27,10 +27,10 @@ workspace, so one `uv sync` installs all three editable:
 Two of them install as separate uv tools, which is what stops a service restart
 rebuilding the MCP shim.
 `docs/DECISIONS/the-socket-is-the-package-boundary.md` says why, with the
-measurements. Use the project interpreter for everything: kokoro declares
-`<3.13`, so a system python outside that range cannot import skid's
-dependencies at all, and a tool run from PATH reports on the wrong environment
-instead of failing honestly.
+measurements. Use the project interpreter for everything: skid's dependencies
+live in `.venv` and nowhere else, so a system python cannot import them, and a
+tool run from PATH reports on the wrong environment instead of failing
+honestly.
 
 ## Running the suite
 

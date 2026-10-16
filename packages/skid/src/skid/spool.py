@@ -156,7 +156,7 @@ class Spool:
         """
         try:
             payload = wrench.load_json_file(path, SCHEMA, wrench.LOCAL_FILE)
-        except (wrench.ParseError, wrench.ValidationError):
+        except wrench.ParseError, wrench.ValidationError:
             return None
         return Entry(
             submission=Submission(

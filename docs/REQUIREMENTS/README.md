@@ -62,6 +62,18 @@ something unrelated.
              retired 2026-08-28, absorbed into FR-2.1
              46 rows stand where 47 did
 
+    FR-1.7   skid runs on an interpreter kokoro supports
+             retired 2026-10-16, replaced by FR-1.13
+
+FR-1.7 read *skid runs on a Python version kokoro supports. Today that is
+Python 3.12 only.*, tested as skid's range sitting inside kokoro's declared
+`<3.13,>=3.10`. The row said to retire it rather than edit the version once
+kokoro's declaration stopped being the constraint. It stopped on 2026-10-16:
+skid moved to 3.14, kokoro runs there, and uv does not enforce the upper bound
+of a dependency's `requires-python`, so the declaration it tracked binds
+nothing. FR-1.13 states what does bind, which is one version across the three
+packages and a published wheel for every compiled dependency.
+
 Why it went: it read *Exclusion is held by a mutex, a lock file, or an
 equivalent. The mechanism is unconstrained; the property is not.* That is a
 licence and not an obligation. There is no implementation that satisfies

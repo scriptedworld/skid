@@ -27,10 +27,9 @@ members = ["packages/*"]
 #
 # This is not a second statement of what toolbox pins. The jig pins what the
 # GATE runs; this declares what the PROJECT needs to check itself, and the
-# difference is load-bearing: the jig invokes these from PATH, where python is
-# 3.14.7 and cannot import skid's dependencies. Run from here they see the 3.12
-# interpreter the code actually uses. `types` reports 30 phantom errors from
-# PATH and one real one from the venv.
+# difference is load-bearing: the jig invokes these from PATH, whose python
+# cannot import skid's dependencies. Run from here they see the environment the
+# code actually uses.
 #
 # It sits at the root and not in a package, because there is one suite over all
 # three packages and one set of checkers judging them together.
@@ -88,8 +87,8 @@ strict = true
 warn_unreachable = true
 exclude = ['^bin/', '^adapters/']
 
-# skid's dependencies live in .venv because kokoro's metadata declares <3.13 and
-# this machine's python3 is 3.14.7. mypy run from PATH therefore cannot import
+# skid's dependencies live in .venv and nowhere else. mypy run from PATH
+# therefore cannot import
 # flask, waitress, wrench or kokoro, and reports every one of them as a missing
 # import rather than checking the code. Naming the interpreter is mypy's own
 # answer to that, and it is what makes the gate's `types` task check skid rather
@@ -129,6 +128,11 @@ ignore_missing_imports = true
 
 [tool.ruff]
 extend-exclude = ["bin"]
+# Stated, because this root declares no requires-python for ruff to infer it
+# from. Left to its default, the project's ruff filed `tomllib` as third-party
+# while the gate's filed it as standard library, and each failed the other's
+# import order. FR-1.13 names the version.
+target-version = "py314"
 
 [tool.ruff.lint.isort]
 # Stated rather than inferred, because the inference is not stable across
@@ -154,11 +158,11 @@ known-first-party = ["skid", "skid_mcp", "skid_contract"]
 # traceback.
 ignore-paths = ['^bin/.*', '^\.venv/.*', '^\.bolt-.*', '^adapters/.*', '^\.ephemera/.*']
 
-# The same split mypy's `python_executable` answers. pylint run from PATH is a
-# 3.14.7 interpreter and skid's dependencies are in a 3.12 virtualenv, so
-# without this every import of flask, waitress, wrench or kokoro is an
-# `import-error` and the findings are about which python ran rather than about
-# skid. Globbed rather than pinned to 3.12, so it survives the pin moving.
+# The same split mypy's `python_executable` answers. pylint run from PATH does
+# not see the virtualenv skid's dependencies live in, so without this every
+# import of flask, waitress, wrench or kokoro is an `import-error` and the
+# findings are about which python ran rather than about skid. Globbed rather
+# than pinned to a version, so it survives the pin moving.
 init-hook = 'import glob, sys; sys.path[:0] = glob.glob(".venv/lib/python*/site-packages")'
 
 [tool.bandit]

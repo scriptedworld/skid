@@ -35,4 +35,5 @@ rests on one measurement.
 
 ## What the measurement also forced
 
-kokoro declares `requires_python <3.13,>=3.10`, which is why FR-1.7 exists.
+A Python project runs on a Python version, so skid needs one its whole stack
+publishes wheels for. FR-1.13 names it.

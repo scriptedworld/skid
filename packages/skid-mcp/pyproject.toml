@@ -7,7 +7,7 @@ license-files = ["LICENSE", "NOTICE"]
 classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.14,<3.15"
 # The whole list, and its shortness is the reason this package exists. This
 # environment measures 33 MB where the service's is 1.3 GB, because nothing
 # here reaches kokoro, torch, spacy or generation.
